@@ -91,6 +91,9 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Content == "ping" {
 		s.ChannelMessageSend(m.ChannelID, "Pong!")
 	}
+
+    if m.Content == "quote" {
+        Quote(m.Content)
 }
 
 func messageEdit(s *discordgo.Session, m *discordgo.MessageUpdate) {

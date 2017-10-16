@@ -1,5 +1,10 @@
 package main
 
 import (
-	"os"
+	
 )
+
+Quote(message *discordgo.message){
+    return;
+}
+

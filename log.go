@@ -29,15 +29,15 @@ func logMessage(s *discordgo.Session, timestamp time.Time, user *discordgo.User,
 		s.ChannelMessageSend(logID, fmt.Sprintf("```diff\n- %s - %s - %s:\n!MSG: %s\n```", timestampf, namestr, code, message))
 		break
 
-	case "EDI":
-		oldMsg, _ := s.State.Message(cID, mID)
-		s.ChannelMessageSend(logID, fmt.Sprintf("```diff\n- %s - %s - %s:\n!OLD: %s\n!NEW: %s\n```", timestampf, namestr, code, oldMsg.ContentWithMentionsReplaced(), message))
-		break
+//	case "EDI":
+//		oldMsg, _ := s.State.Message(cID, mID)
+//		s.ChannelMessageSend(logID, fmt.Sprintf("```diff\n- %s - %s - %s:\n!OLD: %s\n!NEW: %s\n```", timestampf, namestr, code, oldMsg.ContentWithMentionsReplaced(), message))
+//		break
 
-	case "DEL":
-		oldMsg, _ := s.State.Message(cID, mID)
-		s.ChannelMessageSend(logID, fmt.Sprintf("```diff\n- %s - %s - %s:\n!MSG: %s\n```", timestampf, namestr, code, oldMsg))
-		break
+//	case "DEL":
+//		oldMsg, _ := s.State.Message(cID, mID)
+//		s.ChannelMessageSend(logID, fmt.Sprintf("```diff\n- %s - %s - %s:\n!MSG: %s\n```", timestampf, namestr, code, oldMsg))
+//		break
 	default:
 		break
 	}
