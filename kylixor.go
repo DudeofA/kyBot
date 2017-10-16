@@ -44,8 +44,6 @@ func main() {
 	ky.AddHandler(messageCreate)
 
 	// Register other things
-	ky.AddHandler(messageEdit)
-	ky.AddHandler(messageDelete)
 	// ky.AddHandler(messageReactionAdd)
 	// ky.AddHandler(messageReactionRemove)
 
@@ -95,26 +93,6 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
     if m.Content == "quote" {
         Quote(m.Content)
 }
-
-func messageEdit(s *discordgo.Session, m *discordgo.MessageUpdate) {
-	// Ignore all messages created by the bot itself
-	// This isn't required in this specific example but it's a good practice.
-	if m.Author.ID == s.State.User.ID {
-		return
-	}
-
-	if m.ChannelID != logID {
-		timestamp := time.Now()
-		logMessage(s, timestamp, m.Message.Author, m.ID, m.ChannelID, "EDI", m.ContentWithMentionsReplaced())
-	}
-}
-
-func messageDelete(s *discordgo.Session, m *discordgo.MessageDelete) {
-	// Ignore all messages created by the bot itself
-	// This isn't required in this specific example but it's a good practice.
-	if m.Author.ID == s.State.User.ID {
-		return
-	}
 
 	if m.ChannelID != logID {
 		timestamp := time.Now()
