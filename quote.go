@@ -1,7 +1,9 @@
 package main
 
+import (
+	"github.com/bwmarrin/discordgo"
+)
 
-Quote(message *discordgo.message){
-    return;
+func Quote(s *discordgo.Session, message *discordgo.Message) {
+	s.ChannelMessageSend(message.ChannelID, message.ContentWithMentionsReplaced())
 }
-

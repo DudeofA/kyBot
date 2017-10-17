@@ -90,9 +90,9 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		s.ChannelMessageSend(m.ChannelID, "Pong!")
 	}
 
-    if m.Content == "quote" {
-        Quote(m.Content)
-}
+	if m.Content == "quote" {
+		Quote(s, m.Message)
+	}
 
 	if m.ChannelID != logID {
 		timestamp := time.Now()
