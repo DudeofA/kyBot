@@ -1,9 +1,9 @@
 dirs = .
 
-all: kylixor
+all: clean kylixor
 
 kylixor: ## Default action. Builds Kylixor.
-	@env GO15VENDOREXPERIMENT="1" go build .
+	@go build kylixor.go log.go quote.go test.go vote.go
 
 .PHONY: test
 test: ## Runs unit tests for Kylixor.
@@ -11,7 +11,7 @@ test: ## Runs unit tests for Kylixor.
 
 .PHONY: clean
 clean: ## Removes compiled Kylixor binaries.
-	@rm -f kylixor*
+	@rm -f kylixor
 
 .PHONY: install
 install: ## Copies kylixor binary to /usr/local/bin for easy execution.

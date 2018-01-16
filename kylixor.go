@@ -8,7 +8,7 @@ import (
 	// "log"
 	"os"
 	"os/signal"
-	//	"strings"
+	"strings"
 	"syscall"
 	"time"
 
@@ -86,16 +86,45 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		logMessage(s, timestamp, m.Message.Author, m.ID, m.ChannelID, "MSG", m.ContentWithMentionsReplaced())
 	}
 
+    if m.Content == "test" {
+        Test(s, m)
+    }
+
 	if m.Content == "ping" {
 		s.ChannelMessageSend(m.ChannelID, "Pong!")
 	}
 
-	if m.Content == "quote" {
-		Quote(s, m.Message)
+    if m.Content == "pizza" {
+        s.ChannelMessageSend(m.ChannelID, "🍕 here it is, come get it.  I ain't your delivery bitch.")
+    }
+
+	if strings.HasPrefix(strings.ToLower(m.Content), "quote ") {
+        //NEEDS IMPROVEMENTS
+        quote := strings.TrimPrefix(m.Content, "quote ")
+        quote = strings.TrimPrefix(quote, "Quote ")
+        result := Vote(s, m, quote)
+        if result {
+            final := SaveQuote(s, m, quote)
+            s.ChannelMessageSend(m.ChannelID, final)
+        }
 	}
 
-	if m.ChannelID != logID {
-		timestamp := time.Now()
-		logMessage(s, timestamp, m.Message.Author, m.ID, m.ChannelID, "DEL", m.ContentWithMentionsReplaced())
-	}
+    if strings.HasPrefix(strings.ToLower(m.Content), "quotelist"){
+        entries := ListQuote(s, m)
+        if entries <= 1 {
+            s.ChannelMessageSend(m.ChannelID, "No quotes in file")
+        }
+    }
+    //only Me
+    if m.Content == "quoteclear" && m.Author.ID == "144220178853396480" {
+        _, _ = os.Create("quotes.txt")
+        s.ChannelMessageSend(m.ChannelID, "Quote file cleared")
+    }
 }
+
+
+
+
+
+
+
