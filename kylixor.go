@@ -86,7 +86,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		logMessage(s, timestamp, m.Message.Author, m.ID, m.ChannelID, "MSG", m.ContentWithMentionsReplaced())
 	}
 
-    if m.Content == "test" {
+    if m.Content == "test" && m.Author.ID == "144220178853396480" {
         Test(s, m)
     }
 
