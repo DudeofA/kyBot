@@ -47,6 +47,7 @@ func ListQuote(s *discordgo.Session, m *discordgo.MessageCreate, i ...int) (entr
 }
 
 func ShowRandQuote(s *discordgo.Session, m *discordgo.MessageCreate) {
+    
     rand.Seed(time.Now().UTC().UnixNano())
     quotes, err := ioutil.ReadFile("quotes.txt")
     if err != nil{

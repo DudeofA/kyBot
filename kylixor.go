@@ -95,7 +95,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
             panic(err)
         }
 
-        s.ChannelMessageSend(m.ChannelID, string(readme))
+        s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("```" + string(readme) + "```"))
     }
 	if m.Content == "ping" {
 		s.ChannelMessageSend(m.ChannelID, "Pong!")
