@@ -4,8 +4,7 @@ import (
 	//	"encoding/binary"
 	"flag"
 	"fmt"
-	//	"io"
-	// "log"
+	"io/ioutil"
 	"os"
 	"os/signal"
 	"strings"
@@ -90,6 +89,14 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
         Test(s, m)
     }
 
+    if m.Content == "help" {
+        readme, err := ioutil.ReadFile("README.md")
+        if err != nil {
+            panic(err)
+        }
+
+        s.ChannelMessageSend(m.ChannelID, string(readme))
+    }
 	if m.Content == "ping" {
 		s.ChannelMessageSend(m.ChannelID, "Pong!")
 	}
@@ -116,11 +123,8 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
         _, _ = os.Create("quotes.txt")
         s.ChannelMessageSend(m.ChannelID, "Quote file cleared")
     }
+
+    if m.Content == "randquote" {
+        ShowRandQuote(s, m)
+    }
 }
-
-
-
-
-
-
-

@@ -5,6 +5,7 @@ import (
     "fmt"
     "os"
     "log"
+    "math/rand"
     "time"
     "strings"
     "io/ioutil"
@@ -43,4 +44,16 @@ func ListQuote(s *discordgo.Session, m *discordgo.MessageCreate, i ...int) (entr
     }
 
     return
+}
+
+func ShowRandQuote(s *discordgo.Session, m *discordgo.MessageCreate) {
+    rand.Seed(time.Now().UTC().UnixNano())
+    quotes, err := ioutil.ReadFile("quotes.txt")
+    if err != nil{
+        panic(err)
+    }
+
+    lines := strings.Split(string(quotes), "\n\n")
+    randNum := rand.Intn(len(lines) - 1)
+    s.ChannelMessageSend(m.ChannelID, lines[randNum])
 }
