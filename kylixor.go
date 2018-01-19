@@ -102,11 +102,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
         //NEEDS IMPROVEMENTS
         quote := strings.TrimPrefix(m.Content, "quote ")
         quote = strings.TrimPrefix(quote, "Quote ")
-        result := Vote(s, m, quote)
-        if result {
-            final := SaveQuote(s, m, quote)
-            s.ChannelMessageSend(m.ChannelID, final)
-        }
+        Vote(s, m, quote)
 	}
 
     if strings.HasPrefix(strings.ToLower(m.Content), "quotelist"){

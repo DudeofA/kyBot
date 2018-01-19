@@ -43,6 +43,8 @@ func Vote(s *discordgo.Session, m *discordgo.MessageCreate, voteSubject string) 
             if len(upCount) == neededUpvotes + 1 {
                 s.ChannelMessageEdit(m.ChannelID, voteMsg.ID, "Vote passed!")
                 CleanVote(s, cID, tempMsg)
+                final := SaveQuote(s, m, voteSubject)
+                s.ChannelMessageSend(m.ChannelID, final)
                 result = true
                 return
             }
