@@ -11,3 +11,4 @@ Commands
 | quote     | Starts a vote for the quote specified to be added to the list
 | quotelist | Prints the quotes in chronological order
 | randquote | Prints a random(tm) quote
+| yee       | Plays the heartwarming clip of yee

@@ -3,7 +3,7 @@ dirs = .
 all: clean kylixor
 
 kylixor: ## Default action. Builds Kylixor.
-	@go build kylixor.go log.go quote.go test.go vote.go
+	@go build *.go
 
 .PHONY: test
 test: ## Runs unit tests for Kylixor.

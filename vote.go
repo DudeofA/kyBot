@@ -51,7 +51,7 @@ func Vote(s *discordgo.Session, m *discordgo.MessageCreate, voteSubject string) 
         }
     }()
 
-    time.Sleep(time.Minute * 10)
+    time.Sleep(time.Minute * 60)
     ticker.Stop()
     //Timed out
     //Not enough votes

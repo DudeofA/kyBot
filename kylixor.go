@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
+    "github.com/bwmarrin/dgvoice"
 )
 
 func init() {
@@ -80,13 +81,32 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
+    // Log every message in log channel
 	if m.ChannelID != logID {
 		timestamp := time.Now()
 		logMessage(s, timestamp, m.Message.Author, m.ID, m.ChannelID, "MSG", m.ContentWithMentionsReplaced())
 	}
 
+    // Testing by me only
     if m.Content == "test" && m.Author.ID == "144220178853396480" {
         Test(s, m)
+    }
+
+    // Plays the 'yee' clip that is so close to our hearts
+    if m.Content == "yee" {
+        // Apparently I need this
+        stopChan := make(chan bool)
+        c, _ := s.State.Channel(m.ChannelID)
+        g, _ := s.State.Guild(c.GuildID)
+        // Search through the guild's voice channels for the command's author
+        for _, vs := range g.VoiceStates {
+            if vs.UserID == m.Author.ID {
+                voiceChannel, _ := s.ChannelVoiceJoin(c.GuildID, vs.ChannelID, false, false);
+                // TO REPLACE WITH MY OWN CODE
+                dgvoice.PlayAudioFile(voiceChannel, "clips/yee.mp3", stopChan);
+                voiceChannel.Disconnect();
+            }
+        }
     }
 
     if m.Content == "help" {
@@ -94,15 +114,20 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
         if err != nil {
             panic(err)
         }
-
+        // Print readme in code brackets so it doesn't look awful
         s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("```" + string(readme) + "```"))
     }
 	if m.Content == "ping" {
-		s.ChannelMessageSend(m.ChannelID, "Pong!")
+        pongMessage, _ := s.ChannelMessageSend(m.ChannelID, "Pong!")
+        pongStamp, _ := time.Parse("2006-01-02T15:04:05-07:00", string(pongMessage.Timestamp))
+        duration := time.Since(pongStamp)
+        pingTime := duration.Nanoseconds() / 1000000
+        s.ChannelMessageEdit(m.ChannelID, pongMessage.ID, fmt.Sprintf("Pong! %vms", pingTime))
+
 	}
 
     if m.Content == "pizza" {
-        s.ChannelMessageSend(m.ChannelID, "🍕 here it is, come get it.  I ain't your delivery bitch.")
+        s.ChannelMessageSend(m.ChannelID, "🍕 here it is, come get it. \nI ain't your delivery bitch.")
     }
 
 	if strings.HasPrefix(strings.ToLower(m.Content), "quote ") {
