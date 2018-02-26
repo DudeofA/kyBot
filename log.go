@@ -28,7 +28,7 @@ func logMessage(s *discordgo.Session, timestamp time.Time, user *discordgo.User,
 	case "MSG":
         channelType, _ := s.Channel(cID)
         channelName := channelType.Name
-		s.ChannelMessageSend(logID, fmt.Sprintf("```diff\n- %s - %s - %s - %s:\n!MSG: %s\n```", timestampf, channelName, namestr, code, message))
+		s.ChannelMessageSend(config.LogID, fmt.Sprintf("```diff\n- %s - %s - %s - %s:\n!MSG: %s\n```", timestampf, channelName, namestr, code, message))
 		break
 
 //	case "EDI":

@@ -1,7 +1,6 @@
 package main
 
 import (
-	//	"encoding/binary"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -10,6 +9,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
+    "encoding/json"
 
 	"github.com/bwmarrin/discordgo"
     "github.com/bwmarrin/dgvoice"
@@ -21,9 +21,29 @@ func init() {
 }
 
 var token string
-var logID = "296765401944162305"
+var stopChan = make(chan bool)
+
+type Config struct {
+    Admin   string
+    Yee     bool
+    LogID   string
+    Test    []string
+}
+
+var config = Config{}
+
+func ReadConfig() {
+    file, _ := os.Open("conf.json")
+    decoder := json.NewDecoder(file)
+    config = Config{}
+    err := decoder.Decode(&config)
+    if err != nil {
+        fmt.Println("error: ", err)
+    }
+}
 
 func main() {
+    ReadConfig()
 
 	if token == "" {
 		fmt.Println("No token provided. Please run: kylixor -t <bot token>")
@@ -68,7 +88,7 @@ func main() {
 func ready(s *discordgo.Session, event *discordgo.Ready) {
 
 	// Set the playing status.
-	s.UpdateStatus(0, "Alpha beta early access")
+	s.UpdateStatus(0, "Alpha v0.2")
 }
 
 // This function will be called (due to AddHandler above) every time a new
@@ -82,74 +102,99 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
     // Log every message in log channel
-	if m.ChannelID != logID {
+	if m.ChannelID != config.LogID {
 		timestamp := time.Now()
 		logMessage(s, timestamp, m.Message.Author, m.ID, m.ChannelID, "MSG", m.ContentWithMentionsReplaced())
 	}
 
-    // Testing by me only
-    if m.Content == "test" && m.Author.ID == "144220178853396480" {
-        Test(s, m)
-    }
+    if strings.HasPrefix(m.Content, "!") {
+        // Remove prefix for 'performance'
+        input := strings.TrimPrefix(m.Content, "!")
 
-    // Plays the 'yee' clip that is so close to our hearts
-    if m.Content == "yee" {
-        // Apparently I need this
-        stopChan := make(chan bool)
-        c, _ := s.State.Channel(m.ChannelID)
-        g, _ := s.State.Guild(c.GuildID)
-        // Search through the guild's voice channels for the command's author
-        for _, vs := range g.VoiceStates {
-            if vs.UserID == m.Author.ID {
-                voiceChannel, _ := s.ChannelVoiceJoin(c.GuildID, vs.ChannelID, false, false);
-                // TO REPLACE WITH MY OWN CODE
-                dgvoice.PlayAudioFile(voiceChannel, "clips/yee.mp3", stopChan);
-                voiceChannel.Disconnect();
+        switch input {
+
+        case "help":
+            readme, err := ioutil.ReadFile("README.md")
+            if err != nil { panic(err) }
+            // Print readme in code brackets so it doesn't look awful
+            s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("```" + string(readme) + "```"))
+            break
+
+        case "ping":
+            pongMessage, _ := s.ChannelMessageSend(m.ChannelID, "Pong!")
+            // Format Discord time to readable time
+            pongStamp, _ := time.Parse("2006-01-02T15:04:05-07:00", string(pongMessage.Timestamp))
+            duration := time.Since(pongStamp)
+            pingTime := duration.Nanoseconds() / 1000000
+            // Print duration from message being send to message being posted
+            s.ChannelMessageEdit(m.ChannelID, pongMessage.ID, fmt.Sprintf("Pong! %vms", pingTime))
+            break
+
+
+        case "pizza":
+            s.ChannelMessageSend(m.ChannelID, "🍕 here it is, come get it. \nI ain't your delivery bitch.")
+            break
+
+        case "quoteclear":
+            if m.Author.ID == config.Admin {
+                // Create empty file to overwrite old quote DANGER: CAN'T UNDO
+                _, _ = os.Create("quotes.txt")
+                s.ChannelMessageSend(m.ChannelID, "Quote file cleared")
             }
+            break
+
+        case "quotelist":
+            entries := ListQuote(s, m)
+            if entries <= 1 {
+                s.ChannelMessageSend(m.ChannelID, "No quotes in file")
+            }
+            break
+
+        case "randquote":
+            ShowRandQuote(s, m)
+            break
+
+        case "reload":
+            if m.Author.ID == config.Admin {
+                ReadConfig()
+                s.ChannelMessageSend(m.ChannelID, "Config reloaded")
+            }
+            break
+
+        case "test":
+            if m.Author.ID == config.Admin {
+                Test(s,m)
+            }
+            break
+
+        // Plays the 'yee' clip that is so close to our hearts
+        case "yee":
+            if !config.Yee {
+                s.ChannelMessageSend(m.ChannelID, "Yee is disabled")
+            } else {
+                c, _ := s.State.Channel(m.ChannelID)
+                g, _ := s.State.Guild(c.GuildID)
+                // Search through the guild's voice channels for the command's author
+                for _, vs := range g.VoiceStates {
+                    if vs.UserID == m.Author.ID {
+                        voiceChannel, _ := s.ChannelVoiceJoin(c.GuildID, vs.ChannelID, false, false);
+                        // TO REPLACE WITH MY OWN CODE
+                        dgvoice.PlayAudioFile(voiceChannel, "clips/yee.mp3", stopChan);
+                        voiceChannel.Disconnect();
+                    }
+                }
+            }
+
+        default:
+        //    s.ChannelMessageSend(m.ChannelID, "Whatchu say?")
         }
-    }
 
-    if m.Content == "help" {
-        readme, err := ioutil.ReadFile("README.md")
-        if err != nil {
-            panic(err)
+        if strings.HasPrefix(strings.ToLower(m.Content), "quote ") {
+            //NEEDS IMPROVEMENTS
+            quote := strings.TrimPrefix(m.Content, "quote ")
+            quote = strings.TrimPrefix(quote, "Quote ")
+            Vote(s, m, quote)
         }
-        // Print readme in code brackets so it doesn't look awful
-        s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("```" + string(readme) + "```"))
-    }
-	if m.Content == "ping" {
-        pongMessage, _ := s.ChannelMessageSend(m.ChannelID, "Pong!")
-        pongStamp, _ := time.Parse("2006-01-02T15:04:05-07:00", string(pongMessage.Timestamp))
-        duration := time.Since(pongStamp)
-        pingTime := duration.Nanoseconds() / 1000000
-        s.ChannelMessageEdit(m.ChannelID, pongMessage.ID, fmt.Sprintf("Pong! %vms", pingTime))
 
-	}
-
-    if m.Content == "pizza" {
-        s.ChannelMessageSend(m.ChannelID, "🍕 here it is, come get it. \nI ain't your delivery bitch.")
-    }
-
-	if strings.HasPrefix(strings.ToLower(m.Content), "quote ") {
-        //NEEDS IMPROVEMENTS
-        quote := strings.TrimPrefix(m.Content, "quote ")
-        quote = strings.TrimPrefix(quote, "Quote ")
-        Vote(s, m, quote)
-	}
-
-    if strings.HasPrefix(strings.ToLower(m.Content), "quotelist"){
-        entries := ListQuote(s, m)
-        if entries <= 1 {
-            s.ChannelMessageSend(m.ChannelID, "No quotes in file")
-        }
-    }
-    //only Me
-    if m.Content == "quoteclear" && m.Author.ID == "144220178853396480" {
-        _, _ = os.Create("quotes.txt")
-        s.ChannelMessageSend(m.ChannelID, "Quote file cleared")
-    }
-
-    if m.Content == "randquote" {
-        ShowRandQuote(s, m)
     }
 }
