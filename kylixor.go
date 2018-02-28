@@ -12,7 +12,6 @@ import (
     "encoding/json"
 
 	"github.com/bwmarrin/discordgo"
-    "github.com/bwmarrin/dgvoice"
 )
 
 func init() {
@@ -25,9 +24,10 @@ var stopChan = make(chan bool)
 
 type Config struct {
     Admin   string
-    Yee     bool
     LogID   string
+    Monitor []string
     Test    []string
+    Yee     bool
 }
 
 var config = Config{}
@@ -63,6 +63,9 @@ func main() {
 	// Register messageCreate as a callback for the messageCreate events.
 	ky.AddHandler(messageCreate)
 
+    // Register presenceUpdate to see who is online
+    ky.AddHandler(presenceUpdate)
+
 	// Register other things
 	// ky.AddHandler(messageReactionAdd)
 	// ky.AddHandler(messageReactionRemove)
@@ -91,6 +94,16 @@ func ready(s *discordgo.Session, event *discordgo.Ready) {
 	s.UpdateStatus(0, "Alpha v0.2")
 }
 
+// This function will be called each time certain (or all) users change their
+// online status
+func presenceUpdate(s *discordgo.Session, p *discordgo.PresenceUpdate) {
+    for _, b := range config.Monitor {
+        if b == p.User.ID {
+            Log(s, p, "STATUS")
+        }
+    }
+}
+
 // This function will be called (due to AddHandler above) every time a new
 // message is created on any channel that the autenticated bot has access to.
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -103,8 +116,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
     // Log every message in log channel
 	if m.ChannelID != config.LogID {
-		timestamp := time.Now()
-		logMessage(s, timestamp, m.Message.Author, m.ID, m.ChannelID, "MSG", m.ContentWithMentionsReplaced())
+		Log(s, m, "MSG")
 	}
 
     if strings.HasPrefix(m.Content, "!") {
@@ -112,6 +124,10 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
         input := strings.TrimPrefix(m.Content, "!")
 
         switch input {
+
+        case "bitconnect":
+            PlayClip(s, m, "bitconnect")
+            break
 
         case "help":
             readme, err := ioutil.ReadFile("README.md")
@@ -167,26 +183,8 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
             }
             break
 
-        // Plays the 'yee' clip that is so close to our hearts
-        case "yee":
-            if !config.Yee {
-                s.ChannelMessageSend(m.ChannelID, "Yee is disabled")
-            } else {
-                c, _ := s.State.Channel(m.ChannelID)
-                g, _ := s.State.Guild(c.GuildID)
-                // Search through the guild's voice channels for the command's author
-                for _, vs := range g.VoiceStates {
-                    if vs.UserID == m.Author.ID {
-                        voiceChannel, _ := s.ChannelVoiceJoin(c.GuildID, vs.ChannelID, false, false);
-                        // TO REPLACE WITH MY OWN CODE
-                        dgvoice.PlayAudioFile(voiceChannel, "clips/yee.mp3", stopChan);
-                        voiceChannel.Disconnect();
-                    }
-                }
-            }
-
         default:
-        //    s.ChannelMessageSend(m.ChannelID, "Whatchu say?")
+            s.ChannelMessageSend(m.ChannelID, "Not a command I'm pretty sure")
         }
 
         if strings.HasPrefix(strings.ToLower(m.Content), "quote ") {
