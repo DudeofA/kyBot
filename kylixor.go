@@ -26,8 +26,9 @@ type Config struct {
     Admin   string
     LogID   string
     Monitor []string
+    Noise   bool
+    Status  string
     Test    []string
-    Yee     bool
 }
 
 var config = Config{}
@@ -91,7 +92,7 @@ func main() {
 func ready(s *discordgo.Session, event *discordgo.Ready) {
 
 	// Set the playing status.
-	s.UpdateStatus(0, "Alpha v0.2")
+	s.UpdateStatus(0, config.Status)
 }
 
 // This function will be called each time certain (or all) users change their
@@ -153,13 +154,14 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
         case "quoteclear":
             if m.Author.ID == config.Admin {
-                // Create empty file to overwrite old quote DANGER: CAN'T UNDO
+            // Create empty file to overwrite old quote DANGER: CAN'T UNDO
                 _, _ = os.Create("quotes.txt")
                 s.ChannelMessageSend(m.ChannelID, "Quote file cleared")
             }
             break
 
         case "quotelist":
+            // List all quote, with lag
             entries := ListQuote(s, m)
             if entries <= 1 {
                 s.ChannelMessageSend(m.ChannelID, "No quotes in file")
@@ -177,20 +179,29 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
             }
             break
 
+        case "status":
+            ReadConfig()
+            s.UpdateStatus(0, config.Status)
+            s.ChannelMessageSend(m.ChannelID, "Status refreshed")
+            break
+
         case "test":
             if m.Author.ID == config.Admin {
                 Test(s,m)
             }
             break
 
+        case "yee":
+            PlayClip(s, m, "yee")
+            break
+
         default:
             s.ChannelMessageSend(m.ChannelID, "Not a command I'm pretty sure")
         }
 
-        if strings.HasPrefix(strings.ToLower(m.Content), "quote ") {
+        if strings.HasPrefix(m.Content, "quote ") {
             //NEEDS IMPROVEMENTS
             quote := strings.TrimPrefix(m.Content, "quote ")
-            quote = strings.TrimPrefix(quote, "Quote ")
             Vote(s, m, quote)
         }
 
