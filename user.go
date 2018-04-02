@@ -27,10 +27,14 @@ var USArray UserStateArray
 func ReadUserFile() {
 	file, err := os.Open("users.json")
 	if err != nil {
-		file, err = os.Create("users.json")
+		WriteUserFile()
+        file, err = os.Open("users.json")
+        if err != nil {
+            panic(err)
+        }
 	}
 	decoder := json.NewDecoder(file)
-	err := decoder.Decode(&USArray)
+	err = decoder.Decode(&USArray)
 	if err != nil {
 		panic(err)
 	}
@@ -108,6 +112,9 @@ func UpdateUser(s *discordgo.Session, i interface{}, code string) bool {
 
 func WriteUserFile() {
 	//Marshal global variable data
+    if USArray == nil {
+        USArray
+    }
 	jsonData, err := json.MarshalIndent(USArray, "", "    ")
 	if err != nil {
 		panic(err)
