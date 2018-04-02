@@ -25,7 +25,10 @@ type UserState struct {
 var USArray UserStateArray
 
 func ReadUserFile() {
-	file, _ := os.Open("users.json")
+	file, err := os.Open("users.json")
+	if err != nil {
+		file, err = os.Create("users.json")
+	}
 	decoder := json.NewDecoder(file)
 	err := decoder.Decode(&USArray)
 	if err != nil {
