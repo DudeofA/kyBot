@@ -24,14 +24,22 @@ type UserState struct {
 
 var USArray UserStateArray
 
+func InitUserFile() {
+	file, err := os.Create("users.json")
+	file.Write(`
+		{
+	    	"gID": "",
+	    	"users": [
+	        	{}
+	    	]
+		}`)
+	file.Close()
+}
+
 func ReadUserFile() {
 	file, err := os.Open("users.json")
 	if err != nil {
-		WriteUserFile()
-        file, err = os.Open("users.json")
-        if err != nil {
-            panic(err)
-        }
+		panic(err)
 	}
 	decoder := json.NewDecoder(file)
 	err = decoder.Decode(&USArray)
@@ -112,9 +120,9 @@ func UpdateUser(s *discordgo.Session, i interface{}, code string) bool {
 
 func WriteUserFile() {
 	//Marshal global variable data
-    if USArray == nil {
-        USArray
-    }
+	if USArray == nil {
+		USArray
+	}
 	jsonData, err := json.MarshalIndent(USArray, "", "    ")
 	if err != nil {
 		panic(err)
