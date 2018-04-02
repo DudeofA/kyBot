@@ -26,13 +26,16 @@ var USArray UserStateArray
 
 func InitUserFile() {
 	file, err := os.Create("users.json")
-	file.Write(`
+	if err != nil {
+		panic(err)
+	}
+	file.Write([]byte(`
 		{
 	    	"gID": "",
 	    	"users": [
 	        	{}
 	    	]
-		}`)
+		}`))
 	file.Close()
 }
 
@@ -120,9 +123,6 @@ func UpdateUser(s *discordgo.Session, i interface{}, code string) bool {
 
 func WriteUserFile() {
 	//Marshal global variable data
-	if USArray == nil {
-		USArray
-	}
 	jsonData, err := json.MarshalIndent(USArray, "", "    ")
 	if err != nil {
 		panic(err)

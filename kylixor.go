@@ -47,7 +47,7 @@ func ReadConfig() {
 
 func main() {
 	//Read in files
-	if os.Stat("users.json"); os.IsNotExist(err) {
+	if _, err := os.Stat("users.json"); os.IsNotExist(err) {
 		InitUserFile()
 	}
 	ReadConfig()
