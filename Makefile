@@ -3,6 +3,8 @@ dirs = .
 all: clean kylixor
 
 kylixor: ## Default action. Builds Kylixor.
+	@go get "github.com/bwmarrin/discordgo"
+	@go get "github.com/jasonlvhit/gocron"
 	@go build *.go
 
 .PHONY: test

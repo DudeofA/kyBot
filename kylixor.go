@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
+
+	"github.com/jasonlvhit/gocron"
 )
 
 func init() {
@@ -20,14 +22,17 @@ func init() {
 }
 
 type Config struct {
-	Admin   string
-	Bots    []string
-	LogID   string
-	Monitor []string
-	Noise   bool
-	Prefix  string
-	Status  string
-	Test    []string
+	Admin      string
+	Bots       []string
+	LogID      string
+	LogMessage bool
+	LogStatus  bool
+	LogVoice   bool
+	Monitor    []string
+	Noise      bool
+	Prefix     string
+	Status     string
+	Test       []string
 }
 
 var config = Config{}
@@ -45,6 +50,13 @@ func ReadConfig() {
 	file.Close()
 }
 
+func ResetDailies() {
+	for j := range USArray.Users {
+		USArray.Users[j].Dailies = false
+	}
+	WriteUserFile()
+}
+
 func main() {
 	//Read in files
 	if _, err := os.Stat("users.json"); os.IsNotExist(err) {
@@ -52,6 +64,9 @@ func main() {
 	}
 	ReadConfig()
 	ReadUserFile()
+
+	gocron.Every(1).Day().At("00:00").Do(ResetDailies)
+	<-gocron.Start()
 
 	//Account for no token at runtime
 	if token == "" {
@@ -150,6 +165,19 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 		case "bitconnect":
 			PlayClip(s, m, "bitconnect")
+			break
+
+		case "dailies":
+			_, i := ReadUser(s, m, "MSG")
+			usr := &USArray.Users[i]
+			if !usr.Dailies {
+				usr.NoiseCredits += 1
+				usr.Dailies = true
+				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Dailies received! Total credits: %d", usr.NoiseCredits))
+			} else {
+				s.ChannelMessageSend(m.ChannelID, "Already got dailies, check back tomorrow.")
+			}
+			WriteUserFile()
 			break
 
 		case "help":

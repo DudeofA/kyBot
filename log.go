@@ -35,7 +35,7 @@ func GetAuthor(s *discordgo.Session, i interface{}, code string) (name string) {
 		//Get channel despite if the voicestateupdate is empty
 		var channel *discordgo.Channel
 		if v.ChannelID == "" {
-			fileUser, _ := ReadUser(s, v)
+			fileUser, _ := ReadUser(s, v, "VOICE")
 			channel, _ = s.State.Channel(fileUser.LastSeenCID)
 		} else {
 			channel, _ = s.State.Channel(v.ChannelID)
@@ -65,37 +65,44 @@ func FormatAuthor(user *discordgo.User, member *discordgo.Member, err error) (na
 }
 
 func Log(s *discordgo.Session, i interface{}, code string) {
-
 	timestamp := time.Now()
 	timestampf := timestamp.Format("Mon Jan 2 - 3:04PM")
 
 	switch code {
 
 	case "MSG":
+		if !config.LogMessage {
+			return
+		}
 		m := i.(*discordgo.MessageCreate)
 		username := GetAuthor(s, i, code)
 
 		channel, _ := s.Channel(m.ChannelID)
 		s.ChannelMessageSend(config.LogID, fmt.Sprintf("```diff\n- %s - %s - %s - %s:\n!MSG: %s\n```",
-			timestampf, channel.Name, username, code, m.Content))
+			timestampf, channel.Name, username, code, m.ContentWithMentionsReplaced()))
 		break
 
 	case "STATUS":
+		if !config.LogStatus {
+			return
+		}
 		p := i.(*discordgo.PresenceUpdate)
 		username := GetAuthor(s, i, code)
-
 		s.ChannelMessageSend(config.LogID, fmt.Sprintf("```diff\n- %s - %s - %s:\n!STATUS: %s\n```",
 			timestampf, username, code, p.Status))
 		break
 
 	case "VOICE":
+		if !config.LogVoice {
+			return
+		}
 		v := i.(*discordgo.VoiceStateUpdate)
 		username := GetAuthor(s, i, code)
 		var action string
 		var channel *discordgo.Channel
 		if v.ChannelID == "" {
 			action = "Left"
-			fileUser, _ := ReadUser(s, v)
+			fileUser, _ := ReadUser(s, v, "VOICE")
 			channel, _ = s.State.Channel(fileUser.LastSeenCID)
 		} else {
 			action = "Joined"

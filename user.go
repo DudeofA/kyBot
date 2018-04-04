@@ -20,6 +20,7 @@ type UserState struct {
 	LastSeenCID  string `json:"lastSeenCID"`
 	Anthem       string `json:"anthem"`
 	NoiseCredits int    `json:"noiseCredits"`
+	Dailies      bool   `json:"dailies"`
 }
 
 var USArray UserStateArray
@@ -51,18 +52,39 @@ func ReadUserFile() {
 	}
 
 	file.Close()
+	WriteUserFile()
 }
 
-func ReadUser(s *discordgo.Session, v *discordgo.VoiceStateUpdate) (UVS UserState, i int) {
+func ReadUser(s *discordgo.Session, i interface{}, code string) (UVS UserState, j int) {
 	//Search through user array for specific user and return them
-	for i := range USArray.Users {
-		if USArray.Users[i].UserID == v.UserID {
-			return USArray.Users[i], i
+	switch code {
+
+	case "VOICE":
+		v := i.(*discordgo.VoiceStateUpdate)
+		//Return user if they are inside array
+		for j := range USArray.Users {
+			if USArray.Users[j].UserID == v.UserID {
+				return USArray.Users[j], j
+			}
 		}
+		//Or create a new one if they cannot be found
+		s.ChannelMessageSend(config.LogID, "```\nCannot find user...Creating new...\n```")
+		return CreateUser(s, v, "VOICE"), len(USArray.Users)
+	case "MSG":
+		m := i.(*discordgo.MessageCreate)
+		//Return user if they are inside array
+		for j := range USArray.Users {
+			if USArray.Users[j].UserID == m.Author.ID {
+				return USArray.Users[j], j
+			}
+		}
+		//Or create a new one if they cannot be found
+		s.ChannelMessageSend(config.LogID, "```\nCannot find user...Creating new...\n```")
+		return CreateUser(s, m, "MSG"), len(USArray.Users)
+	default:
+		panic("Incorrect code in ReadUser")
 	}
-	//Or create a new one if they cannot be found
-	s.ChannelMessageSend(config.LogID, "Cannot find user...Creating new...")
-	return CreateUser(s, v, "VOICE"), len(USArray.Users)
+
 }
 
 func CreateUser(s *discordgo.Session, i interface{}, code string) (UVS UserState) {
@@ -81,6 +103,7 @@ func CreateUser(s *discordgo.Session, i interface{}, code string) (UVS UserState
 		user.LastSeenCID = v.ChannelID
 		user.Anthem = ""
 		user.NoiseCredits = 1
+		user.Dailies = false
 		break
 
 	default:
@@ -98,7 +121,7 @@ func UpdateUser(s *discordgo.Session, i interface{}, code string) bool {
 	case "VOICE":
 		v := i.(*discordgo.VoiceStateUpdate)
 		//Get user object
-		user, j := ReadUser(s, v)
+		user, j := ReadUser(s, v, "VOICE")
 		//Update user object
 		//If the update is only a change in voice (mute, deafen, etc)
 		if user.CurrentCID == v.ChannelID && user.LastSeenCID == v.ChannelID {
