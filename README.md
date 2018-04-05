@@ -16,7 +16,7 @@ Commands
 | quotelist   | Prints the quotes in chronological order
 | randquote   | Prints a random(tm) quote
 | yee         | Plays the heartwarming clip of yee
-| ----------- | -----------
+
 | Admin CMD   | Description
 | ----------- | -----------
 | quoteclear  | Clears all quotes
