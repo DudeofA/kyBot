@@ -69,7 +69,8 @@ func ReadUser(s *discordgo.Session, i interface{}, code string) (UVS UserState, 
 		}
 		//Or create a new one if they cannot be found
 		s.ChannelMessageSend(config.LogID, "```\nCannot find user...Creating new...\n```")
-		return CreateUser(s, v, "VOICE"), len(USArray.Users)
+		user := CreateUser(s, v, "VOICE")
+		return user, len(USArray.Users) - 1
 	case "MSG":
 		m := i.(*discordgo.MessageCreate)
 		//Return user if they are inside array
@@ -80,7 +81,8 @@ func ReadUser(s *discordgo.Session, i interface{}, code string) (UVS UserState, 
 		}
 		//Or create a new one if they cannot be found
 		s.ChannelMessageSend(config.LogID, "```\nCannot find user...Creating new...\n```")
-		return CreateUser(s, m, "MSG"), len(USArray.Users)
+		user := CreateUser(s, m, "MSG")
+		return user, len(USArray.Users) - 1
 	default:
 		panic("Incorrect code in ReadUser")
 	}
@@ -101,8 +103,17 @@ func CreateUser(s *discordgo.Session, i interface{}, code string) (UVS UserState
 		user.UserID = v.UserID
 		user.CurrentCID = v.ChannelID
 		user.LastSeenCID = v.ChannelID
-		user.Anthem = ""
-		user.NoiseCredits = 1
+		user.NoiseCredits = 0
+		user.Dailies = false
+		break
+	case "MSG":
+		m := i.(*discordgo.MessageCreate)
+		usr, _ := s.User(m.Author.ID)
+		channel, _ := s.Channel(m.ChannelID)
+		member, err := s.GuildMember(channel.GuildID, m.Author.ID)
+		user.Name = FormatAuthor(usr, member, err)
+		user.UserID = m.Author.ID
+		user.NoiseCredits = 0
 		user.Dailies = false
 		break
 

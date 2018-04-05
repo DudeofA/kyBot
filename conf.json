@@ -1,13 +1,24 @@
 {
-    "Admin":    	"144220178853396480",
-    "Bots":			["211307697331634186", "426059234543927307"],
-    "LogID":    	"296765401944162305",
-    "LogMessage":	true,
-    "LogStatus":	true,
-    "LogVoice":		true,
-    "Monitor":  	["260204967841890304", "180753847025795073", "278668025442598914"],
-    "Noise":    	true,
-    "Prefix":   	"_",
-    "Status":   	"Alpha v0.4",
-    "Test":     	["one", "two"]
+    "Admin": "144220178853396480",
+    "Bots": [
+        "211307697331634186",
+        "426059234543927307"
+    ],
+    "Coins": "Jew",
+    "LogID": "296765401944162305",
+    "LogMessage": true,
+    "LogStatus": true,
+    "LogVoice": true,
+    "Monitor": [
+        "260204967841890304",
+        "180753847025795073",
+        "278668025442598914"
+    ],
+    "Noise": true,
+    "Prefix": "_",
+    "Status": "Alpha v0.5",
+    "Test": [
+        "one",
+        "two"
+    ]
 }

@@ -24,6 +24,7 @@ func init() {
 type Config struct {
 	Admin      string
 	Bots       []string
+	Coins      string
 	LogID      string
 	LogMessage bool
 	LogStatus  bool
@@ -50,6 +51,25 @@ func ReadConfig() {
 	file.Close()
 }
 
+func WriteConfig() {
+	configData, err := json.MarshalIndent(config, "", "    ")
+	if err != nil {
+		panic(err)
+	}
+	//Open file
+	jsonFile, err := os.Create("conf.json")
+	if err != nil {
+		panic(err)
+	}
+	//Write to file
+	_, err = jsonFile.Write(configData)
+	if err != nil {
+		panic(err)
+	}
+	//Cleanup
+	jsonFile.Close()
+}
+
 func ResetDailies() {
 	for j := range USArray.Users {
 		USArray.Users[j].Dailies = false
@@ -63,10 +83,13 @@ func main() {
 		InitUserFile()
 	}
 	ReadConfig()
+	WriteConfig()
 	ReadUserFile()
 
-	gocron.Every(1).Day().At("00:00").Do(ResetDailies)
-	<-gocron.Start()
+	go func() {
+		gocron.Every(1).Day().At("20:00").Do(ResetDailies)
+		<-gocron.Start()
+	}()
 
 	//Account for no token at runtime
 	if token == "" {
@@ -157,11 +180,20 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		Log(s, m, "MSG")
 	}
 
+	if m.Content == "(╯°□°）╯︵ ┻━┻" {
+		s.ChannelMessageSend(m.ChannelID, "┬─┬ノ( º _ ºノ)")
+	}
+
 	if strings.HasPrefix(m.Content, config.Prefix) {
 		// Remove prefix for 'performance'
 		input := strings.TrimPrefix(m.Content, config.Prefix)
 
 		switch input {
+
+		case "account":
+			usr, _ := ReadUser(s, m, "MSG")
+			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("💵 | You have a total of **%d** %s coins", usr.NoiseCredits, config.Coins))
+			break
 
 		case "bitconnect":
 			PlayClip(s, m, "bitconnect")
@@ -171,11 +203,22 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			_, i := ReadUser(s, m, "MSG")
 			usr := &USArray.Users[i]
 			if !usr.Dailies {
-				usr.NoiseCredits += 1
+				usr.NoiseCredits += 100
 				usr.Dailies = true
-				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Dailies received! Total credits: %d", usr.NoiseCredits))
+				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf(
+					"💵 | Dailies received! Total %s coins: **%d**",
+					config.Coins, usr.NoiseCredits))
 			} else {
-				s.ChannelMessageSend(m.ChannelID, "Already got dailies, check back tomorrow.")
+				_, nextRuntime := gocron.NextRun()
+				timeUntil := time.Until(nextRuntime)
+				hour := timeUntil / time.Hour
+				timeUntil -= hour * time.Hour
+				min := timeUntil / time.Minute
+				timeUntil -= min * time.Minute
+				sec := timeUntil / time.Second
+				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf(
+					"💵 | You have already collected today's dailies.\nDailies reset in %d hour(s), %d minute(s) and %d second(s).",
+					hour, min, sec))
 			}
 			WriteUserFile()
 			break

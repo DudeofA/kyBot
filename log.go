@@ -65,6 +65,9 @@ func FormatAuthor(user *discordgo.User, member *discordgo.Member, err error) (na
 }
 
 func Log(s *discordgo.Session, i interface{}, code string) {
+	if config.LogID == "" {
+		return
+	}
 	timestamp := time.Now()
 	timestampf := timestamp.Format("Mon Jan 2 - 3:04PM")
 

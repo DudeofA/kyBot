@@ -7,6 +7,7 @@ import (
 	// "os"
 
 	"github.com/bwmarrin/discordgo"
+	// "github.com/jasonlvhit/gocron"
 )
 
 func Test(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -14,7 +15,6 @@ func Test(s *discordgo.Session, m *discordgo.MessageCreate) {
 	//
 	//Make sure it actually starts and runs once
 
-	//
 	ResetDailies()
 
 	//Makes sure it makes it to then end
