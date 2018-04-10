@@ -224,12 +224,12 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		default:
 			s.ChannelMessageSend(m.ChannelID, "Not a command I'm pretty sure")
 		}
+    }
 
-		if strings.HasPrefix(m.Content, "quote ") {
-			//NEEDS IMPROVEMENTS
-			quote := strings.TrimPrefix(m.Content, "quote ")
-			Vote(s, m, quote)
-		}
-
+	if strings.HasPrefix(m.Content, "quote ") {
+		//NEEDS IMPROVEMENTS
+		quote := strings.TrimPrefix(m.Content, "quote ")
+		Vote(s, m, quote)
 	}
+
 }
