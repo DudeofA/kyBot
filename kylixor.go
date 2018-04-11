@@ -147,8 +147,10 @@ func main() {
 	<-sc
 
 	// Cleanly close down the Discord session.
-	if curChan.ChannelID != "" {
-		curChan.Disconnect()
+	if curChan != nil {
+		if curChan.ChannelID != "" {
+			curChan.Disconnect()
+		}
 	}
 	ky.Close()
 }
