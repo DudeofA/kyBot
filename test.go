@@ -15,7 +15,15 @@ func Test(s *discordgo.Session, m *discordgo.MessageCreate) {
 	//
 	//Make sure it actually starts and runs once
 
-	ResetDailies()
+	g, _ := s.Guild(USArray.GID)
+	voiceChan := config.DefaultChan
+	for i := range g.VoiceStates {
+		if g.VoiceStates[i].UserID == m.Author.ID {
+			voiceChan = g.VoiceStates[i].ChannelID
+		}
+	}
+	curChan, _ = s.ChannelVoiceJoin(USArray.GID, voiceChan, false, false)
+	// curChan.Disconnect()
 
 	//Makes sure it makes it to then end
 	//

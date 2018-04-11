@@ -73,6 +73,7 @@ func PlayClip(s *discordgo.Session, m *discordgo.MessageCreate, clip string) {
 	_, i := ReadUser(s, m, "MSG")
 	if USArray.Users[i].NoiseCredits >= 100 {
 		USArray.Users[i].NoiseCredits -= 100
+		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("💵 | You now have a total of **%d** %s coins", USArray.Users[i].NoiseCredits, config.Coins))
 		WriteUserFile()
 	} else {
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf(
@@ -84,15 +85,15 @@ func PlayClip(s *discordgo.Session, m *discordgo.MessageCreate, clip string) {
 	g, _ := s.State.Guild(c.GuildID)
 	for _, vs := range g.VoiceStates {
 		if vs.UserID == m.Author.ID {
-			voiceChannel, _ := s.ChannelVoiceJoin(c.GuildID, vs.ChannelID, false, false)
+			curChan, _ := s.ChannelVoiceJoin(c.GuildID, vs.ChannelID, false, false)
 			switch clip {
 
 			case "yee":
-				dgvoice.PlayAudioFile(voiceChannel, "clips/yee.mp3", stopChan)
+				dgvoice.PlayAudioFile(curChan, "clips/yee.mp3", stopChan)
 				// voiceChannel.Disconnect()
 				return
 			case "bitconnect":
-				dgvoice.PlayAudioFile(voiceChannel, "clips/bitconnect.wav", stopChan)
+				dgvoice.PlayAudioFile(curChan, "clips/bitconnect.wav", stopChan)
 				// voiceChannel.Disconnect()
 				return
 			default:

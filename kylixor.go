@@ -41,6 +41,7 @@ type Config struct {
 var config = Config{}
 var self *discordgo.User
 var token string
+var curChan *discordgo.VoiceConnection
 
 //Read in the config into the Config structure
 func ReadConfig() {
@@ -146,6 +147,9 @@ func main() {
 	<-sc
 
 	// Cleanly close down the Discord session.
+	if curChan.ChannelID != "" {
+		curChan.Disconnect()
+	}
 	ky.Close()
 }
 
@@ -155,6 +159,7 @@ func ready(s *discordgo.Session, event *discordgo.Ready) {
 	// Set the playing status.
 	s.UpdateStatus(0, config.Status)
 	self = event.User
+	USArray.GID = event.Guilds[0].ID
 }
 
 // This function will be called each time certain (or all) users change their
@@ -186,31 +191,36 @@ func VoiceStateUpdate(s *discordgo.Session, v *discordgo.VoiceStateUpdate) {
 	VoiceChannelChange := UpdateUser(s, v, "VOICE")
 	if VoiceChannelChange {
 		Log(s, v, "VOICE")
+		//If the VoiceStateUpdate is a join channel
 		if v.ChannelID != "" {
 			usr, _ := ReadUser(s, v, "VOICE")
-			if usr.PlayAnthem {
-				if usr.Anthem != "" {
-					PlayAnthem(s, v, usr.Anthem)
-				}
+			if usr.PlayAnthem && usr.Anthem != "" {
+				PlayAnthem(s, v, usr.Anthem)
+			}
+		}
+		//Join channel with most people
+		g, _ := s.State.Guild(USArray.GID)
+		if len(g.VoiceStates) > 0 {
+			m := make(map[string]int)
+			for i := range g.VoiceStates {
+				m[g.VoiceStates[i].ChannelID] += 1
 			}
 
-			c, _ := s.State.Channel(v.ChannelID)
-			g, _ := s.State.Guild(c.GuildID)
-			if len(g.VoiceStates) > 1 {
-				m := make(map[string]int)
-				for i := range g.VoiceStates {
-					m[g.VoiceStates[i].ChannelID] += 1
-				}
+			pl := make(PairList, len(m))
+			i := 0
+			for k, v := range m {
+				pl[i] = Pair{k, v}
+				i++
+			}
+			sort.Sort(sort.Reverse(pl))
 
-				pl := make(PairList, len(m))
-				i := 0
-				for k, v := range m {
-					pl[i] = Pair{k, v}
-					i++
-				}
-				sort.Sort(sort.Reverse(pl))
-
-				s.ChannelVoiceJoin(c.GuildID, pl[0].Key, false, false)
+			//If bot is the only one left, leave
+			if pl[0].Value == 1 && curChan != nil {
+				curChan.Disconnect()
+				curChan.ChannelID = ""
+			} else {
+				//Join channel with most people
+				curChan, _ = s.ChannelVoiceJoin(USArray.GID, pl[0].Key, false, false)
 			}
 		}
 	}
