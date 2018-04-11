@@ -18,6 +18,7 @@ type UserState struct {
 	UserID       string `json:"userID"`
 	CurrentCID   string `json:"currentCID"`
 	LastSeenCID  string `json:"lastSeenCID"`
+	PlayAnthem   bool   `json:"playAnthem"`
 	Anthem       string `json:"anthem"`
 	NoiseCredits int    `json:"noiseCredits"`
 	Dailies      bool   `json:"dailies"`
@@ -104,7 +105,7 @@ func CreateUser(s *discordgo.Session, i interface{}, code string) (UVS UserState
 		user.CurrentCID = v.ChannelID
 		user.LastSeenCID = v.ChannelID
 		user.NoiseCredits = 0
-		user.Dailies = false
+		user.PlayAnthem = true
 		break
 	case "MSG":
 		m := i.(*discordgo.MessageCreate)
@@ -114,7 +115,7 @@ func CreateUser(s *discordgo.Session, i interface{}, code string) (UVS UserState
 		user.Name = FormatAuthor(usr, member, err)
 		user.UserID = m.Author.ID
 		user.NoiseCredits = 0
-		user.Dailies = false
+		user.PlayAnthem = true
 		break
 
 	default:

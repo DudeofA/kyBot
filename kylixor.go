@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/signal"
+	"sort"
 	"strings"
 	"syscall"
 	"time"
@@ -22,25 +23,26 @@ func init() {
 }
 
 type Config struct {
-	Admin      string
-	Bots       []string
-	Coins      string
-	LogID      string
-	LogMessage bool
-	LogStatus  bool
-	LogVoice   bool
-	Monitor    []string
-	Noise      bool
-	Prefix     string
-	Status     string
-	Test       []string
+	Admin       string
+	Bots        []string
+	Coins       string
+	DefaultChan string
+	LogID       string
+	LogMessage  bool
+	LogStatus   bool
+	LogVoice    bool
+	Monitor     []string
+	Noise       bool
+	Prefix      string
+	Status      string
+	Test        []string
 }
 
 var config = Config{}
-var followUser *discordgo.User
+var self *discordgo.User
 var token string
-var stopChan = make(chan bool)
 
+//Read in the config into the Config structure
 func ReadConfig() {
 	file, _ := os.Open("conf.json")
 	decoder := json.NewDecoder(file)
@@ -51,7 +53,9 @@ func ReadConfig() {
 	file.Close()
 }
 
+//Write out the current Config structure to file, indented nicely
 func WriteConfig() {
+	//Indent so its readable
 	configData, err := json.MarshalIndent(config, "", "    ")
 	if err != nil {
 		panic(err)
@@ -70,6 +74,7 @@ func WriteConfig() {
 	jsonFile.Close()
 }
 
+//Function to call once a day
 func ResetDailies() {
 	for j := range USArray.Users {
 		USArray.Users[j].Dailies = false
@@ -85,6 +90,11 @@ func main() {
 	ReadConfig()
 	WriteConfig()
 	ReadUserFile()
+
+	for j := range USArray.Users {
+		USArray.Users[j].PlayAnthem = true
+	}
+	WriteUserFile()
 
 	go func() {
 		gocron.Every(1).Day().At("20:00").Do(ResetDailies)
@@ -104,11 +114,14 @@ func main() {
 		return
 	}
 
-	// Register ready as a callback for the ready events.
+	// Register ready as a callback for the ready events
 	ky.AddHandlerOnce(ready)
 
-	// Register messageCreate as a callback for the messageCreate events.
+	// Register messageCreate as a callback for the messageCreate events
 	ky.AddHandler(messageCreate)
+
+	// Register messageDelete as a callback for the messageDelete events
+	ky.AddHandler(messageDelete)
 
 	// Register presenceUpdate to see who is online
 	ky.AddHandler(presenceUpdate)
@@ -141,6 +154,7 @@ func main() {
 func ready(s *discordgo.Session, event *discordgo.Ready) {
 	// Set the playing status.
 	s.UpdateStatus(0, config.Status)
+	self = event.User
 }
 
 // This function will be called each time certain (or all) users change their
@@ -154,13 +168,57 @@ func presenceUpdate(s *discordgo.Session, p *discordgo.PresenceUpdate) {
 	}
 }
 
+type Pair struct {
+	Key   string
+	Value int
+}
+
+type PairList []Pair
+
+func (p PairList) Len() int           { return len(p) }
+func (p PairList) Less(i, j int) bool { return p[i].Value < p[j].Value }
+func (p PairList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+
 // This function will be called when a user changes their voice state
 // (mute, deafen, join channel, leave channel, etc.)
 func VoiceStateUpdate(s *discordgo.Session, v *discordgo.VoiceStateUpdate) {
 	//Update the user and if it is a real update log it
-	success := UpdateUser(s, v, "VOICE")
-	if success {
+	VoiceChannelChange := UpdateUser(s, v, "VOICE")
+	if VoiceChannelChange {
 		Log(s, v, "VOICE")
+		if v.ChannelID != "" {
+			usr, _ := ReadUser(s, v, "VOICE")
+			if usr.PlayAnthem {
+				if usr.Anthem != "" {
+					PlayAnthem(s, v, usr.Anthem)
+				}
+			}
+
+			c, _ := s.State.Channel(v.ChannelID)
+			g, _ := s.State.Guild(c.GuildID)
+			if len(g.VoiceStates) > 1 {
+				m := make(map[string]int)
+				for i := range g.VoiceStates {
+					m[g.VoiceStates[i].ChannelID] += 1
+				}
+
+				pl := make(PairList, len(m))
+				i := 0
+				for k, v := range m {
+					pl[i] = Pair{k, v}
+					i++
+				}
+				sort.Sort(sort.Reverse(pl))
+
+				s.ChannelVoiceJoin(c.GuildID, pl[0].Key, false, false)
+			}
+		}
+	}
+}
+
+func messageDelete(s *discordgo.Session, m *discordgo.MessageDelete) {
+	if m.ChannelID != config.LogID {
+		Log(s, m, "DEL")
 	}
 }
 
@@ -169,10 +227,8 @@ func VoiceStateUpdate(s *discordgo.Session, v *discordgo.VoiceStateUpdate) {
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	// Ignore all messages created by the bots
 	// This isn't required in this specific example but it's a good practice.
-	for _, b := range config.Bots {
-		if b == m.Author.ID {
-			return
-		}
+	if m.Author.Bot {
+		return
 	}
 
 	// Log every message into the log channel
@@ -193,6 +249,10 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		case "account":
 			usr, _ := ReadUser(s, m, "MSG")
 			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("💵 | You have a total of **%d** %s coins", usr.NoiseCredits, config.Coins))
+			break
+
+		case "anthem":
+			SetAnthem(s, m)
 			break
 
 		case "bitconnect":
@@ -295,12 +355,10 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		default:
 			s.ChannelMessageSend(m.ChannelID, "Not a command I'm pretty sure")
 		}
-
-		if strings.HasPrefix(m.Content, "quote ") {
-			//NEEDS IMPROVEMENTS
-			quote := strings.TrimPrefix(m.Content, "quote ")
-			Vote(s, m, quote)
-		}
-
+	}
+	if strings.HasPrefix(m.Content, "quote ") {
+		//NEEDS IMPROVEMENTS
+		quote := strings.TrimPrefix(m.Content, "quote ")
+		Vote(s, m, quote)
 	}
 }

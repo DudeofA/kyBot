@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -17,6 +18,15 @@ func GetAuthor(s *discordgo.Session, i interface{}, code string) (name string) {
 		user := m.Author
 		channel, _ := s.State.Channel(m.ChannelID)
 		member, err := s.State.Member(channel.GuildID, m.Author.ID)
+		name = FormatAuthor(user, member, err)
+		break
+	case "DEL":
+		// Typecast interface to MessageCreate
+		d := i.(*discordgo.MessageDelete)
+		//Get user and member using what is within each event struct
+		user := d.Author
+		channel, _ := s.State.Channel(d.ChannelID)
+		member, err := s.State.Member(channel.GuildID, d.Author.ID)
 		name = FormatAuthor(user, member, err)
 		break
 	case "STATUS":
@@ -64,6 +74,26 @@ func FormatAuthor(user *discordgo.User, member *discordgo.Member, err error) (na
 	return name
 }
 
+func SearchMessages(s *discordgo.Session, cID string, mID string) (authorID string, delMessage string) {
+	messages, err := s.ChannelMessages(cID, 50, "", "", "")
+	if err != nil {
+		panic(err)
+	}
+	for i := range messages {
+		if strings.Contains(messages[i].Content, mID) {
+			delMessageRaw := messages[i].ContentWithMentionsReplaced()
+			delMessageContent := strings.SplitAfter(delMessageRaw, ": ")
+			delMessageClean := strings.Split(delMessageContent[1], "\n")
+			delMessage = delMessageClean[0]
+			delauthor := strings.Split(delMessageRaw, "\n")
+			author := strings.Split(delauthor[2], ": ")
+			authorID = author[0]
+			return authorID, delMessage
+		}
+	}
+	return authorID, delMessage
+}
+
 func Log(s *discordgo.Session, i interface{}, code string) {
 	if config.LogID == "" {
 		return
@@ -78,11 +108,26 @@ func Log(s *discordgo.Session, i interface{}, code string) {
 			return
 		}
 		m := i.(*discordgo.MessageCreate)
-		username := GetAuthor(s, i, code)
-
+		username := GetAuthor(s, m, code)
 		channel, _ := s.Channel(m.ChannelID)
-		s.ChannelMessageSend(config.LogID, fmt.Sprintf("```diff\n- %s - %s - %s - %s:\n!MSG: %s\n```",
-			timestampf, channel.Name, username, code, m.ContentWithMentionsReplaced()))
+		s.ChannelMessageSend(config.LogID, fmt.Sprintf("```diff\n- %s - %s - %s - %s:\n!%s: %s\n```",
+			timestampf, channel.Name, m.ID, code, username, m.ContentWithMentionsReplaced()))
+		break
+
+	case "DEL":
+		if !config.LogMessage {
+			return
+		}
+		d := i.(*discordgo.MessageDelete)
+		channel, _ := s.Channel(d.ChannelID)
+
+		author, delMessage := SearchMessages(s, config.LogID, d.ID)
+		if delMessage == "" {
+			delMessage = "Cannot find deleted message in log"
+			author = "Cannot find author"
+		}
+		s.ChannelMessageSend(config.LogID, fmt.Sprintf("```diff\n- %s - %s - %s - %s:\n%s: %s\n```",
+			timestampf, channel.Name, d.ID, code, author, delMessage))
 		break
 
 	case "STATUS":
