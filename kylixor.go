@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"os/signal"
 	"sort"
@@ -85,6 +86,8 @@ func ResetDailies() {
 
 func main() {
 	//Read in files
+	rand.Seed(time.Now().Unix())
+
 	if _, err := os.Stat("users.json"); os.IsNotExist(err) {
 		InitUserFile()
 	}
@@ -365,7 +368,17 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			break
 
 		default:
-			s.ChannelMessageSend(m.ChannelID, "Not a command I'm pretty sure")
+			responseList := make([]string, 0)
+			responseList = append(responseList,
+				"My slave isn't that good at coding, sorry",
+				"I'm trying really hard but you're not being very clear",
+				"I have no idea what you're talking about",
+				"You think I'm some kind of AI?",
+				"I'm smarter than you but I'm not _that_ smart",
+				"I don't want to do that",
+				"No")
+
+			s.ChannelMessageSend(m.ChannelID, responseList[rand.Intn(len(responseList))])
 		}
 	}
 	if strings.HasPrefix(m.Content, "quote ") {
