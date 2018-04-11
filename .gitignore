@@ -1,6 +1,6 @@
 kylixor
 START
 quotes.txt
-*.json
 backup/
-kylixor.sublime-*
+kylixor.sublime*
+*.json
