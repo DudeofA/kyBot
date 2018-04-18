@@ -11,7 +11,7 @@ import (
 )
 
 func SetAnthem(s *discordgo.Session, m *discordgo.MessageCreate) {
-	usr, i := ReadUser(s, m, "MSG")
+	usr, i := USArray.ReadUser(s, m, "MSG")
 	var anthem string
 	anthem = usr.Anthem
 	if usr.Anthem == "" {
@@ -40,15 +40,16 @@ func SetAnthem(s *discordgo.Session, m *discordgo.MessageCreate) {
 			if index == 0 {
 				USArray.Users[i].Anthem = ""
 				s.ChannelMessageSend(m.ChannelID, "Anthem cleared")
-				WriteUserFile()
+				USArray.WriteUserFile()
 				stopHandling()
 				return
 			}
 			// _, err := ioutil.ReadFile("clips/anthems/" + files[index-1].Name())
 			if index <= len(files) && index >= 1 {
 				USArray.Users[i].Anthem = files[index-1].Name()
-				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Anthem set to %s", files[index-1].Name()))
-				WriteUserFile()
+				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Anthem set to %s",
+					files[index-1].Name()))
+				USArray.WriteUserFile()
 				stopHandling()
 				return
 			} else {
@@ -70,11 +71,11 @@ func PlayClip(s *discordgo.Session, m *discordgo.MessageCreate, clip string) {
 		return
 	}
 
-	_, i := ReadUser(s, m, "MSG")
+	_, i := USArray.ReadUser(s, m, "MSG")
 	if USArray.Users[i].NoiseCredits >= 100 {
 		USArray.Users[i].NoiseCredits -= 100
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("💵 | You now have a total of **%d** %s coins", USArray.Users[i].NoiseCredits, config.Coins))
-		WriteUserFile()
+		USArray.WriteUserFile()
 	} else {
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf(
 			"You do not have enough credits to use this command\nYou need 100 coins (have %d)", USArray.Users[i].NoiseCredits))
@@ -118,13 +119,13 @@ func PlayAnthem(s *discordgo.Session, v *discordgo.VoiceStateUpdate, anthem stri
 	dgvoice.PlayAudioFile(voiceChan, fmt.Sprintf("clips/anthems/%s", anthem), stopChan)
 	// voiceChan.Disconnect()
 
-	_, i := ReadUser(s, v, "VOICE")
+	_, i := USArray.ReadUser(s, v, "VOICE")
 	USArray.Users[i].PlayAnthem = false
-	WriteUserFile()
+	USArray.WriteUserFile()
 
 	go func() {
 		time.Sleep(time.Minute * 10)
 		USArray.Users[i].PlayAnthem = true
-		WriteUserFile()
+		USArray.WriteUserFile()
 	}()
 }

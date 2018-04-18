@@ -45,7 +45,7 @@ func GetAuthor(s *discordgo.Session, i interface{}, code string) (name string) {
 		//Get channel despite if the voicestateupdate is empty
 		var channel *discordgo.Channel
 		if v.ChannelID == "" {
-			fileUser, _ := ReadUser(s, v, "VOICE")
+			fileUser, _ := USArray.ReadUser(s, v, "VOICE")
 			channel, _ = s.State.Channel(fileUser.LastSeenCID)
 		} else {
 			channel, _ = s.State.Channel(v.ChannelID)
@@ -150,7 +150,7 @@ func Log(s *discordgo.Session, i interface{}, code string) {
 		var channel *discordgo.Channel
 		if v.ChannelID == "" {
 			action = "Left"
-			fileUser, _ := ReadUser(s, v, "VOICE")
+			fileUser, _ := USArray.ReadUser(s, v, "VOICE")
 			channel, _ = s.State.Channel(fileUser.LastSeenCID)
 		} else {
 			action = "Joined"

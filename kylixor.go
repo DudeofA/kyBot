@@ -45,10 +45,10 @@ var token string
 var curChan *discordgo.VoiceConnection
 
 //Read in the config into the Config structure
-func ReadConfig() {
+func (c Config) ReadConfig() {
 	file, _ := os.Open("conf.json")
 	decoder := json.NewDecoder(file)
-	err := decoder.Decode(&config)
+	err := decoder.Decode(&c)
 	if err != nil {
 		fmt.Println("error: ", err)
 	}
@@ -56,9 +56,9 @@ func ReadConfig() {
 }
 
 //Write out the current Config structure to file, indented nicely
-func WriteConfig() {
+func (c Config) WriteConfig() {
 	//Indent so its readable
-	configData, err := json.MarshalIndent(config, "", "    ")
+	configData, err := json.MarshalIndent(c, "", "    ")
 	if err != nil {
 		panic(err)
 	}
@@ -81,7 +81,7 @@ func ResetDailies() {
 	for j := range USArray.Users {
 		USArray.Users[j].Dailies = false
 	}
-	WriteUserFile()
+	USArray.WriteUserFile()
 }
 
 func main() {
@@ -91,14 +91,14 @@ func main() {
 	if _, err := os.Stat("users.json"); os.IsNotExist(err) {
 		InitUserFile()
 	}
-	ReadConfig()
-	WriteConfig()
-	ReadUserFile()
+	config.ReadConfig()
+	config.WriteConfig()
+	USArray.ReadUserFile()
 
 	for j := range USArray.Users {
 		USArray.Users[j].PlayAnthem = true
 	}
-	WriteUserFile()
+	USArray.WriteUserFile()
 
 	go func() {
 		gocron.Every(1).Day().At("19:00").Do(ResetDailies)
@@ -193,18 +193,21 @@ func (p PairList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 // (mute, deafen, join channel, leave channel, etc.)
 func VoiceStateUpdate(s *discordgo.Session, v *discordgo.VoiceStateUpdate) {
 	//Update the user and if it is a real update log it
-	VoiceChannelChange := UpdateUser(s, v, "VOICE")
+	VoiceChannelChange := USArray.UpdateUser(s, v, "VOICE")
 	if VoiceChannelChange {
 		Log(s, v, "VOICE")
 		//If the VoiceStateUpdate is a join channel
-		if v.ChannelID != "" {
-			usr, _ := ReadUser(s, v, "VOICE")
-			if usr.PlayAnthem && usr.Anthem != "" {
-				PlayAnthem(s, v, usr.Anthem)
+		g, _ := s.Guild(USArray.GID)
+		if v.ChannelID != g.AfkChannelID {
+			if v.ChannelID != "" {
+				usr, _ := USArray.ReadUser(s, v, "VOICE")
+				if usr.PlayAnthem && usr.Anthem != "" {
+					PlayAnthem(s, v, usr.Anthem)
+					time.Sleep(3 * time.Second)
+				}
 			}
 		}
 		//Join channel with most people
-		g, _ := s.State.Guild(USArray.GID)
 		if len(g.VoiceStates) > 0 {
 			m := make(map[string]int)
 			for i := range g.VoiceStates {
@@ -256,13 +259,15 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	if strings.HasPrefix(m.Content, config.Prefix) {
-		// Remove prefix for 'performance'
+		// Remove prefix
 		input := strings.TrimPrefix(m.Content, config.Prefix)
+		// Split message into command and anything after
+		command := strings.SplitN(input, " ", 2)
 
-		switch input {
+		switch strings.ToLower(command[0]) {
 
 		case "account":
-			usr, _ := ReadUser(s, m, "MSG")
+			usr, _ := USArray.ReadUser(s, m, "MSG")
 			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("💵 | You have a total of **%d** %s coins", usr.NoiseCredits, config.Coins))
 			break
 
@@ -275,7 +280,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			break
 
 		case "dailies":
-			_, i := ReadUser(s, m, "MSG")
+			_, i := USArray.ReadUser(s, m, "MSG")
 			usr := &USArray.Users[i]
 			if !usr.Dailies {
 				usr.NoiseCredits += 100
@@ -295,7 +300,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 					"💵 | You have already collected today's dailies.\nDailies reset in %d hour(s), %d minute(s) and %d second(s).",
 					hour, min, sec))
 			}
-			WriteUserFile()
+			USArray.WriteUserFile()
 			break
 
 		case "help":
@@ -321,6 +326,10 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			s.ChannelMessageSend(m.ChannelID, "🍕 here it is, come get it. \nI ain't your delivery bitch.")
 			break
 
+		case "quote":
+			Vote(s, m, command[1])
+			break
+
 		case "quoteclear":
 			if m.Author.ID == config.Admin {
 				// Create empty file to overwrite old quote DANGER: CAN'T UNDO
@@ -343,15 +352,26 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 		case "reload":
 			if m.Author.ID == config.Admin {
-				ReadConfig()
-				ReadUserFile()
+				config.ReadConfig()
+				USArray.ReadUserFile()
 				s.ChannelMessageSend(m.ChannelID, "Config reloaded")
 			}
 			break
 
+		case "remindme":
+			_, i := USArray.ReadUser(s, m, "MSG")
+
+			//If there are no reminders
+			if USArray.Users[i].Reminders == nil {
+				USArray.Users[i].Reminders = make([]string, 0)
+			}
+			USArray.Users[i].Reminders = append(USArray.Users[i].Reminders, m.Content)
+			USArray.WriteUserFile()
+			break
+
 		case "status":
 			if m.Author.ID == config.Admin {
-				ReadConfig()
+				config.ReadConfig()
 				s.UpdateStatus(0, config.Status)
 				s.ChannelMessageSend(m.ChannelID, "Status refreshed")
 			}
@@ -381,10 +401,4 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			s.ChannelMessageSend(m.ChannelID, responseList[rand.Intn(len(responseList))])
 		}
 	}
-	if strings.HasPrefix(m.Content, "quote ") {
-		//NEEDS IMPROVEMENTS
-		quote := strings.TrimPrefix(m.Content, "quote ")
-		Vote(s, m, quote)
-	}
-
 }
