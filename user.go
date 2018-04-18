@@ -28,21 +28,26 @@ type UserState struct {
 var USArray UserStateArray
 
 func InitUserFile() {
-	file, err := os.Create("users.json")
+	//Indent so its readable
+	userData, err := json.MarshalIndent(USArray, "", "    ")
 	if err != nil {
 		panic(err)
 	}
-	file.Write([]byte(`
-		{
-	    	"gID": "",
-	    	"users": [
-	        	{}
-	    	]
-		}`))
-	file.Close()
+	//Open file
+	jsonFile, err := os.Create("users.json")
+	if err != nil {
+		panic(err)
+	}
+	//Write to file
+	_, err = jsonFile.Write(userData)
+	if err != nil {
+		panic(err)
+	}
+	//Cleanup
+	jsonFile.Close()
 }
 
-func (u UserStateArray) ReadUserFile() {
+func (u *UserStateArray) ReadUserFile() {
 	file, err := os.Open("users.json")
 	if err != nil {
 		panic(err)
@@ -57,7 +62,27 @@ func (u UserStateArray) ReadUserFile() {
 	u.WriteUserFile()
 }
 
-func (u UserStateArray) ReadUser(s *discordgo.Session, i interface{}, code string) (UVS UserState, j int) {
+func (u *UserStateArray) WriteUserFile() {
+	//Marshal global variable data
+	jsonData, err := json.MarshalIndent(u, "", "    ")
+	if err != nil {
+		panic(err)
+	}
+	//Open file
+	jsonFile, err := os.Create("users.json")
+	if err != nil {
+		panic(err)
+	}
+	//Write to file
+	_, err = jsonFile.Write(jsonData)
+	if err != nil {
+		panic(err)
+	}
+	//Cleanup
+	jsonFile.Close()
+}
+
+func (u *UserStateArray) ReadUser(s *discordgo.Session, i interface{}, code string) (UVS UserState, j int) {
 	//Search through user array for specific user and return them
 	switch code {
 
@@ -91,7 +116,7 @@ func (u UserStateArray) ReadUser(s *discordgo.Session, i interface{}, code strin
 
 }
 
-func (u UserStateArray) CreateUser(s *discordgo.Session, i interface{}, code string) (UVS UserState) {
+func (u *UserStateArray) CreateUser(s *discordgo.Session, i interface{}, code string) (UVS UserState) {
 	var user UserState
 
 	switch code {
@@ -128,7 +153,7 @@ func (u UserStateArray) CreateUser(s *discordgo.Session, i interface{}, code str
 	return user
 }
 
-func (u UserStateArray) UpdateUser(s *discordgo.Session, i interface{}, code string) bool {
+func (u *UserStateArray) UpdateUser(s *discordgo.Session, i interface{}, code string) bool {
 	switch code {
 
 	case "VOICE":
@@ -155,24 +180,4 @@ func (u UserStateArray) UpdateUser(s *discordgo.Session, i interface{}, code str
 
 	u.WriteUserFile()
 	return true
-}
-
-func (u UserStateArray) WriteUserFile() {
-	//Marshal global variable data
-	jsonData, err := json.MarshalIndent(u, "", "    ")
-	if err != nil {
-		panic(err)
-	}
-	//Open file
-	jsonFile, err := os.Create("users.json")
-	if err != nil {
-		panic(err)
-	}
-	//Write to file
-	_, err = jsonFile.Write(jsonData)
-	if err != nil {
-		panic(err)
-	}
-	//Cleanup
-	jsonFile.Close()
 }

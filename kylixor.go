@@ -44,19 +44,41 @@ var self *discordgo.User
 var token string
 var curChan *discordgo.VoiceConnection
 
+func InitConfFile() {
+	config.Prefix = "!"
+	config.Status = "!help"
+
+	configData, err := json.MarshalIndent(config, "", "    ")
+	if err != nil {
+		panic(err)
+	}
+	//Open file
+	jsonFile, err := os.Create("conf.json")
+	if err != nil {
+		panic(err)
+	}
+	//Write to file
+	_, err = jsonFile.Write(configData)
+	if err != nil {
+		panic(err)
+	}
+	//Cleanup
+	jsonFile.Close()
+}
+
 //Read in the config into the Config structure
-func (c Config) ReadConfig() {
+func (c *Config) ReadConfig() {
 	file, _ := os.Open("conf.json")
 	decoder := json.NewDecoder(file)
 	err := decoder.Decode(&c)
 	if err != nil {
-		fmt.Println("error: ", err)
+		panic(err)
 	}
 	file.Close()
 }
 
 //Write out the current Config structure to file, indented nicely
-func (c Config) WriteConfig() {
+func (c *Config) WriteConfig() {
 	//Indent so its readable
 	configData, err := json.MarshalIndent(c, "", "    ")
 	if err != nil {
@@ -88,13 +110,18 @@ func main() {
 	//Read in files
 	rand.Seed(time.Now().Unix())
 
-	if _, err := os.Stat("users.json"); os.IsNotExist(err) {
-		InitUserFile()
+	if _, err := os.Stat("conf.json"); os.IsNotExist(err) {
+		fmt.Println("\nCannot find conf.json, creating new...")
+		InitConfFile()
 	}
 	config.ReadConfig()
 	config.WriteConfig()
-	USArray.ReadUserFile()
 
+	if _, err := os.Stat("users.json"); os.IsNotExist(err) {
+		fmt.Println("\nCannot find users.json, creating new...")
+		InitUserFile()
+	}
+	USArray.ReadUserFile()
 	for j := range USArray.Users {
 		USArray.Users[j].PlayAnthem = true
 	}
