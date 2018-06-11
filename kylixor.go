@@ -25,7 +25,6 @@ func init() {
 
 type Config struct {
 	Admin       string
-	Bots        []string
 	Coins       string
 	DefaultChan string
     Follow      bool
@@ -366,6 +365,10 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("```"+string(readme)+"```"))
 			break
 
+        case "karma":
+            s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("☯ | Current Karma: %d", USArray.Karma))
+            break
+
 		case "ping":
 			pongMessage, _ := s.ChannelMessageSend(m.ChannelID, "Pong!")
 			// Format Discord time to readable time
@@ -412,6 +415,11 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			}
 			break
 
+        case "resetdailies":
+            s.ChannelMessageSend(m.ChannelID, "Reseting Dailies")
+            ResetDailies()
+            break
+
 		case "remindme":
 			_, i := USArray.ReadUser(s, m, "MSG")
 
@@ -444,13 +452,13 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		default:
 			responseList := make([]string, 0)
 			responseList = append(responseList,
-				"My slave isn't that good at coding, sorry",
 				"I'm trying really hard but you're not being very clear",
 				"I have no idea what you're talking about",
-				"You think I'm some kind of AI?",
-				"I'm smarter than you but I'm not _that_ smart",
-				"I don't want to do that",
-				"No")
+				"I'm smarter than you but thats not enough to do _that_",
+				"I don't want to",
+				"No",
+                "wat",
+                "u wot m8")
 
 			s.ChannelMessageSend(m.ChannelID, responseList[rand.Intn(len(responseList))])
 		}
