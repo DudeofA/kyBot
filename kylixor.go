@@ -28,6 +28,7 @@ type Config struct {
 	Bots        []string
 	Coins       string
 	DefaultChan string
+    Follow      bool
 	LogID       string
 	LogMessage  bool
 	LogStatus   bool
@@ -45,8 +46,8 @@ var token string
 var curChan *discordgo.VoiceConnection
 
 func InitConfFile() {
-	config.Prefix = "!"
-	config.Status = "!help"
+	config.Prefix = "k!"
+	config.Status = "k!help"
 
 	configData, err := json.MarshalIndent(config, "", "    ")
 	if err != nil {
@@ -114,6 +115,7 @@ func main() {
 		fmt.Println("\nCannot find conf.json, creating new...")
 		InitConfFile()
 	}
+    //Read and write config to update and changes to format/layout
 	config.ReadConfig()
 	config.WriteConfig()
 
@@ -121,12 +123,14 @@ func main() {
 		fmt.Println("\nCannot find users.json, creating new...")
 		InitUserFile()
 	}
+    //Reset all anthems
 	USArray.ReadUserFile()
 	for j := range USArray.Users {
 		USArray.Users[j].PlayAnthem = true
 	}
 	USArray.WriteUserFile()
 
+    //Reset dailies each day at 7pm
 	go func() {
 		gocron.Every(1).Day().At("19:00").Do(ResetDailies)
 		<-gocron.Start()
@@ -232,33 +236,32 @@ func VoiceStateUpdate(s *discordgo.Session, v *discordgo.VoiceStateUpdate) {
 					PlayAnthem(s, v, usr.Anthem)
 					time.Sleep(3 * time.Second)
 				}
-			}
-		}
-		//Join channel with most people
-		if len(g.VoiceStates) > 0 {
-			m := make(map[string]int)
-			for i := range g.VoiceStates {
-				m[g.VoiceStates[i].ChannelID] += 1
-			}
+			//Else join channel with most people
+            } else if len(g.VoiceStates) > 0 {
+                m := make(map[string]int)
+                for i := range g.VoiceStates {
+                    m[g.VoiceStates[i].ChannelID] += 1
+                }
 
-			pl := make(PairList, len(m))
-			i := 0
-			for k, v := range m {
-				pl[i] = Pair{k, v}
-				i++
-			}
-			sort.Sort(sort.Reverse(pl))
+                pl := make(PairList, len(m))
+                i := 0
+                for k, v := range m {
+                    pl[i] = Pair{k, v}
+                    i++
+                }
+                sort.Sort(sort.Reverse(pl))
 
-			//If bot is the only one left, leave
-			if pl[0].Value == 1 && curChan != nil {
-				curChan.Disconnect()
-				curChan.ChannelID = ""
-			} else {
-				//Join channel with most people
-				curChan, _ = s.ChannelVoiceJoin(USArray.GID, pl[0].Key, false, false)
-			}
-		}
-	}
+                //If bot is the only one left, leave
+                if pl[0].Value == 1 && curChan != nil {
+                    curChan.Disconnect()
+                    curChan.ChannelID = ""
+                } else {
+                    //Join channel with most people
+                    curChan, _ = s.ChannelVoiceJoin(USArray.GID, pl[0].Key, false, false)
+                }
+            }
+        }
+    }
 }
 
 func messageDelete(s *discordgo.Session, m *discordgo.MessageDelete) {
@@ -268,10 +271,9 @@ func messageDelete(s *discordgo.Session, m *discordgo.MessageDelete) {
 }
 
 // This function will be called (due to AddHandler above) every time a new
-// message is created on any channel that the autenticated bot has access to.
+// message is created in any channel that the bot has access to.
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
-	// Ignore all messages created by the bots
-	// This isn't required in this specific example but it's a good practice.
+	// Ignore all messages created by bots
 	if m.Author.Bot {
 		return
 	}
@@ -284,6 +286,18 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Content == "(╯°□°）╯︵ ┻━┻" {
 		s.ChannelMessageSend(m.ChannelID, "┬─┬ノ( º _ ºノ)")
 	}
+
+    if strings.ToLower(m.Content) == "good bot" {
+        USArray.Karma++
+        USArray.WriteUserFile()
+        s.MessageReactionAdd(m.ChannelID, m.ID, "😊")
+    }
+
+    if strings.ToLower(m.Content) == "bad bot" {
+        USArray.Karma--
+        USArray.WriteUserFile()
+        s.MessageReactionAdd(m.ChannelID, m.ID, "😞")
+    }
 
 	if strings.HasPrefix(m.Content, config.Prefix) {
 		// Remove prefix
@@ -329,6 +343,19 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			}
 			USArray.WriteUserFile()
 			break
+
+        case "follow":
+            if config.Follow {
+                config.Follow = false
+            } else {
+                config.Follow = true
+            }
+            if config.Follow {
+                s.ChannelMessageSend(m.ChannelID, "This bot is now following users")
+            } else {
+                s.ChannelMessageSend(m.ChannelID, "This bot is no longer following users")
+            }
+            break
 
 		case "help":
 			readme, err := ioutil.ReadFile("README.md")

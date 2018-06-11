@@ -10,6 +10,7 @@ import (
 
 type UserStateArray struct {
 	GID   string      `json:"gID"`
+    Karma int         `json:"karma"`
 	Users []UserState `json:"users"`
 }
 
