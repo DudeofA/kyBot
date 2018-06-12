@@ -226,18 +226,24 @@ func VoiceStateUpdate(s *discordgo.Session, v *discordgo.VoiceStateUpdate) {
 	VoiceChannelChange := USArray.UpdateUser(s, v, "VOICE")
 	if VoiceChannelChange {
 		Log(s, v, "VOICE")
-		//If the VoiceStateUpdate is a join channel
+		//If the VoiceStateUpdate is a join channel event
 		g, _ := s.Guild(USArray.GID)
 		if v.ChannelID != g.AfkChannelID {
+            //If user didn't just leave
 			if v.ChannelID != "" {
+                //Check if anthem is enabled
 				usr, _ := USArray.ReadUser(s, v, "VOICE")
 				if usr.PlayAnthem && usr.Anthem != "" {
-					PlayAnthem(s, v, usr.Anthem)
-					time.Sleep(3 * time.Second)
+                    //Check if they are joining new or from AFK channel
+					if usr.LastSeenCID == "" || usr.LastSeenCID == g.AfkChannelID {
+                        PlayAnthem(s, v, usr.Anthem)
+					    time.Sleep(3 * time.Second)
+                    }
 				}
 			//Else join channel with most people
             } else if len(g.VoiceStates) > 0 {
                 m := make(map[string]int)
+                //Create a pair list of channels and the users in them
                 for i := range g.VoiceStates {
                     m[g.VoiceStates[i].ChannelID] += 1
                 }
@@ -263,6 +269,7 @@ func VoiceStateUpdate(s *discordgo.Session, v *discordgo.VoiceStateUpdate) {
     }
 }
 
+// This will be called whenever a message is deleted
 func messageDelete(s *discordgo.Session, m *discordgo.MessageDelete) {
 	if m.ChannelID != config.LogID {
 		Log(s, m, "DEL")
@@ -302,9 +309,14 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		// Remove prefix
 		input := strings.TrimPrefix(m.Content, config.Prefix)
 		// Split message into command and anything after
-		command := strings.SplitN(input, " ", 2)
+		inputSplit := strings.SplitN(input, " ", 2)
+        command := inputSplit[0]
+        phrase := "If you see this, that's a problem"
+        if (len(inputSplit) == 2) {
+            phrase := inputSplit[1]
+        }
 
-		switch strings.ToLower(command[0]) {
+		switch strings.ToLower(command) {
 
 		case "account":
 			usr, _ := USArray.ReadUser(s, m, "MSG")
@@ -336,9 +348,22 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 				min := timeUntil / time.Minute
 				timeUntil -= min * time.Minute
 				sec := timeUntil / time.Second
+
+                hourStr := "s"
+                minStr := "s"
+                secStr := "s"
+                if hour == 1 {
+                    hourStr = ""
+                }
+                if min == 1 {
+                    minStr = ""
+                }
+                if sec == 1 {
+                    secStr = ""
+                }
 				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf(
-					"💵 | You have already collected today's dailies.\nDailies reset in %d hour(s), %d minute(s) and %d second(s).",
-					hour, min, sec))
+					"💵 | You have already collected today's dailies.\nDailies reset in %d hour%s, %d minute%s and %d second%s.",
+					hour, hourStr, min, minStr, sec, secStr))
 			}
 			USArray.WriteUserFile()
 			break
@@ -384,7 +409,10 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			break
 
 		case "quote":
-			Vote(s, m, command[1])
+            result := Vote(s, m, phrase)
+            if result {
+                quote = SaveQuote(s, m, phrase)
+                s.ChannelMessageSend(m.ChannelID, quote)
 			break
 
 		case "quoteclear":
@@ -427,7 +455,8 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			if USArray.Users[i].Reminders == nil {
 				USArray.Users[i].Reminders = make([]string, 0)
 			}
-			USArray.Users[i].Reminders = append(USArray.Users[i].Reminders, m.Content)
+
+			USArray.Users[i].Reminders = append(USArray.Users[i].Reminders, phrase)
 			USArray.WriteUserFile()
 			break
 

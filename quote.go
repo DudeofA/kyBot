@@ -37,10 +37,12 @@ func ListQuote(s *discordgo.Session, m *discordgo.MessageCreate, i ...int) (entr
 	lines := strings.Split(string(quotes), "\n\n")
 
 	entries = 0
+    var quoteList []string
 	for _, line := range lines {
-		s.ChannelMessageSend(m.ChannelID, line)
+        append(quoteList, line)
 		entries++
 	}
+    s.ChannelMessageSend(m.ChannelID, quoteList)
 
 	return
 }
