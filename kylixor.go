@@ -313,7 +313,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
         command := inputSplit[0]
         phrase := "If you see this, that's a problem"
         if (len(inputSplit) == 2) {
-            phrase := inputSplit[1]
+            phrase = inputSplit[1]
         }
 
 		switch strings.ToLower(command) {
@@ -411,8 +411,9 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		case "quote":
             result := Vote(s, m, phrase)
             if result {
-                quote = SaveQuote(s, m, phrase)
+                quote := SaveQuote(s, m, phrase)
                 s.ChannelMessageSend(m.ChannelID, quote)
+            }
 			break
 
 		case "quoteclear":

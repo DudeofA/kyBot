@@ -41,7 +41,7 @@ func Vote(s *discordgo.Session, m *discordgo.MessageCreate, voteSubject string) 
             //Failed vote
             downCount, _ := s.MessageReactions(m.ChannelID, voteMsg.ID, "Downvote:402490335789318144", 10)
             if !hasEmotes {
-                downCount, _ := s.MessageReactions(m.ChannelID, voteMsg.ID, "⬇", 10)
+                downCount, _ = s.MessageReactions(m.ChannelID, voteMsg.ID, "⬇", 10)
             }
             if len(downCount) == neededDownvotes + 1 {
                 s.ChannelMessageEdit(m.ChannelID, voteMsg.ID, "Vote failed!")
@@ -53,7 +53,7 @@ func Vote(s *discordgo.Session, m *discordgo.MessageCreate, voteSubject string) 
             //Success vote
             upCount, _ := s.MessageReactions(m.ChannelID, voteMsg.ID, "Upvote:402490285365657600", 10)
             if !hasEmotes {
-                upCount, _ := s.MessageReactions(m.ChannelID, voteMsg.ID, "⬆", 10)
+                upCount, _ = s.MessageReactions(m.ChannelID, voteMsg.ID, "⬆", 10)
             }
             if len(upCount) == neededUpvotes + 1 {
                 s.ChannelMessageEdit(m.ChannelID, voteMsg.ID, "Vote passed!")
