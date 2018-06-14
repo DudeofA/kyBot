@@ -235,7 +235,7 @@ func VoiceStateUpdate(s *discordgo.Session, v *discordgo.VoiceStateUpdate) {
 				usr, _ := USArray.ReadUser(s, v, "VOICE")
 				if usr.PlayAnthem && usr.Anthem != "" {
                     //Check if they are joining new or from AFK channel
-					if usr.LastSeenCID == "" || usr.LastSeenCID == g.AfkChannelID {
+					if usr.LastSeenCID != "" || usr.LastSeenCID != g.AfkChannelID {
                         PlayAnthem(s, v, usr.Anthem)
 					    time.Sleep(3 * time.Second)
                     }
