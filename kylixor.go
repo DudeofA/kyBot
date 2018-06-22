@@ -226,43 +226,45 @@ func VoiceStateUpdate(s *discordgo.Session, v *discordgo.VoiceStateUpdate) {
 	VoiceChannelChange := USArray.UpdateUser(s, v, "VOICE")
 	if VoiceChannelChange {
 		Log(s, v, "VOICE")
-		//If the VoiceStateUpdate is a join channel event
-		g, _ := s.Guild(USArray.GID)
-		if v.ChannelID != g.AfkChannelID {
-            //If user didn't just leave
-			if v.ChannelID != "" {
-                //Check if anthem is enabled
-				usr, _ := USArray.ReadUser(s, v, "VOICE")
-				if usr.PlayAnthem && usr.Anthem != "" {
-                    //Check if they are joining new or from AFK channel
-					if usr.LastSeenCID != "" || usr.LastSeenCID != g.AfkChannelID {
-                        PlayAnthem(s, v, usr.Anthem)
-					    time.Sleep(3 * time.Second)
+        if config.Follow {
+            //If the VoiceStateUpdate is a join channel event
+            g, _ := s.Guild(USArray.GID)
+            if v.ChannelID != g.AfkChannelID {
+                //If user didn't just leave
+                if v.ChannelID != "" {
+                    //Check if anthem is enabled
+                    usr, _ := USArray.ReadUser(s, v, "VOICE")
+                    if usr.PlayAnthem && usr.Anthem != "" {
+                        //Check if they are joining new or from AFK channel
+                        if usr.LastSeenCID != "" || usr.LastSeenCID != g.AfkChannelID {
+                            PlayAnthem(s, v, usr.Anthem)
+                            time.Sleep(3 * time.Second)
+                        }
                     }
-				}
-			//Else join channel with most people
-            } else if len(g.VoiceStates) > 0 {
-                m := make(map[string]int)
-                //Create a pair list of channels and the users in them
-                for i := range g.VoiceStates {
-                    m[g.VoiceStates[i].ChannelID] += 1
-                }
+                //Else join channel with most people
+                } else if len(g.VoiceStates) > 0 {
+                    m := make(map[string]int)
+                    //Create a pair list of channels and the users in them
+                    for i := range g.VoiceStates {
+                        m[g.VoiceStates[i].ChannelID] += 1
+                    }
 
-                pl := make(PairList, len(m))
-                i := 0
-                for k, v := range m {
-                    pl[i] = Pair{k, v}
-                    i++
-                }
-                sort.Sort(sort.Reverse(pl))
+                    pl := make(PairList, len(m))
+                    i := 0
+                    for k, v := range m {
+                        pl[i] = Pair{k, v}
+                        i++
+                    }
+                    sort.Sort(sort.Reverse(pl))
 
-                //If bot is the only one left, leave
-                if pl[0].Value == 1 && curChan != nil {
-                    curChan.Disconnect()
-                    curChan.ChannelID = ""
-                } else {
-                    //Join channel with most people
-                    curChan, _ = s.ChannelVoiceJoin(USArray.GID, pl[0].Key, false, false)
+                    //If bot is the only one left, leave
+                    if pl[0].Value == 1 && curChan != nil {
+                        curChan.Disconnect()
+                        curChan.ChannelID = ""
+                    } else {
+                        //Join channel with most people
+                        curChan, _ = s.ChannelVoiceJoin(USArray.GID, pl[0].Key, false, false)
+                    }
                 }
             }
         }
