@@ -447,8 +447,10 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			break
 
         case "resetdailies":
-            s.ChannelMessageSend(m.ChannelID, "Reseting Dailies")
-            ResetDailies()
+            if m.Author.ID == config.Admin {
+                s.ChannelMessageSend(m.ChannelID, "Reseting Dailies")
+                ResetDailies()
+            }
             break
 
 		case "remindme":
