@@ -111,7 +111,7 @@ func Log(s *discordgo.Session, i interface{}, code string) {
 		username := GetAuthor(s, m, code)
 		channel, _ := s.Channel(m.ChannelID)
 		s.ChannelMessageSend(config.LogID, fmt.Sprintf("```diff\n- %s - %s - %s - %s:\n!%s: %s\n```",
-			timestampf, channel.Name, m.ID, code, username, m.ContentWithMentionsReplaced()))
+			timestampf, channel.Name, username, code, m.ID, m.ContentWithMentionsReplaced()))
 		break
 
 	case "DEL":
@@ -127,7 +127,7 @@ func Log(s *discordgo.Session, i interface{}, code string) {
 			author = "Cannot find author"
 		}
 		s.ChannelMessageSend(config.LogID, fmt.Sprintf("```diff\n- %s - %s - %s - %s:\n%s: %s\n```",
-			timestampf, channel.Name, d.ID, code, author, delMessage))
+			timestampf, channel.Name, author, code, d.ID, delMessage))
 		break
 
 	case "STATUS":
@@ -156,7 +156,7 @@ func Log(s *discordgo.Session, i interface{}, code string) {
 			action = "Joined"
 			channel, _ = s.State.Channel(v.ChannelID)
 		}
-		s.ChannelMessageSend(config.LogID, fmt.Sprintf("```diff\n- %s - %s - %s:\n!VOICE: %s: %s\n```",
+		s.ChannelMessageSend(config.LogID, fmt.Sprintf("```diff\n- %s - %s - %s:\n!%s: %s\n```",
 			timestampf, username, code, action, channel.Name))
 	default:
 		break

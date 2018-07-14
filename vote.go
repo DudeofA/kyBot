@@ -13,6 +13,7 @@ func Vote(s *discordgo.Session, m *discordgo.MessageCreate, voteSubject string) 
     neededDownvotes := 2
     cID := m.ChannelID
     result = false
+    hasEmotes := true
 
     //Save messages to delete later
     quoteMsg, _ := s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("```css\n%s\n```", voteSubject))
@@ -20,8 +21,16 @@ func Vote(s *discordgo.Session, m *discordgo.MessageCreate, voteSubject string) 
     tempMsg := []string{quoteMsg.ID}
 
     //Add upvote and downvote reactions
-    s.MessageReactionAdd(m.ChannelID, voteMsg.ID, "Upvote:402490285365657600") 
-    s.MessageReactionAdd(m.ChannelID, voteMsg.ID, "Downvote:402490335789318144") 
+    err := s.MessageReactionAdd(m.ChannelID, voteMsg.ID, "Upvote:402490285365657600") 
+    if err != nil {
+        s.MessageReactionAdd(m.ChannelID, voteMsg.ID, "⬆")
+        hasEmotes = false
+    }
+    err = s.MessageReactionAdd(m.ChannelID, voteMsg.ID, "Downvote:402490335789318144") 
+    if err != nil {
+        s.MessageReactionAdd(m.ChannelID, voteMsg.ID, "⬇")
+        hasEmotes = false
+    }
 
     //Every second check votes
     ticker := time.NewTicker(time.Millisecond * 1000)
@@ -31,6 +40,9 @@ func Vote(s *discordgo.Session, m *discordgo.MessageCreate, voteSubject string) 
             //Get the number of people who reacted and compare the length to the neededUp/Downvotes
             //Failed vote
             downCount, _ := s.MessageReactions(m.ChannelID, voteMsg.ID, "Downvote:402490335789318144", 10)
+            if !hasEmotes {
+                downCount, _ = s.MessageReactions(m.ChannelID, voteMsg.ID, "⬇", 10)
+            }
             if len(downCount) == neededDownvotes + 1 {
                 s.ChannelMessageEdit(m.ChannelID, voteMsg.ID, "Vote failed!")
                 CleanVote(s, cID, tempMsg)
@@ -40,11 +52,12 @@ func Vote(s *discordgo.Session, m *discordgo.MessageCreate, voteSubject string) 
 
             //Success vote
             upCount, _ := s.MessageReactions(m.ChannelID, voteMsg.ID, "Upvote:402490285365657600", 10)
+            if !hasEmotes {
+                upCount, _ = s.MessageReactions(m.ChannelID, voteMsg.ID, "⬆", 10)
+            }
             if len(upCount) == neededUpvotes + 1 {
                 s.ChannelMessageEdit(m.ChannelID, voteMsg.ID, "Vote passed!")
                 CleanVote(s, cID, tempMsg)
-                final := SaveQuote(s, m, voteSubject)
-                s.ChannelMessageSend(m.ChannelID, final)
                 result = true
                 return
             }
