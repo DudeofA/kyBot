@@ -131,7 +131,7 @@ func main() {
 
     //Reset dailies each day at 7pm
 	go func() {
-		gocron.Every(1).Day().At("19:00").Do(ResetDailies)
+		gocron.Every(1).Day().At("20:00").Do(ResetDailies)
 		<-gocron.Start()
 	}()
 
