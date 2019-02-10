@@ -131,7 +131,7 @@ func main() {
 
     //Reset dailies each day at 7pm
 	go func() {
-		gocron.Every(1).Day().At("20:00").Do(ResetDailies)
+		gocron.Every(1).Day().At("19:00").Do(ResetDailies)
 		<-gocron.Start()
 	}()
 
@@ -478,6 +478,10 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 				Test(s, m)
 			}
 			break
+
+        case "wotd":
+            s.ChannelMessageSend(m.ChannelID, "The word of the day is...Canoodle! \nSee more here: https://dictionary.com/browse/canoodle")
+            break
 
 		case "yee":
 			PlayClip(s, m, "yee")
