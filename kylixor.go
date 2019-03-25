@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/rand"
+    "net/http"
 	"os"
 	"os/signal"
 	"sort"
@@ -391,6 +392,15 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			// Print readme in code brackets so it doesn't look awful
 			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("```"+string(readme)+"```"))
 			break
+
+        case "ip":
+            if m.Author.ID == config.Admin {
+                resp, _ := http.Get("http://myexternalip.com/raw")
+		        defer resp.Body.Close()
+                responseData, _ := ioutil.ReadAll(resp.Body)
+                s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Bot's current external IP: %s", string(responseData)));
+            }
+            break
 
         case "karma":
             s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("☯ | Current Karma: %d", USArray.Karma))
