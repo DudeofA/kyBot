@@ -1,6 +1,7 @@
 package main
 
 import (
+    "bufio"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -111,7 +112,7 @@ func main() {
 	rand.Seed(time.Now().Unix())
 
 	if _, err := os.Stat("conf.json"); os.IsNotExist(err) {
-		fmt.Println("\nCannot find conf.json, creating new...")
+		fmt.Println("Cannot find conf.json, creating new...")
 		InitConfFile()
 	}
     //Read and write config to update and changes to format/layout
@@ -119,7 +120,7 @@ func main() {
 	config.WriteConfig()
 
 	if _, err := os.Stat("users.json"); os.IsNotExist(err) {
-		fmt.Println("\nCannot find users.json, creating new...")
+		fmt.Println("Cannot find users.json, creating new...")
 		InitUserFile()
 	}
     //Reset all anthems
