@@ -1,6 +1,7 @@
 package main
 
 import (
+    "bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -9,6 +10,7 @@ import (
     "net/http"
 	"os"
 	"os/signal"
+    "os/exec"
 	"sort"
 	"strings"
 	"syscall"
@@ -370,6 +372,18 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			}
 			USArray.WriteUserFile()
 			break
+
+        case "factorio":
+            cmd := exec.Command("ssh", "andrew@hermes", "-t", "sudo", "updateFactorio")
+            var out bytes.Buffer
+            cmd.Stdout = &out
+            err := cmd.Run()
+            if err != nil {
+                s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Updated failed: err - %s", err))
+            }
+
+            s.ChannelMessageSend(m.ChannelID, out.String())
+            break
 
         case "follow":
             if config.Follow {

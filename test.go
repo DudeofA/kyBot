@@ -1,31 +1,27 @@
 package main
 
 import (
-	// "encoding/json"
-	// "fmt"
-	// "io/ioutil"
-	// "os"
+    "bytes"
+	"fmt"
+    "os/exec"
 
 	"github.com/bwmarrin/discordgo"
-	// "github.com/jasonlvhit/gocron"
 )
 
 func Test(s *discordgo.Session, m *discordgo.MessageCreate) {
-	s.ChannelMessageSend(m.ChannelID, "Starting testing...")
-	//
-	//Make sure it actually starts and runs once
+	s.ChannelMessageSend(m.ChannelID, "Testing Starting...")
 
-	g, _ := s.Guild(USArray.GID)
-	voiceChan := config.DefaultChan
-	for i := range g.VoiceStates {
-		if g.VoiceStates[i].UserID == m.Author.ID {
-			voiceChan = g.VoiceStates[i].ChannelID
-		}
-	}
-	curChan, _ = s.ChannelVoiceJoin(USArray.GID, voiceChan, false, false)
-	// curChan.Disconnect()
+    s.ChannelMessageSend(m.ChannelID, "Running update command...")
+    cmd := exec.Command("ssh", "andrew@hermes", "/home/andrew/test")
+    var out bytes.Buffer
+    cmd.Stdout = &out
+    err := cmd.Run()
+    if err != nil {
+        s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Updated failed: err - %s", err))
+    }
 
-	//Makes sure it makes it to then end
-	//
-	s.ChannelMessageSend(m.ChannelID, "Testing Complete.")
+    s.ChannelMessageSend(m.ChannelID, "Output: " + out.String())
+
+    s.ChannelMessageSend(m.ChannelID, "Testing Done")
+
 }
