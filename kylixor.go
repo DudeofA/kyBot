@@ -26,31 +26,19 @@ import(
 )
 
 type Config struct {
-	// Name of currency that bot uses (i.e. <gold> coins)
-	Coins       string
-
-	// Whether or not the bot joins/follows into voice channels for anthems
-    Follow      bool
-
-    // ID of channel for logging
-	LogID       string
-
-	// Whether the bot will use function that play sound
-	Noise       bool
-
-	// Prefix the bot will respond to
-	Prefix      string
-
-	// Status of the bot (Playing <v1.0>)
-	Status      string
-
+	Coins	string 		//Name of currency that bot uses (i.e. <gold> coins)
+    Follow      bool 	//Whether or not the bot joins/follows into voice channels for anthems
+	LogID       string 	//ID of channel for logging
+	Noise       bool 	//Whether the bot will use function that play sound
+	Prefix      string 	//Prefix the bot will respond to
+	Status      string	//Status of the bot (Playing <v1.0>)
 }
 
-// Current voice channel bot is in, nil if none
-var currentVoiceChannel *discordgo.VoiceConnection
-var config = Config{}
-var self *discordgo.User
-var APItoken string
+// ----- GLOBAL VARIABLES -----
+var currentVoiceChannel *discordgo.VoiceConnection 	//Current voice channel bot is in, nil if none
+var config = Config{}								//Config structure from file
+var self *discordgo.User 							//discord user type of self (bots user account)
+var APItoken string 								//API token from flag
 
 func InitConfFile() {
 	config.Prefix = "k!"
