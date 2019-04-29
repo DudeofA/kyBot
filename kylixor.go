@@ -21,7 +21,6 @@ import(
 	"time"
 
 	"github.com/bwmarrin/discordgo"
-
 	"github.com/jasonlvhit/gocron"
 )
 
@@ -200,3 +199,4 @@ func ready(s *discordgo.Session, event *discordgo.Ready) {
 	self = event.User
 	USArray.GID = event.Guilds[0].ID
 }
+
