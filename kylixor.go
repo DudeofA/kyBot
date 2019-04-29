@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 package main
 
 import (
@@ -744,3 +745,16 @@ func ready(s *discordgo.Session, event *discordgo.Ready) {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+>>>>>>> ee1232426be26627a98c2a4e2b2f199ff5d6261f
