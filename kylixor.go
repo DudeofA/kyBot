@@ -476,7 +476,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
                 }
 
                 //Create and update embeded status message
-                factorioServer := &discordgo.MessageEmbed {
+                minecraftServer := &discordgo.MessageEmbed {
                     Author:         &discordgo.MessageEmbedAuthor{},
                     Color:          0xA14D0C, //factorio color
                     Description:    "Server Address: kylixor.com",
@@ -493,7 +493,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
                         },
                     },
                     Image: &discordgo.MessageEmbedImage{
-                        URL: "https://cdn.iconscout.com/icon/free/png-256/minecraft-14-282131.png",
+                        URL: "https://www.freepnglogos.com/uploads/minecraft-logo-6.png",
                     },
                     Thumbnail: &discordgo.MessageEmbedThumbnail{
                         URL:  "https://logodix.com/logo/1014674.png",
@@ -503,7 +503,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
                 }
 
                 //Edit previous server status message
-                s.ChannelMessageSendEmbed("386915907047391241", factorioServer)
+                s.ChannelMessageEditEmbed("386915907047391241", "574381603984375808", minecraftServer)
             }
 
             s.ChannelMessageSend(m.ChannelID, "Check <#386915907047391241> for the current status")
