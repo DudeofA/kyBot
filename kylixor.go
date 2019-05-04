@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"math/rand"
     "net/http"
+    "net"
 	"os"
 	"os/signal"
     "os/exec"
@@ -374,15 +375,53 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			break
 
         case "factorio":
+            s.ChannelMessageSend(m.ChannelID, "Checking for updates...")
             cmd := exec.Command("ssh", "andrew@hermes", "-t", "sudo", "updateFactorio")
             var out bytes.Buffer
             cmd.Stdout = &out
             err := cmd.Run()
             if err != nil {
                 s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Updated failed: err - %s", err))
+            } else {
+                status := "DOWN"
+                timeout := time.Duration(1 * time.Second)
+                _, err := net.DialTimeout("udp","kylixor.com:34197", timeout)
+                if err == nil {
+                    status = "UP"
+                }
+
+                //Create and update embeded status message
+                factorioServer := &discordgo.MessageEmbed {
+                    Author:         &discordgo.MessageEmbedAuthor{},
+                    Color:          0xA14D0C, //factorio color
+                    Description:    "Server Address: andrewlanghill.com | Password: baconbits",
+                    Fields: []*discordgo.MessageEmbedField {
+                        &discordgo.MessageEmbedField {
+                            Name:   "Current Version: ",
+                            Value:  out.String(),
+                            Inline: true,
+                        },
+                        &discordgo.MessageEmbedField {
+                            Name:   "Status: ",
+                            Value:  status,
+                            Inline: true,
+                        },
+                    },
+                    Image: &discordgo.MessageEmbedImage{
+                        URL: "https://www.factorio.com/static/img/factorio-logo.png",
+                    },
+                    Thumbnail: &discordgo.MessageEmbedThumbnail{
+                        URL:  "https://www.factorio.com/static/img/factorio-wheel.png",
+                    },
+                    Timestamp:  time.Now().Format(time.RFC3339), // Discord wants ISO8601; RFC3339 is an extension of ISO8601 and should be completely compatible.
+                    Title:      "Factorio Server Status",
+                }
+
+                //Edit previous server status message
+                s.ChannelMessageEditEmbed("386915907047391241", "573690525119545354", factorioServer)
             }
 
-            s.ChannelMessageSend(m.ChannelID, out.String())
+            s.ChannelMessageSend(m.ChannelID, "Check <#386915907047391241> for the current status")
             break
 
         case "follow":
