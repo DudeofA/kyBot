@@ -478,7 +478,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
                 //Create and update embeded status message
                 minecraftServer := &discordgo.MessageEmbed {
                     Author:         &discordgo.MessageEmbedAuthor{},
-                    Color:          0xA14D0C, //factorio color
+                    Color:          0x4A6E2E, //minecraft color
                     Description:    "Server Address: kylixor.com",
                     Fields: []*discordgo.MessageEmbedField {
                         &discordgo.MessageEmbedField {
