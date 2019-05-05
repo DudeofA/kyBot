@@ -470,6 +470,56 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("☯ | Current Karma: %d", USArray.Karma))
 			break
 
+		case "minecraft":
+			s.ChannelMessageSend(m.ChannelID, "Checking for updates...")
+			cmd := exec.Command("ssh", "andrew@hermes", "-t", "sudo", "/home/andrew/scripts/updateMinecraft")
+			var out bytes.Buffer
+			cmd.Stdout = &out
+			err := cmd.Run()
+			if err != nil {
+				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Updated failed: err - %s", err))
+			} else {
+				status := "DOWN"
+				timeout := time.Duration(1 * time.Second)
+				_, err := net.DialTimeout("tcp", "kylixor.com:25565", timeout)
+				if err == nil {
+					status = "UP"
+				}
+
+				//Create and update embeded status message
+				minecraftServer := &discordgo.MessageEmbed{
+					Author:      &discordgo.MessageEmbedAuthor{},
+					Color:       0x4A6E2E, //minecraft color
+					Description: "Server Address: kylixor.com",
+					Fields: []*discordgo.MessageEmbedField{
+						&discordgo.MessageEmbedField{
+							Name:   "Current Version: ",
+							Value:  out.String(),
+							Inline: true,
+						},
+						&discordgo.MessageEmbedField{
+							Name:   "Status: ",
+							Value:  status,
+							Inline: true,
+						},
+					},
+					Image: &discordgo.MessageEmbedImage{
+						URL: "https://www.freepnglogos.com/uploads/minecraft-logo-6.png",
+					},
+					Thumbnail: &discordgo.MessageEmbedThumbnail{
+						URL: "https://logodix.com/logo/1014674.png",
+					},
+					Timestamp: time.Now().Format(time.RFC3339), // Discord wants ISO8601; RFC3339 is an extension of ISO8601 and should be completely compatible.
+					Title:     "Minecraft Server Status",
+				}
+
+				//Edit previous server status message
+				s.ChannelMessageEditEmbed("386915907047391241", "574381603984375808", minecraftServer)
+			}
+
+			s.ChannelMessageSend(m.ChannelID, "Check <#386915907047391241> for the current status")
+			break
+
 		case "ping":
 			pongMessage, _ := s.ChannelMessageSend(m.ChannelID, "Pong!")
 			// Format Discord time to readable time
