@@ -390,7 +390,8 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 				}
 
 				//Create and update embeded status message
-				factorioServer := CreateEmbed("Factorio Server Status", 0xA14D0C,
+				factorioServer := CreateEmbed("Factorio Server Status",
+					0xA14D0C,
 					"Server Address: andrewlanghill.com | Password: baconbits",
 					"Current Version: ",
 					out.String(),
@@ -400,33 +401,6 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 					"https://www.factorio.com/static/img/factorio-wheel.png",
 					time.Now().Format(time.RFC3339),
 				)
-
-				// //Create and update embeded status message
-				// factorioServer := &discordgo.MessageEmbed {
-				//     Author:         &discordgo.MessageEmbedAuthor{},
-				//     Color:          0xA14D0C, //factorio color
-				//     Description:    "Server Address: andrewlanghill.com | Password: baconbits",
-				//     Fields: []*discordgo.MessageEmbedField {
-				//         &discordgo.MessageEmbedField {
-				//             Name:   "Current Version: ",
-				//             Value:  out.String(),
-				//             Inline: true,
-				//         },
-				//         &discordgo.MessageEmbedField {
-				//             Name:   "Status: ",
-				//             Value:  status,
-				//             Inline: true,
-				//         },
-				//     },
-				//     Image: &discordgo.MessageEmbedImage{
-				//         URL: "https://www.factorio.com/static/img/factorio-logo.png",
-				//     },
-				//     Thumbnail: &discordgo.MessageEmbedThumbnail{
-				//         URL:  "https://www.factorio.com/static/img/factorio-wheel.png",
-				//     },
-				//     Timestamp:  time.Now().Format(time.RFC3339), // Discord wants ISO8601; RFC3339 is an extension of ISO8601 and should be completely compatible.
-				//     Title:      "Factorio Server Status",
-				// }
 
 				//Edit previous server status message
 				s.ChannelMessageEditEmbed("386915907047391241", "573690525119545354", factorioServer)
@@ -487,31 +461,17 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 				}
 
 				//Create and update embeded status message
-				minecraftServer := &discordgo.MessageEmbed{
-					Author:      &discordgo.MessageEmbedAuthor{},
-					Color:       0x4A6E2E, //minecraft color
-					Description: "Server Address: kylixor.com",
-					Fields: []*discordgo.MessageEmbedField{
-						&discordgo.MessageEmbedField{
-							Name:   "Current Version: ",
-							Value:  out.String(),
-							Inline: true,
-						},
-						&discordgo.MessageEmbedField{
-							Name:   "Status: ",
-							Value:  status,
-							Inline: true,
-						},
-					},
-					Image: &discordgo.MessageEmbedImage{
-						URL: "https://www.freepnglogos.com/uploads/minecraft-logo-6.png",
-					},
-					Thumbnail: &discordgo.MessageEmbedThumbnail{
-						URL: "https://logodix.com/logo/1014674.png",
-					},
-					Timestamp: time.Now().Format(time.RFC3339), // Discord wants ISO8601; RFC3339 is an extension of ISO8601 and should be completely compatible.
-					Title:     "Minecraft Server Status",
-				}
+				minecraftServer := CreateEmbed("Minecraft Server Status",
+					0x4A6E2E,
+					"Server Address: kylixor.com",
+					"Current Version: ",
+					out.String(),
+					"Status: ",
+					status,
+					"https://www.freepnglogos.com/uploads/minecraft-logo-6.png",
+					"https://logodix.com/logo/1014674.png",
+					time.Now().Format(time.RFC3339),
+				)
 
 				//Edit previous server status message
 				s.ChannelMessageEditEmbed("386915907047391241", "574381603984375808", minecraftServer)
