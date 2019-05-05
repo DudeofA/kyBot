@@ -1,24 +1,23 @@
 package main
 
 import (
-    "bytes"
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
-    "net/http"
-    "net"
+	"net"
+	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
-    "os/exec"
 	"sort"
 	"strings"
 	"syscall"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
-
 	"github.com/jasonlvhit/gocron"
 )
 
@@ -31,7 +30,7 @@ type Config struct {
 	Admin       string
 	Coins       string
 	DefaultChan string
-    Follow      bool
+	Follow      bool
 	LogID       string
 	LogMessage  bool
 	LogStatus   bool
@@ -118,7 +117,7 @@ func main() {
 		fmt.Println("\nCannot find conf.json, creating new...")
 		InitConfFile()
 	}
-    //Read and write config to update and changes to format/layout
+	//Read and write config to update and changes to format/layout
 	config.ReadConfig()
 	config.WriteConfig()
 
@@ -126,14 +125,14 @@ func main() {
 		fmt.Println("\nCannot find users.json, creating new...")
 		InitUserFile()
 	}
-    //Reset all anthems
+	//Reset all anthems
 	USArray.ReadUserFile()
 	for j := range USArray.Users {
 		USArray.Users[j].PlayAnthem = true
 	}
 	USArray.WriteUserFile()
 
-    //Reset dailies each day at 7pm
+	//Reset dailies each day at 7pm
 	go func() {
 		gocron.Every(1).Day().At("19:00").Do(ResetDailies)
 		<-gocron.Start()
@@ -230,49 +229,49 @@ func VoiceStateUpdate(s *discordgo.Session, v *discordgo.VoiceStateUpdate) {
 	VoiceChannelChange := USArray.UpdateUser(s, v, "VOICE")
 	if VoiceChannelChange {
 		Log(s, v, "VOICE")
-        if config.Follow {
-            //If the VoiceStateUpdate is a join channel event
-            g, _ := s.Guild(USArray.GID)
-            if v.ChannelID != g.AfkChannelID {
-                //If user didn't just leave
-                if v.ChannelID != "" {
-                    //Check if anthem is enabled
-                    usr, _ := USArray.ReadUser(s, v, "VOICE")
-                    if usr.PlayAnthem && usr.Anthem != "" {
-                        //Check if they are joining new or from AFK channel
-                        if usr.LastSeenCID != "" || usr.LastSeenCID != g.AfkChannelID {
-                            PlayAnthem(s, v, usr.Anthem)
-                            time.Sleep(3 * time.Second)
-                        }
-                    }
-                //Else join channel with most people
-                } else if len(g.VoiceStates) > 0 {
-                    m := make(map[string]int)
-                    //Create a pair list of channels and the users in them
-                    for i := range g.VoiceStates {
-                        m[g.VoiceStates[i].ChannelID] += 1
-                    }
+		if config.Follow {
+			//If the VoiceStateUpdate is a join channel event
+			g, _ := s.Guild(USArray.GID)
+			if v.ChannelID != g.AfkChannelID {
+				//If user didn't just leave
+				if v.ChannelID != "" {
+					//Check if anthem is enabled
+					usr, _ := USArray.ReadUser(s, v, "VOICE")
+					if usr.PlayAnthem && usr.Anthem != "" {
+						//Check if they are joining new or from AFK channel
+						if usr.LastSeenCID != "" || usr.LastSeenCID != g.AfkChannelID {
+							PlayAnthem(s, v, usr.Anthem)
+							time.Sleep(3 * time.Second)
+						}
+					}
+					//Else join channel with most people
+				} else if len(g.VoiceStates) > 0 {
+					m := make(map[string]int)
+					//Create a pair list of channels and the users in them
+					for i := range g.VoiceStates {
+						m[g.VoiceStates[i].ChannelID] += 1
+					}
 
-                    pl := make(PairList, len(m))
-                    i := 0
-                    for k, v := range m {
-                        pl[i] = Pair{k, v}
-                        i++
-                    }
-                    sort.Sort(sort.Reverse(pl))
+					pl := make(PairList, len(m))
+					i := 0
+					for k, v := range m {
+						pl[i] = Pair{k, v}
+						i++
+					}
+					sort.Sort(sort.Reverse(pl))
 
-                    //If bot is the only one left, leave
-                    if pl[0].Value == 1 && curChan != nil {
-                        curChan.Disconnect()
-                        curChan.ChannelID = ""
-                    } else {
-                        //Join channel with most people
-                        curChan, _ = s.ChannelVoiceJoin(USArray.GID, pl[0].Key, false, false)
-                    }
-                }
-            }
-        }
-    }
+					//If bot is the only one left, leave
+					if pl[0].Value == 1 && curChan != nil {
+						curChan.Disconnect()
+						curChan.ChannelID = ""
+					} else {
+						//Join channel with most people
+						curChan, _ = s.ChannelVoiceJoin(USArray.GID, pl[0].Key, false, false)
+					}
+				}
+			}
+		}
+	}
 }
 
 // This will be called whenever a message is deleted
@@ -299,28 +298,28 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		s.ChannelMessageSend(m.ChannelID, "┬─┬ノ( º _ ºノ)")
 	}
 
-    if strings.ToLower(m.Content) == "good bot" {
-        USArray.Karma++
-        USArray.WriteUserFile()
-        s.MessageReactionAdd(m.ChannelID, m.ID, "😊")
-    }
+	if strings.ToLower(m.Content) == "good bot" {
+		USArray.Karma++
+		USArray.WriteUserFile()
+		s.MessageReactionAdd(m.ChannelID, m.ID, "😊")
+	}
 
-    if strings.ToLower(m.Content) == "bad bot" {
-        USArray.Karma--
-        USArray.WriteUserFile()
-        s.MessageReactionAdd(m.ChannelID, m.ID, "😞")
-    }
+	if strings.ToLower(m.Content) == "bad bot" {
+		USArray.Karma--
+		USArray.WriteUserFile()
+		s.MessageReactionAdd(m.ChannelID, m.ID, "😞")
+	}
 
 	if strings.HasPrefix(m.Content, config.Prefix) {
 		// Remove prefix
 		input := strings.TrimPrefix(m.Content, config.Prefix)
 		// Split message into command and anything after
 		inputSplit := strings.SplitN(input, " ", 2)
-        command := inputSplit[0]
-        phrase := "If you see this, that's a problem"
-        if (len(inputSplit) == 2) {
-            phrase = inputSplit[1]
-        }
+		command := inputSplit[0]
+		phrase := "If you see this, that's a problem"
+		if len(inputSplit) == 2 {
+			phrase = inputSplit[1]
+		}
 
 		switch strings.ToLower(command) {
 
@@ -355,18 +354,18 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 				timeUntil -= min * time.Minute
 				sec := timeUntil / time.Second
 
-                hourStr := "s"
-                minStr := "s"
-                secStr := "s"
-                if hour == 1 {
-                    hourStr = ""
-                }
-                if min == 1 {
-                    minStr = ""
-                }
-                if sec == 1 {
-                    secStr = ""
-                }
+				hourStr := "s"
+				minStr := "s"
+				secStr := "s"
+				if hour == 1 {
+					hourStr = ""
+				}
+				if min == 1 {
+					minStr = ""
+				}
+				if sec == 1 {
+					secStr = ""
+				}
 				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf(
 					"💵 | You have already collected today's dailies.\nDailies reset in %d hour%s, %d minute%s and %d second%s.",
 					hour, hourStr, min, minStr, sec, secStr))
@@ -374,68 +373,80 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			USArray.WriteUserFile()
 			break
 
-        case "factorio":
-            s.ChannelMessageSend(m.ChannelID, "Checking for updates...")
-            cmd := exec.Command("ssh", "andrew@hermes", "-t", "sudo", "updateFactorio")
-            var out bytes.Buffer
-            cmd.Stdout = &out
-            err := cmd.Run()
-            if err != nil {
-                s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Updated failed: err - %s", err))
-            } else {
-                status := "DOWN"
-                timeout := time.Duration(1 * time.Second)
-                _, err := net.DialTimeout("udp","kylixor.com:34197", timeout)
-                if err == nil {
-                    status = "UP"
-                }
+		case "factorio":
+			s.ChannelMessageSend(m.ChannelID, "Checking for updates...")
+			cmd := exec.Command("ssh", "andrew@hermes", "-t", "sudo", "updateFactorio")
+			var out bytes.Buffer
+			cmd.Stdout = &out
+			err := cmd.Run()
+			if err != nil {
+				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Updated failed: err - %s", err))
+			} else {
+				status := "DOWN"
+				timeout := time.Duration(1 * time.Second)
+				_, err := net.DialTimeout("udp", "kylixor.com:34197", timeout)
+				if err == nil {
+					status = "UP"
+				}
 
-                //Create and update embeded status message
-                factorioServer := &discordgo.MessageEmbed {
-                    Author:         &discordgo.MessageEmbedAuthor{},
-                    Color:          0xA14D0C, //factorio color
-                    Description:    "Server Address: andrewlanghill.com | Password: baconbits",
-                    Fields: []*discordgo.MessageEmbedField {
-                        &discordgo.MessageEmbedField {
-                            Name:   "Current Version: ",
-                            Value:  out.String(),
-                            Inline: true,
-                        },
-                        &discordgo.MessageEmbedField {
-                            Name:   "Status: ",
-                            Value:  status,
-                            Inline: true,
-                        },
-                    },
-                    Image: &discordgo.MessageEmbedImage{
-                        URL: "https://www.factorio.com/static/img/factorio-logo.png",
-                    },
-                    Thumbnail: &discordgo.MessageEmbedThumbnail{
-                        URL:  "https://www.factorio.com/static/img/factorio-wheel.png",
-                    },
-                    Timestamp:  time.Now().Format(time.RFC3339), // Discord wants ISO8601; RFC3339 is an extension of ISO8601 and should be completely compatible.
-                    Title:      "Factorio Server Status",
-                }
+				//Create and update embeded status message
+				factorioServer := CreateEmbed("Factorio Server Status", 0xA14D0C,
+					"Server Address: andrewlanghill.com | Password: baconbits",
+					"Current Version: ",
+					out.String(),
+					"Status: ",
+					status,
+					"https://www.factorio.com/static/img/factorio-logo.png",
+					"https://www.factorio.com/static/img/factorio-wheel.png",
+					time.Now().Format(time.RFC3339),
+				)
 
-                //Edit previous server status message
-                s.ChannelMessageEditEmbed("386915907047391241", "573690525119545354", factorioServer)
-            }
+				// //Create and update embeded status message
+				// factorioServer := &discordgo.MessageEmbed {
+				//     Author:         &discordgo.MessageEmbedAuthor{},
+				//     Color:          0xA14D0C, //factorio color
+				//     Description:    "Server Address: andrewlanghill.com | Password: baconbits",
+				//     Fields: []*discordgo.MessageEmbedField {
+				//         &discordgo.MessageEmbedField {
+				//             Name:   "Current Version: ",
+				//             Value:  out.String(),
+				//             Inline: true,
+				//         },
+				//         &discordgo.MessageEmbedField {
+				//             Name:   "Status: ",
+				//             Value:  status,
+				//             Inline: true,
+				//         },
+				//     },
+				//     Image: &discordgo.MessageEmbedImage{
+				//         URL: "https://www.factorio.com/static/img/factorio-logo.png",
+				//     },
+				//     Thumbnail: &discordgo.MessageEmbedThumbnail{
+				//         URL:  "https://www.factorio.com/static/img/factorio-wheel.png",
+				//     },
+				//     Timestamp:  time.Now().Format(time.RFC3339), // Discord wants ISO8601; RFC3339 is an extension of ISO8601 and should be completely compatible.
+				//     Title:      "Factorio Server Status",
+				// }
 
-            s.ChannelMessageSend(m.ChannelID, "Check <#386915907047391241> for the current status")
-            break
+				//Edit previous server status message
+				s.ChannelMessageEditEmbed("386915907047391241", "573690525119545354", factorioServer)
+			}
 
-        case "follow":
-            if config.Follow {
-                config.Follow = false
-            } else {
-                config.Follow = true
-            }
-            if config.Follow {
-                s.ChannelMessageSend(m.ChannelID, "This bot is now following users")
-            } else {
-                s.ChannelMessageSend(m.ChannelID, "This bot is no longer following users")
-            }
-            break
+			s.ChannelMessageSend(m.ChannelID, "Check <#386915907047391241> for the current status")
+			break
+
+		case "follow":
+			if config.Follow {
+				config.Follow = false
+			} else {
+				config.Follow = true
+			}
+			if config.Follow {
+				s.ChannelMessageSend(m.ChannelID, "This bot is now following users")
+			} else {
+				s.ChannelMessageSend(m.ChannelID, "This bot is no longer following users")
+			}
+			break
 
 		case "help":
 			readme, err := ioutil.ReadFile("README.md")
@@ -446,18 +457,18 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("```"+string(readme)+"```"))
 			break
 
-        case "ip":
-            if m.Author.ID == config.Admin {
-                resp, _ := http.Get("http://myexternalip.com/raw")
-		        defer resp.Body.Close()
-                responseData, _ := ioutil.ReadAll(resp.Body)
-                s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Bot's current external IP: %s", string(responseData)));
-            }
-            break
+		case "ip":
+			if m.Author.ID == config.Admin {
+				resp, _ := http.Get("http://myexternalip.com/raw")
+				defer resp.Body.Close()
+				responseData, _ := ioutil.ReadAll(resp.Body)
+				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Bot's current external IP: %s", string(responseData)))
+			}
+			break
 
-        case "karma":
-            s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("☯ | Current Karma: %d", USArray.Karma))
-            break
+		case "karma":
+			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("☯ | Current Karma: %d", USArray.Karma))
+			break
 
 		case "ping":
 			pongMessage, _ := s.ChannelMessageSend(m.ChannelID, "Pong!")
@@ -474,11 +485,11 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			break
 
 		case "quote":
-            result := Vote(s, m, phrase)
-            if result {
-                quote := SaveQuote(s, m, phrase)
-                s.ChannelMessageSend(m.ChannelID, quote)
-            }
+			result := Vote(s, m, phrase)
+			if result {
+				quote := SaveQuote(s, m, phrase)
+				s.ChannelMessageSend(m.ChannelID, quote)
+			}
 			break
 
 		case "quoteclear":
@@ -509,12 +520,12 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			}
 			break
 
-        case "resetdailies":
-            if m.Author.ID == config.Admin {
-                s.ChannelMessageSend(m.ChannelID, "Reseting Dailies")
-                ResetDailies()
-            }
-            break
+		case "resetdailies":
+			if m.Author.ID == config.Admin {
+				s.ChannelMessageSend(m.ChannelID, "Reseting Dailies")
+				ResetDailies()
+			}
+			break
 
 		case "remindme":
 			_, i := USArray.ReadUser(s, m, "MSG")
@@ -542,9 +553,9 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			}
 			break
 
-        case "wotd":
-            s.ChannelMessageSend(m.ChannelID, "The word of the day is...Canoodle! \nSee more here: https://dictionary.com/browse/canoodle")
-            break
+		case "wotd":
+			s.ChannelMessageSend(m.ChannelID, "The word of the day is...Canoodle! \nSee more here: https://dictionary.com/browse/canoodle")
+			break
 
 		case "yee":
 			PlayClip(s, m, "yee")
@@ -558,10 +569,40 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 				"I'm smarter than you but thats not enough to do _that_",
 				"I don't want to",
 				"No",
-                "wat",
-                "u wot m8")
+				"wat",
+				"u wot m8")
 
 			s.ChannelMessageSend(m.ChannelID, responseList[rand.Intn(len(responseList))])
 		}
+	}
+}
+
+func (embed *discordgo.MessageEmbed) CreateEmbed(title string, color int, desc string, f1_name string, f1_value, f2_name string, f2_value, image string, thumbnail string, timestamp time) {
+
+	//Create and update embeded status message
+	embed := &discordgo.MessageEmbed{
+		Author:      &discordgo.MessageEmbedAuthor{},
+		Color:       color, //factorio color
+		Description: desc,
+		Fields: []*discordgo.MessageEmbedField{
+			&discordgo.MessageEmbedField{
+				Name:   f1_name,
+				Value:  f1_value,
+				Inline: true,
+			},
+			&discordgo.MessageEmbedField{
+				Name:   f2_name,
+				Value:  f2_value,
+				Inline: true,
+			},
+		},
+		Image: &discordgo.MessageEmbedImage{
+			URL: image,
+		},
+		Thumbnail: &discordgo.MessageEmbedThumbnail{
+			URL: thumbnail,
+		},
+		Timestamp: time, // Discord wants ISO8601; RFC3339 is an extension of ISO8601 and should be completely compatible.
+		Title:     title,
 	}
 }
