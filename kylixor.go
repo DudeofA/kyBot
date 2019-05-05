@@ -399,7 +399,6 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 					status,
 					"https://www.factorio.com/static/img/factorio-logo.png",
 					"https://www.factorio.com/static/img/factorio-wheel.png",
-					time.Now(),
 				)
 
 				//Edit previous server status message
@@ -470,7 +469,6 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 					status,
 					"https://www.freepnglogos.com/uploads/minecraft-logo-6.png",
 					"https://logodix.com/logo/1014674.png",
-					time.Now(),
 				)
 
 				//Edit previous server status message
@@ -587,11 +585,11 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 }
 
-func (embed *discordgo.MessageEmbed) CreateEmbed(title string, color int, desc string, f1_name string, f1_value, f2_name string, f2_value, image string, thumbnail string, timestamp time) {
+func CreateEmbed(title string, color int, desc string, f1_name string, f1_value, f2_name string, f2_value, image string, thumbnail string) *discordgo.MessageEmbed {
 
 	//Create and update embeded status message
-	embed = &discordgo.MessageEmbed{
-		Author:      &discordgo.MessageEmbedAuthor{},
+    embed := &discordgo.MessageEmbed{
+		//Author:      &discordgo.MessageEmbedAuthor{},
 		Color:       color, //factorio color
 		Description: desc,
 		Fields: []*discordgo.MessageEmbedField{
@@ -612,7 +610,9 @@ func (embed *discordgo.MessageEmbed) CreateEmbed(title string, color int, desc s
 		Thumbnail: &discordgo.MessageEmbedThumbnail{
 			URL: thumbnail,
 		},
-		Timestamp: time.Format(time.RFC3339), // Discord wants ISO8601; RFC3339 is an extension of ISO8601 and should be completely compatible.
+		Timestamp: time.Now().Format(time.RFC3339), // Discord wants ISO8601; RFC3339 is an extension of ISO8601 and should be completely compatible.
 		Title:     title,
 	}
+
+    return embed
 }
