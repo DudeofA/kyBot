@@ -109,6 +109,11 @@ func ResetDailies() {
 	USArray.WriteUserFile()
 }
 
+func UpdateMinecraft() {
+    cmd := exec.Command("ssh", "andrew@hermes", "-t", "sudo", "-u", "minecraft", "/home/andrew/scripts/updateMinecraft")
+    _ = cmd.Run()
+}
+
 func main() {
 	//Read in files
 	rand.Seed(time.Now().Unix())
@@ -135,6 +140,7 @@ func main() {
 	//Reset dailies each day at 7pm
 	go func() {
 		gocron.Every(1).Day().At("19:00").Do(ResetDailies)
+        gocron.Every(5).Minutes().Do(UpdateMinecraft)
 		<-gocron.Start()
 	}()
 
@@ -445,7 +451,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 		case "minecraft":
 			s.ChannelMessageSend(m.ChannelID, "Checking for updates...")
-			cmd := exec.Command("ssh", "andrew@hermes", "-t", "sudo", "/home/andrew/scripts/updateMinecraft")
+			cmd := exec.Command("ssh", "andrew@hermes", "-t", "sudo", "-u", "minecraft", "/home/andrew/scripts/updateMinecraft")
 			var out bytes.Buffer
 			cmd.Stdout = &out
 			err := cmd.Run()
@@ -462,9 +468,9 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 				//Create and update embeded status message
 				minecraftServer := CreateEmbed("Minecraft Server Status",
 					0x4A6E2E,
-					"Server Address: kylixor.com",
+					"Server Address: kylixor.com\n" + out.String(),
 					"Current Version: ",
-					out.String(),
+                    "1.14",
 					"Status: ",
 					status,
 					"https://www.freepnglogos.com/uploads/minecraft-logo-6.png",
