@@ -109,9 +109,80 @@ func ResetDailies() {
 	USArray.WriteUserFile()
 }
 
-func UpdateMinecraft() {
-    cmd := exec.Command("ssh", "andrew@hermes", "-t", "sudo", "-u", "minecraft", "/home/andrew/scripts/updateMinecraft")
-    _ = cmd.Run()
+func UpdateMinecraft(s *discordgo.Session, ChannelID string) {
+	if ChannelID != config.LogID {
+		s.ChannelMessageSend(ChannelID, "Checking for updates...")
+	}
+	cmd := exec.Command("ssh", "andrew@hermes", "-t", "sudo", "-u", "minecraft", "/home/andrew/scripts/updateMinecraft")
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	err := cmd.Run()
+	if err != nil {
+		s.ChannelMessageSend(ChannelID, fmt.Sprintf("Updated failed: err - %s", err))
+	} else {
+		status := "DOWN"
+		timeout := time.Duration(1 * time.Second)
+		_, err := net.DialTimeout("tcp", "kylixor.com:25565", timeout)
+		if err == nil {
+			status = "UP"
+		}
+		//Create and update embeded status message
+		minecraftServer := CreateEmbed("Minecraft Server Status",
+			0x4A6E2E,
+			"Server Address: kylixor.com\n"+out.String(),
+			"Current Version: ",
+			"1.14",
+			"Status: ",
+			status,
+			"https://www.freepnglogos.com/uploads/minecraft-logo-6.png",
+			"https://logodix.com/logo/1014674.png",
+		)
+		//Edit previous server status message
+		s.ChannelMessageEditEmbed("386915907047391241", "574381603984375808", minecraftServer)
+	}
+
+	if ChannelID != config.LogID {
+		s.ChannelMessageSend(ChannelID, "Check <#386915907047391241> for the current status")
+	}
+}
+
+func UpdateFactorio(s *discordgo.Session, ChannelID string) {
+	if ChannelID != config.LogID {
+	    s.ChannelMessageSend(ChannelID, "Checking for updates...")
+    }
+	cmd := exec.Command("ssh", "andrew@hermes", "-t", "sudo", "/opt/factorio/tools/updateFactorio")
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	err := cmd.Run()
+	if err != nil {
+		s.ChannelMessageSend(ChannelID, fmt.Sprintf("Updated failed: err - %s", err))
+	} else {
+		status := "DOWN"
+		timeout := time.Duration(1 * time.Second)
+		_, err := net.DialTimeout("udp", "kylixor.com:34197", timeout)
+		if err == nil {
+			status = "UP"
+		}
+
+		//Create and update embeded status message
+		factorioServer := CreateEmbed("Factorio Server Status",
+			0xA14D0C,
+			"Server Address: andrewlanghill.com | Password: baconbits",
+			"Current Version: ",
+			out.String(),
+			"Status: ",
+			status,
+			"https://www.factorio.com/static/img/factorio-logo.png",
+			"https://www.factorio.com/static/img/factorio-wheel.png",
+		)
+
+		//Edit previous server status message
+		s.ChannelMessageEditEmbed("386915907047391241", "573690525119545354", factorioServer)
+	}
+
+	if ChannelID != config.LogID {
+	    s.ChannelMessageSend(ChannelID, "Check <#386915907047391241> for the current status")
+    }
 }
 
 func main() {
@@ -136,13 +207,6 @@ func main() {
 		USArray.Users[j].PlayAnthem = true
 	}
 	USArray.WriteUserFile()
-
-	//Reset dailies each day at 7pm
-	go func() {
-		gocron.Every(1).Day().At("19:00").Do(ResetDailies)
-        gocron.Every(5).Minutes().Do(UpdateMinecraft)
-		<-gocron.Start()
-	}()
 
 	//Account for no token at runtime
 	if token == "" {
@@ -204,6 +268,16 @@ func ready(s *discordgo.Session, event *discordgo.Ready) {
 	s.UpdateStatus(0, config.Status)
 	self = event.User
 	USArray.GID = event.Guilds[0].ID
+
+	go func() {
+		//Reset dailies each day at 7pm
+		gocron.Every(1).Day().At("19:00").Do(ResetDailies)
+		//Update Minecraft status every 5 minutes
+		gocron.Every(15).Minutes().Do(UpdateMinecraft, s, config.LogID)
+		//Update Factorio server once a day at 5AM
+		gocron.Every(1).Day().At("05:00").Do(UpdateFactorio, s, config.LogID)
+		<-gocron.Start()
+	}()
 }
 
 // This function will be called each time certain (or all) users change their
@@ -380,38 +454,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			break
 
 		case "factorio":
-			s.ChannelMessageSend(m.ChannelID, "Checking for updates...")
-			cmd := exec.Command("ssh", "andrew@hermes", "-t", "sudo", "updateFactorio")
-			var out bytes.Buffer
-			cmd.Stdout = &out
-			err := cmd.Run()
-			if err != nil {
-				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Updated failed: err - %s", err))
-			} else {
-				status := "DOWN"
-				timeout := time.Duration(1 * time.Second)
-				_, err := net.DialTimeout("udp", "kylixor.com:34197", timeout)
-				if err == nil {
-					status = "UP"
-				}
-
-				//Create and update embeded status message
-				factorioServer := CreateEmbed("Factorio Server Status",
-					0xA14D0C,
-					"Server Address: andrewlanghill.com | Password: baconbits",
-					"Current Version: ",
-					out.String(),
-					"Status: ",
-					status,
-					"https://www.factorio.com/static/img/factorio-logo.png",
-					"https://www.factorio.com/static/img/factorio-wheel.png",
-				)
-
-				//Edit previous server status message
-				s.ChannelMessageEditEmbed("386915907047391241", "573690525119545354", factorioServer)
-			}
-
-			s.ChannelMessageSend(m.ChannelID, "Check <#386915907047391241> for the current status")
+            UpdateFactorio(s, m.ChannelID)
 			break
 
 		case "follow":
@@ -450,38 +493,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			break
 
 		case "minecraft":
-			s.ChannelMessageSend(m.ChannelID, "Checking for updates...")
-			cmd := exec.Command("ssh", "andrew@hermes", "-t", "sudo", "-u", "minecraft", "/home/andrew/scripts/updateMinecraft")
-			var out bytes.Buffer
-			cmd.Stdout = &out
-			err := cmd.Run()
-			if err != nil {
-				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Updated failed: err - %s", err))
-			} else {
-				status := "DOWN"
-				timeout := time.Duration(1 * time.Second)
-				_, err := net.DialTimeout("tcp", "kylixor.com:25565", timeout)
-				if err == nil {
-					status = "UP"
-				}
-
-				//Create and update embeded status message
-				minecraftServer := CreateEmbed("Minecraft Server Status",
-					0x4A6E2E,
-					"Server Address: kylixor.com\n" + out.String(),
-					"Current Version: ",
-                    "1.14",
-					"Status: ",
-					status,
-					"https://www.freepnglogos.com/uploads/minecraft-logo-6.png",
-					"https://logodix.com/logo/1014674.png",
-				)
-
-				//Edit previous server status message
-				s.ChannelMessageEditEmbed("386915907047391241", "574381603984375808", minecraftServer)
-			}
-
-			s.ChannelMessageSend(m.ChannelID, "Check <#386915907047391241> for the current status")
+			UpdateMinecraft(s, m.ChannelID)
 			break
 
 		case "ping":
@@ -594,7 +606,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 func CreateEmbed(title string, color int, desc string, f1_name string, f1_value, f2_name string, f2_value, image string, thumbnail string) *discordgo.MessageEmbed {
 
 	//Create and update embeded status message
-    embed := &discordgo.MessageEmbed{
+	embed := &discordgo.MessageEmbed{
 		//Author:      &discordgo.MessageEmbedAuthor{},
 		Color:       color, //factorio color
 		Description: desc,
@@ -620,5 +632,5 @@ func CreateEmbed(title string, color int, desc string, f1_name string, f1_value,
 		Title:     title,
 	}
 
-    return embed
+	return embed
 }
