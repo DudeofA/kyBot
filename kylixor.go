@@ -1,22 +1,19 @@
 /* 	kylixor.go
-	_________________________________
-	Main code for Kylixor Discord Bot
-	Andrew Langhill
-	kylixor.com
+_________________________________
+Main code for Kylixor Discord Bot
+Andrew Langhill
+kylixor.com
 */
 
 package main
 
-import(
+import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"os/signal"
-	"sort"
-	"strings"
 	"syscall"
 	"time"
 
@@ -35,10 +32,10 @@ type Config struct {
 }
 
 // ----- GLOBAL VARIABLES -----
-var currentVoiceChannel *discordgo.VoiceConnection 	//Current voice channel bot is in, nil if none
-var config = Config{}								//Config structure from file
-var self *discordgo.User 							//discord user type of self (bots user account)
-var APItoken string 								//API token from flag
+var currentVoiceChannel *discordgo.VoiceConnection //Current voice channel bot is in, nil if none
+var config = Config{}                              //Config structure from file
+var self *discordgo.User                           //discord user type of self (bots user account)
+var APItoken string                                //API token from flag
 
 func InitConfFile() {
 	config.Prefix = "k!"
@@ -95,8 +92,8 @@ func (c *Config) WriteConfig() {
 }
 
 func (c *Config) UpdateConfig() {
-	config.ReadConfig();
-	config.WriteConfig();
+	config.ReadConfig()
+	config.WriteConfig()
 }
 
 // Function to call once a day
@@ -126,7 +123,7 @@ func main() {
 	}
 
 	// Update config to account for any data structure changes
-	config.UpdateConfig();
+	config.UpdateConfig()
 
 	// Read in user data file if exists
 	if _, err := os.Stat("data/users.json"); os.IsNotExist(err) {
@@ -134,7 +131,7 @@ func main() {
 		InitUserFile()
 	}
 
-    // Reset all anthems
+	// Reset all anthems
 	USArray.ReadUserFile()
 	for j := range USArray.Users {
 		USArray.Users[j].PlayAnthem = true
