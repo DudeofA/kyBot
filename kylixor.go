@@ -25,6 +25,7 @@ import(
 )
 
 type Config struct {
+	Admin	string
 	Coins	string 		//Name of currency that bot uses (i.e. <gold> coins)
     Follow      bool 	//Whether or not the bot joins/follows into voice channels for anthems
 	LogID       string 	//ID of channel for logging
@@ -48,7 +49,7 @@ func InitConfFile() {
 		panic(err)
 	}
 	// Open file
-	jsonFile, err := os.Create("conf.json")
+	jsonFile, err := os.Create("data/conf.json")
 	if err != nil {
 		panic(err)
 	}
@@ -63,7 +64,7 @@ func InitConfFile() {
 
 // Read in the config into the Config structure
 func (c *Config) ReadConfig() {
-	file, _ := os.Open("conf.json")
+	file, _ := os.Open("data/conf.json")
 	decoder := json.NewDecoder(file)
 	err := decoder.Decode(&c)
 	if err != nil {
@@ -80,7 +81,7 @@ func (c *Config) WriteConfig() {
 		panic(err)
 	}
 	//Open file
-	jsonFile, err := os.Create("conf.json")
+	jsonFile, err := os.Create("data/conf.json")
 	if err != nil {
 		panic(err)
 	}
@@ -119,7 +120,7 @@ func main() {
 	}
 
 	// Read in config file if exists
-	if _, err := os.Stat("conf.json"); os.IsNotExist(err) {
+	if _, err := os.Stat("data/conf.json"); os.IsNotExist(err) {
 		fmt.Println("\nCannot find conf.json, creating new...")
 		InitConfFile()
 	}
@@ -128,7 +129,7 @@ func main() {
 	config.UpdateConfig();
 
 	// Read in user data file if exists
-	if _, err := os.Stat("users.json"); os.IsNotExist(err) {
+	if _, err := os.Stat("data/users.json"); os.IsNotExist(err) {
 		fmt.Println("\nCannot find users.json, creating new...")
 		InitUserFile()
 	}
@@ -181,7 +182,7 @@ func main() {
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	<-sc
 
-	// Cleanly close down the Discord session by disconnecting 
+	// Cleanly close down the Discord session by disconnecting
 	// from any connected voice channels
 	if curChan != nil {
 		if curChan.ChannelID != "" {
@@ -199,4 +200,3 @@ func ready(s *discordgo.Session, event *discordgo.Ready) {
 	self = event.User
 	USArray.GID = event.Guilds[0].ID
 }
-

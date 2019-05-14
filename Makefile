@@ -4,19 +4,14 @@ kylixor: ## Default action. Builds Kylixor.
 	@go get "github.com/bwmarrin/discordgo"
 	@go get "github.com/bwmarrin/dgvoice"
 	@go get "github.com/jasonlvhit/gocron"
-	@go build *.go
+	@go build *.go -o bin/kylixor
 
 clean: ## Removes compiled Kylixor binaries.
 	@rm -f kylixor
 
 install: ## Copies kylixor binary to /usr/local/bin for easy execution and restarts the service
-<<<<<<< HEAD
-	@cp -f kylixor /usr/local/bin/
-	@systemctl restart kylixor
-=======
-	@cp -f kytest /usr/local/bin/
+	@cp -f data/kylixor /usr/local/bin/
 	#@systemctl restart kylixor
->>>>>>> ee1232426be26627a98c2a4e2b2f199ff5d6261f
 
 help: ## Shows this helptext.
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
