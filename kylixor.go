@@ -1,22 +1,19 @@
 /* 	kylixor.go
-	_________________________________
-	Main code for Kylixor Discord Bot
-	Andrew Langhill
-	kylixor.com
+_________________________________
+Main code for Kylixor Discord Bot
+Andrew Langhill
+kylixor.com
 */
 
 package main
 
-import(
+import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"os/signal"
-	"sort"
-	"strings"
 	"syscall"
 	"time"
 
@@ -25,19 +22,19 @@ import(
 )
 
 type Config struct {
-	Coins	string 		//Name of currency that bot uses (i.e. <gold> coins)
-    Follow      bool 	//Whether or not the bot joins/follows into voice channels for anthems
-	LogID       string 	//ID of channel for logging
-	Noise       bool 	//Whether the bot will use function that play sound
-	Prefix      string 	//Prefix the bot will respond to
-	Status      string	//Status of the bot (Playing <v1.0>)
+	Coins  string //Name of currency that bot uses (i.e. <gold> coins)
+	Follow bool   //Whether or not the bot joins/follows into voice channels for anthems
+	LogID  string //ID of channel for logging
+	Noise  bool   //Whether the bot will use function that play sound
+	Prefix string //Prefix the bot will respond to
+	Status string //Status of the bot (Playing <v1.0>)
 }
 
 // ----- GLOBAL VARIABLES -----
-var currentVoiceChannel *discordgo.VoiceConnection 	//Current voice channel bot is in, nil if none
-var config = Config{}								//Config structure from file
-var self *discordgo.User 							//discord user type of self (bots user account)
-var APItoken string 								//API token from flag
+var currentVoiceChannel *discordgo.VoiceConnection //Current voice channel bot is in, nil if none
+var config = Config{}                              //Config structure from file
+var self *discordgo.User                           //discord user type of self (bots user account)
+var APItoken string                                //API token from flag
 
 func InitConfFile() {
 	config.Prefix = "k!"
@@ -94,8 +91,8 @@ func (c *Config) WriteConfig() {
 }
 
 func (c *Config) UpdateConfig() {
-	config.ReadConfig();
-	config.WriteConfig();
+	config.ReadConfig()
+	config.WriteConfig()
 }
 
 // Function to call once a day
@@ -125,7 +122,7 @@ func main() {
 	}
 
 	// Update config to account for any data structure changes
-	config.UpdateConfig();
+	config.UpdateConfig()
 
 	// Read in user data file if exists
 	if _, err := os.Stat("users.json"); os.IsNotExist(err) {
@@ -133,7 +130,7 @@ func main() {
 		InitUserFile()
 	}
 
-    // Reset all anthems
+	// Reset all anthems
 	USArray.ReadUserFile()
 	for j := range USArray.Users {
 		USArray.Users[j].PlayAnthem = true
@@ -181,7 +178,7 @@ func main() {
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	<-sc
 
-	// Cleanly close down the Discord session by disconnecting 
+	// Cleanly close down the Discord session by disconnecting
 	// from any connected voice channels
 	if curChan != nil {
 		if curChan.ChannelID != "" {
@@ -199,4 +196,3 @@ func ready(s *discordgo.Session, event *discordgo.Ready) {
 	self = event.User
 	USArray.GID = event.Guilds[0].ID
 }
-
