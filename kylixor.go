@@ -113,10 +113,14 @@ func UpdateMinecraft(s *discordgo.Session, ChannelID string) {
 	if ChannelID != config.LogID {
 		s.ChannelMessageSend(ChannelID, "Checking for updates...")
 	}
-	cmd := exec.Command("ssh", "andrew@hermes", "-t", "sudo", "-u", "minecraft", "/home/andrew/scripts/updateMinecraft")
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	err := cmd.Run()
+	var players bytes.Buffer
+	var version bytes.Buffer
+    cmd := exec.Command("ssh", "andrew@hermes", "-t", "cat", "/opt/minecraft/server/version.txt")
+    cmd.Stdout = &version
+    err := cmd.Run()
+	cmd = exec.Command("ssh", "andrew@hermes", "-t", "sudo", "-u", "minecraft", "/home/andrew/scripts/updateMinecraft")
+	cmd.Stdout = &players
+	err = cmd.Run()
 	if err != nil {
 		s.ChannelMessageSend(ChannelID, fmt.Sprintf("Updated failed: err - %s", err))
 	} else {
@@ -129,9 +133,9 @@ func UpdateMinecraft(s *discordgo.Session, ChannelID string) {
 		//Create and update embeded status message
 		minecraftServer := CreateEmbed("Minecraft Server Status",
 			0x4A6E2E,
-			"Server Address: kylixor.com\n"+out.String(),
+			"Server Address: kylixor.com\n"+players.String(),
 			"Current Version: ",
-			"1.14",
+			version.String(),
 			"Status: ",
 			status,
 			"https://www.freepnglogos.com/uploads/minecraft-logo-6.png",
