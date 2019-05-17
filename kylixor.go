@@ -26,6 +26,7 @@ func init() {
 	flag.Parse()
 }
 
+//Config - structure to hold the variables from the config file
 type Config struct {
 	Admin       string
 	Coins       string
@@ -47,6 +48,7 @@ var self *discordgo.User
 var token string
 var curChan *discordgo.VoiceConnection
 
+//InitConfFile - Initialize config file if not existing
 func InitConfFile() {
 	config.Prefix = "k!"
 	config.Status = "k!help"
@@ -69,7 +71,7 @@ func InitConfFile() {
 	jsonFile.Close()
 }
 
-//Read in the config into the Config structure
+//ReadConfig - Read in the config into the Config structure
 func (c *Config) ReadConfig() {
 	file, _ := os.Open("conf.json")
 	decoder := json.NewDecoder(file)
@@ -80,7 +82,7 @@ func (c *Config) ReadConfig() {
 	file.Close()
 }
 
-//Write out the current Config structure to file, indented nicely
+//WriteConfig - Write out the current Config structure to file, indented nicely
 func (c *Config) WriteConfig() {
 	//Indent so its readable
 	configData, err := json.MarshalIndent(c, "", "    ")
@@ -101,7 +103,7 @@ func (c *Config) WriteConfig() {
 	jsonFile.Close()
 }
 
-//Function to call once a day
+//ResetDailies - Function to call once a day to reset dailies
 func ResetDailies() {
 	for j := range USArray.Users {
 		USArray.Users[j].Dailies = false
@@ -109,15 +111,16 @@ func ResetDailies() {
 	USArray.WriteUserFile()
 }
 
+//UpdateMinecraft - sends command to game server to update the message in discord about the server (players online)
 func UpdateMinecraft(s *discordgo.Session, ChannelID string) {
 	if ChannelID != config.LogID {
 		s.ChannelMessageSend(ChannelID, "Checking for updates...")
 	}
 	var players bytes.Buffer
 	var version bytes.Buffer
-    cmd := exec.Command("ssh", "andrew@hermes", "-t", "cat", "/opt/minecraft/server/version.txt")
-    cmd.Stdout = &version
-    err := cmd.Run()
+	cmd := exec.Command("ssh", "andrew@hermes", "-t", "cat", "/opt/minecraft/server/version.txt")
+	cmd.Stdout = &version
+	cmd.Run()
 	cmd = exec.Command("ssh", "andrew@hermes", "-t", "sudo", "-u", "minecraft", "/home/andrew/scripts/updateMinecraft")
 	cmd.Stdout = &players
 	err = cmd.Run()
@@ -150,10 +153,11 @@ func UpdateMinecraft(s *discordgo.Session, ChannelID string) {
 	}
 }
 
+//UpdateFactorio - commands the game server to check for updates and update the game fiels if necessary
 func UpdateFactorio(s *discordgo.Session, ChannelID string) {
 	if ChannelID != config.LogID {
-	    s.ChannelMessageSend(ChannelID, "Checking for updates...")
-    }
+		s.ChannelMessageSend(ChannelID, "Checking for updates...")
+	}
 	cmd := exec.Command("ssh", "andrew@hermes", "-t", "sudo", "/opt/factorio/tools/updateFactorio")
 	var out bytes.Buffer
 	cmd.Stdout = &out
@@ -171,7 +175,7 @@ func UpdateFactorio(s *discordgo.Session, ChannelID string) {
 		//Create and update embeded status message
 		factorioServer := CreateEmbed("Factorio Server Status",
 			0xA14D0C,
-			"Server Address: andrewlanghill.com | Password: baconbits",
+			"Server Address: kylixor.com | Password: baconbits",
 			"Current Version: ",
 			out.String(),
 			"Status: ",
@@ -185,8 +189,8 @@ func UpdateFactorio(s *discordgo.Session, ChannelID string) {
 	}
 
 	if ChannelID != config.LogID {
-	    s.ChannelMessageSend(ChannelID, "Check <#386915907047391241> for the current status")
-    }
+		s.ChannelMessageSend(ChannelID, "Check <#386915907047391241> for the current status")
+	}
 }
 
 func main() {
@@ -295,18 +299,20 @@ func presenceUpdate(s *discordgo.Session, p *discordgo.PresenceUpdate) {
 	}
 }
 
+//Pair - helps sort channel
 type Pair struct {
 	Key   string
 	Value int
 }
 
+//PairList - array of pairs
 type PairList []Pair
 
 func (p PairList) Len() int           { return len(p) }
 func (p PairList) Less(i, j int) bool { return p[i].Value < p[j].Value }
 func (p PairList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 
-// This function will be called when a user changes their voice state
+//VoiceStateUpdate - This function will be called when a user changes their voice state
 // (mute, deafen, join channel, leave channel, etc.)
 func VoiceStateUpdate(s *discordgo.Session, v *discordgo.VoiceStateUpdate) {
 	//Update the user and if it is a real update log it
@@ -333,7 +339,7 @@ func VoiceStateUpdate(s *discordgo.Session, v *discordgo.VoiceStateUpdate) {
 					m := make(map[string]int)
 					//Create a pair list of channels and the users in them
 					for i := range g.VoiceStates {
-						m[g.VoiceStates[i].ChannelID] += 1
+						m[g.VoiceStates[i].ChannelID]++
 					}
 
 					pl := make(PairList, len(m))
@@ -458,7 +464,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			break
 
 		case "factorio":
-            UpdateFactorio(s, m.ChannelID)
+			UpdateFactorio(s, m.ChannelID)
 			break
 
 		case "follow":
@@ -607,7 +613,8 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 }
 
-func CreateEmbed(title string, color int, desc string, f1_name string, f1_value, f2_name string, f2_value, image string, thumbnail string) *discordgo.MessageEmbed {
+//CreateEmbed - creates embeded message to be sent with up to 2 values
+func CreateEmbed(title string, color int, desc string, f1name string, f1value, f2name string, f2value, image string, thumbnail string) *discordgo.MessageEmbed {
 
 	//Create and update embeded status message
 	embed := &discordgo.MessageEmbed{
