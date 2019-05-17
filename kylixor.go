@@ -123,7 +123,7 @@ func UpdateMinecraft(s *discordgo.Session, ChannelID string) {
 	cmd.Run()
 	cmd = exec.Command("ssh", "andrew@hermes", "-t", "sudo", "-u", "minecraft", "/home/andrew/scripts/updateMinecraft")
 	cmd.Stdout = &players
-	err = cmd.Run()
+	err := cmd.Run()
 	if err != nil {
 		s.ChannelMessageSend(ChannelID, fmt.Sprintf("Updated failed: err - %s", err))
 	} else {
@@ -623,13 +623,13 @@ func CreateEmbed(title string, color int, desc string, f1name string, f1value, f
 		Description: desc,
 		Fields: []*discordgo.MessageEmbedField{
 			&discordgo.MessageEmbedField{
-				Name:   f1_name,
-				Value:  f1_value,
+				Name:   f1name,
+				Value:  f1value,
 				Inline: true,
 			},
 			&discordgo.MessageEmbedField{
-				Name:   f2_name,
-				Value:  f2_value,
+				Name:   f2name,
+				Value:  f2value,
 				Inline: true,
 			},
 		},
