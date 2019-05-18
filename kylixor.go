@@ -114,12 +114,6 @@ func main() {
 	//Get random seed for later random number generation
 	rand.Seed(time.Now().Unix())
 
-	//Check to see if bot token is provided
-	if config.APIKey == "" {
-		fmt.Println("No token provided. Please place your API key into the config.json file")
-		return
-	}
-
 	// Read in config file if exists
 	if _, err := os.Stat("data/conf.json"); os.IsNotExist(err) {
 		fmt.Println("\nCannot find conf.json, creating new...")
@@ -141,6 +135,12 @@ func main() {
 	// 	USArray.Users[j].PlayAnthem = true
 	// }
 	// USArray.WriteUserFile
+
+	//Check to see if bot token is provided
+	if config.APIKey == "" {
+		fmt.Println("No token provided. Please place your API key into the config.json file")
+		return
+	}
 
 	// Create a new Discord session using the provided bot token.
 	ky, err := discordgo.New("Bot " + config.APIKey)
