@@ -4,7 +4,7 @@ kylixor: ## Default action. Builds Kylixor.
 	@go get "github.com/bwmarrin/discordgo"
 	@go get "github.com/bwmarrin/dgvoice"
 	@go get "github.com/jasonlvhit/gocron"
-	@go build *.go -o bin/kylixor
+	@go build -o bin/kylixor *.go
 
 clean: ## Removes compiled Kylixor binaries.
 	@rm -f kylixor
