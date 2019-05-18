@@ -9,7 +9,6 @@ package main
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
 	"math/rand"
 	"os"
@@ -21,8 +20,12 @@ import (
 	"github.com/jasonlvhit/gocron"
 )
 
+// ----- GLOBAL VARIABLES -----
+
+//Config - structure to hold variables from the config file
 type Config struct {
-	Admin  string
+	Admin  string //Admin's Discord ID
+	APIKey string //Discord bot api key
 	Coins  string //Name of currency that bot uses (i.e. <gold> coins)
 	Follow bool   //Whether or not the bot joins/follows into voice channels for anthems
 	LogID  string //ID of channel for logging
@@ -31,16 +34,17 @@ type Config struct {
 	Status string //Status of the bot (Playing <v1.0>)
 }
 
-// ----- GLOBAL VARIABLES -----
-var currentVoiceChannel *discordgo.VoiceConnection //Current voice channel bot is in, nil if none
 var config = Config{}                              //Config structure from file
-var self *discordgo.User                           //discord user type of self (bots user account)
-var APItoken string                                //API token from flag
+var currentVoiceChannel *discordgo.VoiceConnection //Current voice channel bot is in, nil if none
+var self *discordgo.User                           //discord user type of self (for storing bots user account)
 
+//InitConfFile - Initialize config file if one is not found
 func InitConfFile() {
+	//Default values
 	config.Prefix = "k!"
 	config.Status = "k!help"
 
+	//Create and indent proper json output for the config
 	configData, err := json.MarshalIndent(config, "", "    ")
 	if err != nil {
 		panic(err)
@@ -59,7 +63,7 @@ func InitConfFile() {
 	jsonFile.Close()
 }
 
-// Read in the config into the Config structure
+//ReadConfig - Read in config file into Config structure
 func (c *Config) ReadConfig() {
 	file, _ := os.Open("data/conf.json")
 	decoder := json.NewDecoder(file)
@@ -70,7 +74,7 @@ func (c *Config) ReadConfig() {
 	file.Close()
 }
 
-// Write out the current Config structure to file, indented nicely
+//WriteConfig - Write out the current Config structure to file, indented nicely
 func (c *Config) WriteConfig() {
 	//Indent so its readable
 	configData, err := json.MarshalIndent(c, "", "    ")
@@ -91,28 +95,28 @@ func (c *Config) WriteConfig() {
 	jsonFile.Close()
 }
 
+//UpdateConfig - update configuration file by reading then writing
+//Updates config file to correct syntax
 func (c *Config) UpdateConfig() {
 	config.ReadConfig()
 	config.WriteConfig()
 }
 
-// Function to call once a day
+//ResetDailies - Function to call once a day to reset dailies
 func ResetDailies() {
-	for j := range USArray.Users {
-		USArray.Users[j].Dailies = false
-	}
-	USArray.WriteUserFile()
+	// for j := range USArray.Users {
+	// 	USArray.Users[j].Dailies = false
+	// }
+	// USArray.WriteUserFile()
 }
 
 func main() {
-
+	//Get random seed for later random number generation
 	rand.Seed(time.Now().Unix())
 
-	// Parse bot token
-	flag.StringVar(&APItoken, "t", "", "Bot Token")
-	flag.Parse()
-	if token == "" {
-		fmt.Println("No token provided. Please run: kylixor -t <bot token>")
+	//Check to see if bot token is provided
+	if config.APIKey == "" {
+		fmt.Println("No token provided. Please place your API key into the config.json file")
 		return
 	}
 
@@ -128,25 +132,18 @@ func main() {
 	// Read in user data file if exists
 	if _, err := os.Stat("data/users.json"); os.IsNotExist(err) {
 		fmt.Println("\nCannot find users.json, creating new...")
-		InitUserFile()
+		// InitUserFile()
 	}
 
 	// Reset all anthems
-	USArray.ReadUserFile()
-	for j := range USArray.Users {
-		USArray.Users[j].PlayAnthem = true
-	}
-	USArray.WriteUserFile()
-
-	// Start cronjob to reset dailies every day at 7pm
-	go func() {
-		gocron.Every(1).Day().At("19:00").Do(ResetDailies)
-
-		<-gocron.Start()
-	}()
+	// USArray.ReadUserFile()
+	// for j := range USArray.Users {
+	// 	USArray.Users[j].PlayAnthem = true
+	// }
+	// USArray.WriteUserFile
 
 	// Create a new Discord session using the provided bot token.
-	ky, err := discordgo.New("Bot " + APItoken)
+	ky, err := discordgo.New("Bot " + config.APIKey)
 	if err != nil {
 		fmt.Println("Error creating Discord session: ", err)
 		return
@@ -159,13 +156,13 @@ func main() {
 	ky.AddHandler(messageCreate)
 
 	// Register messageDelete for the messageDelete events
-	ky.AddHandler(messageDelete)
+	// ky.AddHandler(messageDelete)
 
 	// Register presenceUpdate to see who is online
 	ky.AddHandler(presenceUpdate)
 
 	// Register VoiceStateUpdate to check when users enter channel
-	ky.AddHandler(VoiceStateUpdate)
+	ky.AddHandler(voiceStateUpdate)
 
 	// Open the websocket and begin listening for above events.
 	err = ky.Open()
@@ -181,9 +178,9 @@ func main() {
 
 	// Cleanly close down the Discord session by disconnecting
 	// from any connected voice channels
-	if curChan != nil {
-		if curChan.ChannelID != "" {
-			curChan.Disconnect()
+	if currentVoiceChannel != nil {
+		if currentVoiceChannel.ChannelID != "" {
+			currentVoiceChannel.Disconnect()
 		}
 	}
 	ky.Close()
@@ -195,5 +192,26 @@ func ready(s *discordgo.Session, event *discordgo.Ready) {
 	// Set the playing status.
 	s.UpdateStatus(0, config.Status)
 	self = event.User
-	USArray.GID = event.Guilds[0].ID
+	// USArray.GID = event.Guilds[0].ID
+
+	// Start cronjobs
+	go func() {
+		gocron.Every(1).Day().At("19:00").Do(ResetDailies) //Reset dailies task
+
+		<-gocron.Start() //Start waiting for the cronjobs
+	}()
+}
+
+//presenceUpdate - Called when any user changes their status (online, away, playing a game, etc)
+func presenceUpdate(s *discordgo.Session, p *discordgo.PresenceUpdate) {
+
+}
+
+//VoiceStateUpdate - Called whenever a user changes their voice state (muted, deafen, connected, disconnected)
+func voiceStateUpdate(s *discordgo.Session, v *discordgo.VoiceStateUpdate) {
+
+}
+
+func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
+
 }
