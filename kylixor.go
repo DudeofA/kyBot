@@ -49,6 +49,10 @@ func InitConfFile() {
 	if err != nil {
 		panic(err)
 	}
+
+	//Create folder for data
+	_ = os.Mkdir("data", os.ModeDir)
+
 	// Open file
 	jsonFile, err := os.Create("data/conf.json")
 	if err != nil {
