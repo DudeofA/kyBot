@@ -9,7 +9,7 @@ Commands
 
 | Command     | Description
 | ----------- | -----------
-| sample      | sample
+| help        | print out this file
 
 | Admin CMD   | Description
 | ----------- | -----------

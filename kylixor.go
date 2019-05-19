@@ -13,6 +13,7 @@ import (
 	"math/rand"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -29,7 +30,6 @@ type Config struct {
 	Coins  string //Name of currency that bot uses (i.e. <gold> coins)
 	Follow bool   //Whether or not the bot joins/follows into voice channels for anthems
 	LogID  string //ID of channel for logging
-	Noise  bool   //Whether the bot will use function that play sound
 	Prefix string //Prefix the bot will respond to
 	Status string //Status of the bot (Playing <v1.0>)
 }
@@ -211,11 +211,37 @@ func presenceUpdate(s *discordgo.Session, p *discordgo.PresenceUpdate) {
 
 }
 
-//VoiceStateUpdate - Called whenever a user changes their voice state (muted, deafen, connected, disconnected)
+//voiceStateUpdate - Called whenever a user changes their voice state (muted, deafen, connected, disconnected)
 func voiceStateUpdate(s *discordgo.Session, v *discordgo.VoiceStateUpdate) {
 
 }
 
+//messageCreate - Called whenever a message is sent to the discord
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
+	//Return if the message was sent by a bot to avoid infinite loops
+	if m.Author.Bot {
+		return
+	}
+
+	//Fix any flipped tables
+	if m.Content == "(╯°□°）╯︵ ┻━┻" {
+		s.ChannelMessageSend(m.ChannelID, "┬─┬ノ( º _ ºノ)")
+	}
+
+	//If the message sent is a command with the set prefix
+	if strings.HasPrefix(m.Content, config.Prefix) {
+		//Trim the prefix to extract the command
+		input := strings.TrimPrefix(m.Content, config.Prefix)
+		//Split command into the command and what comes after
+		inputPieces := strings.SplitN(input, " ", 2)
+		command := strings.ToLower(inputPieces[0])
+		var data string
+		if len(inputPieces) == 2 {
+			data = inputPieces[1]
+		}
+
+		runCommand(s, m, command, data)
+
+	}
 
 }
