@@ -10,7 +10,6 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
-	"time"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -21,7 +20,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 
 	//----- H E L P -----
 	//Display the readme file
-	case "embed":
+	case "darling":
 		embedMsg := &discordgo.MessageEmbed{Description: "DAH-LING", Color: 0xfa00ff, Image: &discordgo.MessageEmbedImage{URL: "https://cdn.discordapp.com/emojis/496406418962776065.gif"}}
 		s.ChannelMessageSendEmbed(m.ChannelID, embedMsg)
 	case "help":
@@ -36,37 +35,4 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 
 	}
 
-}
-
-//createEmbed - Create an embedded message and send it to the relavent channel
-func createEmbed(title string, color int, desc string, f1name string, f1value, f2name string, f2value, image string, thumbnail string) *discordgo.MessageEmbed {
-
-	//Create and update embeded status message
-	embed := &discordgo.MessageEmbed{
-		//Author:      &discordgo.MessageEmbedAuthor{},
-		Color:       color, //factorio color
-		Description: desc,
-		Fields: []*discordgo.MessageEmbedField{
-			&discordgo.MessageEmbedField{
-				Name:   f1name,
-				Value:  f1value,
-				Inline: true,
-			},
-			&discordgo.MessageEmbedField{
-				Name:   f2name,
-				Value:  f2value,
-				Inline: true,
-			},
-		},
-		Image: &discordgo.MessageEmbedImage{
-			URL: image,
-		},
-		Thumbnail: &discordgo.MessageEmbedThumbnail{
-			URL: thumbnail,
-		},
-		Timestamp: time.Now().Format(time.RFC3339), // Discord wants ISO8601; RFC3339 is an extension of ISO8601 and should be completely compatible.
-		Title:     title,
-	}
-
-	return embed
 }

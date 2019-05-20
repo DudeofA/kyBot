@@ -7,7 +7,11 @@ kylixor.com
 
 package main
 
-import "time"
+import (
+	"encoding/json"
+	"os"
+	"time"
+)
 
 //ServerStats - Hold all the pertaining information for each server
 type ServerStats struct {
@@ -34,4 +38,73 @@ type Reminders struct {
 	UserID     string    `json:"userID"`
 	RemindTime time.Time `json:"remindTime"`
 	RemindMsg  string    `json:"remindMsg"`
+}
+
+var jcc ServerStats
+
+//InitUserFile - Create and initialize user data file
+func InitUserFile() {
+	//Indent so its readable
+	userData, err := json.MarshalIndent(jcc, "", "    ")
+	if err != nil {
+		panic(err)
+	}
+	//Open file
+	jsonFile, err := os.Create(pwd + "/data/users.json")
+	if err != nil {
+		panic(err)
+	}
+	//Write to file
+	_, err = jsonFile.Write(userData)
+	if err != nil {
+		panic(err)
+	}
+	//Cleanup
+	jsonFile.Close()
+}
+
+//ReadUserFile - Read in the user file into the structure
+func (u *ServerStats) ReadUserFile() {
+	//Open file
+	file, err := os.Open(pwd + "/data/users.json")
+	if err != nil {
+		panic(err)
+	}
+
+	//Decode JSON and inject into structure
+	decoder := json.NewDecoder(file)
+	err = decoder.Decode(&u)
+	if err != nil {
+		panic(err)
+	}
+
+	//Close file
+	file.Close()
+}
+
+//WriteUserFile - Write the file
+func (u *ServerStats) WriteUserFile() {
+	//Marshal global variable data
+	jsonData, err := json.MarshalIndent(u, "", "    ")
+	if err != nil {
+		panic(err)
+	}
+	//Open file
+	jsonFile, err := os.Create(pwd + "/data/users.json")
+	if err != nil {
+		panic(err)
+	}
+	//Write to file
+	_, err = jsonFile.Write(jsonData)
+	if err != nil {
+		panic(err)
+	}
+	//Cleanup
+	jsonFile.Close()
+}
+
+//UpdateUserFile - Read then write the user jsonFile
+func (u *ServerStats) UpdateUserFile() {
+	u.ReadUserFile()
+	u.WriteUserFile()
 }

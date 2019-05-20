@@ -10,6 +10,7 @@ Commands
 | Command     | Description
 | ----------- | -----------
 | help        | print out this file
+| weeb        | Gives a random waifu
 
 | Admin CMD   | Description
 | ----------- | -----------
