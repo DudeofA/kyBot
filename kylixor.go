@@ -34,9 +34,12 @@ type Config struct {
 	Status string //Status of the bot (Playing <v1.0>)
 }
 
-var config = Config{}                              //Config structure from file
-var currentVoiceChannel *discordgo.VoiceConnection //Current voice channel bot is in, nil if none
-var self *discordgo.User                           //discord user type of self (for storing bots user account)
+var (
+	config              *Config                    //Config structure from file
+	currentVoiceChannel *discordgo.VoiceConnection //Current voice channel bot is in, nil if none
+	self                *discordgo.User            //discord user type of self (for storing bots user account)
+	err                 error
+)
 
 //InitConfFile - Initialize config file if one is not found
 func InitConfFile() {
@@ -71,7 +74,7 @@ func InitConfFile() {
 func (c *Config) ReadConfig() {
 	file, _ := os.Open("data/conf.json")
 	decoder := json.NewDecoder(file)
-	err := decoder.Decode(&c)
+	err = decoder.Decode(&c)
 	if err != nil {
 		panic(err)
 	}
@@ -114,6 +117,9 @@ func ResetDailies() {
 	// USArray.WriteUserFile()
 }
 
+//------------------------------------------------------------------------------
+//-----------------               M A I N ( )				--------------------
+//------------------------------------------------------------------------------
 func main() {
 	//Get random seed for later random number generation
 	rand.Seed(time.Now().Unix())
@@ -240,6 +246,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			data = inputPieces[1]
 		}
 
+		//Send the data to the command function for execution
 		runCommand(s, m, command, data)
 
 	}
