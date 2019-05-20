@@ -90,7 +90,7 @@ func (c *Config) WriteConfig() {
 		panic(err)
 	}
 	//Open file
-	jsonFile, err := os.Open(pwd + "/data/conf.json")
+	jsonFile, err := os.Create(pwd + "/data/conf.json")
 	if err != nil {
 		panic(err)
 	}
