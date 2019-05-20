@@ -37,8 +37,9 @@ type Config struct {
 var (
 	config              = Config{}                 //Config structure from file
 	currentVoiceChannel *discordgo.VoiceConnection //Current voice channel bot is in, nil if none
-	self                *discordgo.User            //discord user type of self (for storing bots user account)
-	err                 error
+	self                *discordgo.User            //Discord user type of self (for storing bots user account)
+	err                 error                      //One error to rule them all
+	pwd, _              = os.Getwd()
 )
 
 //InitConfFile - Initialize config file if one is not found
@@ -57,7 +58,7 @@ func InitConfFile() {
 	_ = os.Mkdir("data", 0755)
 
 	// Open file
-	jsonFile, err := os.Create("data/conf.json")
+	jsonFile, err := os.Create(pwd + "data/config.json")
 	if err != nil {
 		panic(err)
 	}
@@ -72,7 +73,7 @@ func InitConfFile() {
 
 //ReadConfig - Read in config file into Config structure
 func (c *Config) ReadConfig() {
-	file, _ := os.Open("data/conf.json")
+	file, _ := os.Open(pwd + "data/conf.json")
 	decoder := json.NewDecoder(file)
 	err = decoder.Decode(&c)
 	if err != nil {
@@ -89,7 +90,7 @@ func (c *Config) WriteConfig() {
 		panic(err)
 	}
 	//Open file
-	jsonFile, err := os.Create("data/conf.json")
+	jsonFile, err := os.Open(pwd + "data/conf.json")
 	if err != nil {
 		panic(err)
 	}
@@ -125,7 +126,7 @@ func main() {
 	rand.Seed(time.Now().Unix())
 
 	// Read in config file if exists
-	if _, err := os.Stat("data/conf.json"); os.IsNotExist(err) {
+	if _, err := os.Stat(pwd + "data/conf.json"); os.IsNotExist(err) {
 		fmt.Println("\nCannot find conf.json, creating new...")
 		InitConfFile()
 	}
