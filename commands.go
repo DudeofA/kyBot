@@ -22,7 +22,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 	//----- H E L P -----
 	//Display the readme file
 	case "embed":
-		embedMsg := createEmbed("", 0, "ayaya", "", "", "", "", "https://discordapp.com/channels/144220618848600064/144220618848600064/579864703317311514", "")
+		embedMsg := &discordgo.MessageEmbed{Image: &discordgo.MessageEmbedImage{URL: "https://cdn.discordapp.com/emojis/496406418962776065.gif"}}
 		s.ChannelMessageSendEmbed(m.ChannelID, embedMsg)
 	case "help":
 		readme, err := ioutil.ReadFile("README.md")
