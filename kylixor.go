@@ -58,7 +58,7 @@ func InitConfFile() {
 	_ = os.Mkdir("data", 0755)
 
 	// Open file
-	jsonFile, err := os.Create(pwd + "data/config.json")
+	jsonFile, err := os.Create(pwd + "/data/config.json")
 	if err != nil {
 		panic(err)
 	}
@@ -73,7 +73,7 @@ func InitConfFile() {
 
 //ReadConfig - Read in config file into Config structure
 func (c *Config) ReadConfig() {
-	file, _ := os.Open(pwd + "data/conf.json")
+	file, _ := os.Open(pwd + "/data/conf.json")
 	decoder := json.NewDecoder(file)
 	err = decoder.Decode(&c)
 	if err != nil {
@@ -90,7 +90,7 @@ func (c *Config) WriteConfig() {
 		panic(err)
 	}
 	//Open file
-	jsonFile, err := os.Open(pwd + "data/conf.json")
+	jsonFile, err := os.Open(pwd + "/data/conf.json")
 	if err != nil {
 		panic(err)
 	}
@@ -126,7 +126,7 @@ func main() {
 	rand.Seed(time.Now().Unix())
 
 	// Read in config file if exists
-	if _, err := os.Stat(pwd + "data/conf.json"); os.IsNotExist(err) {
+	if _, err := os.Stat(pwd + "/data/conf.json"); os.IsNotExist(err) {
 		fmt.Println("\nCannot find conf.json, creating new...")
 		InitConfFile()
 	}
