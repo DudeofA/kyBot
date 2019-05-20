@@ -35,7 +35,7 @@ type Config struct {
 }
 
 var (
-	config              *Config                    //Config structure from file
+	config              = Config{}                 //Config structure from file
 	currentVoiceChannel *discordgo.VoiceConnection //Current voice channel bot is in, nil if none
 	self                *discordgo.User            //discord user type of self (for storing bots user account)
 	err                 error
@@ -135,8 +135,8 @@ func main() {
 
 	// Read in user data file if exists
 	// if _, err := os.Stat("data/users.json"); os.IsNotExist(err) {
-		// fmt.Println("\nCannot find users.json, creating new...")
-		// InitUserFile()
+	// fmt.Println("\nCannot find users.json, creating new...")
+	// InitUserFile()
 	// }
 
 	// Reset all anthems
