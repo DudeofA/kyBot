@@ -58,7 +58,7 @@ func InitConfFile() {
 	_ = os.Mkdir("data", 0755)
 
 	// Open file
-	jsonFile, err := os.Create(pwd + "/data/config.json")
+	jsonFile, err := os.Create(pwd + "/data/conf.json")
 	if err != nil {
 		panic(err)
 	}
