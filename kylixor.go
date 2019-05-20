@@ -51,7 +51,7 @@ func InitConfFile() {
 	}
 
 	//Create folder for data
-	_ = os.Mkdir("data", os.ModeDir)
+	_ = os.Mkdir("data", 0755)
 
 	// Open file
 	jsonFile, err := os.Create("data/conf.json")
@@ -128,10 +128,10 @@ func main() {
 	config.UpdateConfig()
 
 	// Read in user data file if exists
-	if _, err := os.Stat("data/users.json"); os.IsNotExist(err) {
-		fmt.Println("\nCannot find users.json, creating new...")
+	// if _, err := os.Stat("data/users.json"); os.IsNotExist(err) {
+		// fmt.Println("\nCannot find users.json, creating new...")
 		// InitUserFile()
-	}
+	// }
 
 	// Reset all anthems
 	// USArray.ReadUserFile()
