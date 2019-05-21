@@ -11,6 +11,8 @@ import (
 	"encoding/json"
 	"os"
 	"time"
+
+	"github.com/bwmarrin/discordgo"
 )
 
 //ServerStats - Hold all the pertaining information for each server
@@ -41,6 +43,8 @@ type Reminders struct {
 }
 
 var jcc ServerStats
+
+//----- U S E R   F I L E   F U N C T I O N S -----
 
 //InitUserFile - Create and initialize user data file
 func InitUserFile() {
@@ -107,4 +111,48 @@ func (u *ServerStats) WriteUserFile() {
 func (u *ServerStats) UpdateUserFile() {
 	u.ReadUserFile()
 	u.WriteUserFile()
+}
+
+//----- U S E R   M A N A G E M E N T -----
+
+//CreateUser - create user within the user json file and return it
+func (u *ServerStats) CreateUser(s *discordgo.Session, c interface{}) (userData UserStats) {
+	var user UserStats
+
+	//Temp - assign interface to MessageEmbed
+	m := c.(*discordgo.MessageCreate)
+
+	//Pull user info from discord
+	discordUser, _ := s.User(m.Author.ID)
+
+	//Put user data into user structure
+	user.Name = discordUser.Username
+	user.Credits = 0
+	user.UserID = m.Author.ID
+	user.PlayAnthem = false
+
+	return user
+}
+
+//GetUserData - Retrieve user data
+func (u *ServerStats) GetUserData(s *discordgo.Session, c interface{}) (userData UserStats) {
+
+	//Temp - assign interface to message
+	m := c.(*discordgo.MessageCreate)
+
+	//Check if user is in the data file, return them if they are
+	for i := range u.Users {
+		if u.Users[i].UserID == m.Author.ID {
+			return u.Users[i]
+		}
+	}
+
+	//return user
+	return u.CreateUser(s, c)
+}
+
+//UpdateUser - Update user data json jsonFile
+func (u *ServerStats) UpdateUser(s *discordgo.Session, c interface{}) bool {
+	//Return true if update was needed
+	return false
 }

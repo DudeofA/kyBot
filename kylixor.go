@@ -155,6 +155,20 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		s.ChannelMessageSend(m.ChannelID, "┬─┬ノ( º _ ºノ)")
 	}
 
+	//Good Karma
+	if strings.ToLower(m.Content) == "good bot" {
+		jcc.Karma++
+		jcc.WriteUserFile()
+		s.MessageReactionAdd(m.ChannelID, m.ID, "😊")
+	}
+
+	//Bad Karma
+	if strings.ToLower(m.Content) == "bad bot" {
+		jcc.Karma--
+		jcc.WriteUserFile()
+		s.MessageReactionAdd(m.ChannelID, m.ID, "😞")
+	}
+
 	//If the message sent is a command with the set prefix
 	if strings.HasPrefix(m.Content, config.Prefix) {
 		//Trim the prefix to extract the command
@@ -169,9 +183,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 		//Send the data to the command function for execution
 		runCommand(s, m, command, data)
-
 	}
-
 }
 
 //----- I N I T I A L   S E T U P   F U N C T I O N S -----
