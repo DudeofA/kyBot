@@ -62,6 +62,13 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("```"+string(readme)+"```"))
 		break
 
+	//----- V E R S I O N -----
+	//Gets the current version from the readme file and prints it
+	case "version":
+		ver := GetVersion(s)
+		s.ChannelMessageSend(m.ChannelID, ver)
+		break
+
 	}
 
 }

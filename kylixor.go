@@ -8,6 +8,7 @@ kylixor.com
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"math/rand"
@@ -25,13 +26,14 @@ import (
 
 //Config - structure to hold variables from the config file
 type Config struct {
-	Admin  string //Admin's Discord ID
-	APIKey string //Discord bot api key
-	Coins  string //Name of currency that bot uses (i.e. <gold> coins)
-	Follow bool   //Whether or not the bot joins/follows into voice channels for anthems
-	LogID  string //ID of channel for logging
-	Prefix string //Prefix the bot will respond to
-	Status string //Status of the bot (Playing <v1.0>)
+	Admin    string //Admin's Discord ID
+	APIKey   string //Discord bot api key
+	BootLogo string //ASCII to display when starting up the bot
+	Coins    string //Name of currency that bot uses (i.e. <gold> coins)
+	Follow   bool   //Whether or not the bot joins/follows into voice channels for anthems
+	LogID    string //ID of channel for logging
+	Prefix   string //Prefix the bot will respond to
+	Status   string //Status of the bot (Playing <v1.0>)
 }
 
 var (
@@ -113,24 +115,7 @@ func main() {
 	}()
 
 	// Wait here until CTRL-C or other term signal is received.
-	fmt.Printf("%s", `
-           /\
-          /  \
-         / /\ \
-________/ /__\_\________
-\  ____/ /___________  /
- \ \  / /      \ \  / /
-  \ \/ /        \ \/ /
-   \ \/          \ \/
-   /\ \          /\ \
-  / /\ \        / /\ \
- / /__\_\______/ /__\ \
-/_____________/ /______\
-        \ \  / /
-         \ \/ /
-          \  /
-           \/
-	`)
+	fmt.Printf(config.BootLogo)
 	fmt.Println("\nKylixor is now running.  Press CTRL-C to exit.")
 	<-done
 
@@ -152,12 +137,15 @@ ________/ /__\_\________
 // the "ready" event from Discord.
 func ready(s *discordgo.Session, event *discordgo.Ready) {
 	// Set the playing status.
-	s.UpdateStatus(0, config.Status)
 	self = event.User
+
+	//Set status once at start, then cronjob takes over every hour
+	SetStatus(s)
 
 	// Start cronjobs
 	go func() {
 		gocron.Every(1).Day().At("19:00").Do(ResetDailies) //Reset dailies task
+		gocron.Every(1).Hours().Do(SetStatus, s)
 
 		<-gocron.Start() //Start waiting for the cronjobs
 	}()
@@ -222,7 +210,6 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 func InitConfFile() {
 	//Default values
 	config.Prefix = "k!"
-	config.Status = "k!help"
 
 	//Create and indent proper json output for the config
 	configData, err := json.MarshalIndent(config, "", "    ")
@@ -286,10 +273,40 @@ func (c *Config) UpdateConfig() {
 	config.WriteConfig()
 }
 
+//----- M I S C .   F U N C T I O N S -----
+
 //ResetDailies - Function to call once a day to reset dailies
 func ResetDailies() {
 	for j := range jcc.Users {
 		jcc.Users[j].Dailies = false
 	}
 	jcc.WriteUserFile()
+}
+
+//GetVersion - Get the version of the bot from the readme
+func GetVersion(s *discordgo.Session) (ver string) {
+	readme, err := os.Open("README.md")
+	if err != nil {
+		panic(err)
+	}
+
+	scanner := bufio.NewScanner(readme)
+	scanner.Split(bufio.ScanLines)
+	var txtlines []string
+
+	for scanner.Scan() {
+		txtlines = append(txtlines, scanner.Text())
+	}
+
+	//Second line of the readme will always be the version number
+	ver = txtlines[1]
+
+	readme.Close()
+
+	return ver
+}
+
+//SetStatus - sets the status of the bot to the version and the default help commands
+func SetStatus(s *discordgo.Session) {
+	s.UpdateStatus(0, fmt.Sprintf("%s - %shelp", GetVersion(s), config.Prefix))
 }
