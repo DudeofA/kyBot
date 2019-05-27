@@ -29,7 +29,15 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 	//Modify or reload config
 	case "config":
 		if m.Author.ID == config.Admin {
-			//
+			switch data {
+			case "reload":
+				jcc.UpdateUserFile()
+				break
+
+			default:
+				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("```\nPossible Commands:\n1. reload"))
+
+			}
 		} else {
 			ErrorPrint(s, m.ChannelID, "NOPERM")
 		}
