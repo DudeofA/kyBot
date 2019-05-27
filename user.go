@@ -131,6 +131,8 @@ func (u *ServerStats) CreateUser(s *discordgo.Session, c interface{}) (userData 
 	user.UserID = m.Author.ID
 	user.PlayAnthem = false
 
+	u.Users = append(u.Users, user)
+	u.WriteUserFile()
 	return user
 }
 

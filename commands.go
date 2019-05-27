@@ -25,6 +25,15 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("💵 | You have a total of **%d** %scoins", user.Credits, config.Coins))
 		break
 
+	//----- C O N F I G -----
+	//Modify or reload config
+	case "config":
+		if m.Author.ID == config.Admin {
+			//
+		} else {
+			ErrorPrint(s, m.ChannelID, "NOPERM")
+		}
+
 	//----- D A R L I N G -----
 	//Posts best girl gif
 	case "darling":

@@ -38,7 +38,6 @@ var (
 	config              = Config{}                 //Config structure from file
 	currentVoiceChannel *discordgo.VoiceConnection //Current voice channel bot is in, nil if none
 	self                *discordgo.User            //Discord user type of self (for storing bots user account)
-	err                 error                      //One error to rule them all
 	pwd, _              = os.Getwd()
 )
 
@@ -221,7 +220,7 @@ func InitConfFile() {
 func (c *Config) ReadConfig() {
 	file, _ := os.Open(pwd + "/data/conf.json")
 	decoder := json.NewDecoder(file)
-	err = decoder.Decode(&c)
+	err := decoder.Decode(&c)
 	if err != nil {
 		panic(err)
 	}
