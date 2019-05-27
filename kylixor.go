@@ -101,6 +101,17 @@ func main() {
 		fmt.Println("Error opening Discord session: ", err)
 	}
 
+	botChan := make(chan os.Signal, 1)
+	done := make(chan bool, 1)
+
+	signal.Notify(botChan, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
+
+	go func() {
+		signalType := <-botChan
+		fmt.Println(fmt.Sprintf("Shutting down nicely from signal type: %s", signalType))
+		done <- true
+	}()
+
 	// Wait here until CTRL-C or other term signal is received.
 	fmt.Printf("%s", `
            /\
@@ -118,31 +129,23 @@ ________/ /__\_\________
         \ \  / /
          \ \/ /
           \  /
-           \/`)
+           \/
+	`)
 	fmt.Println("\nKylixor is now running.  Press CTRL-C to exit.")
-	sc := make(chan os.Signal, 1)
-	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
+	<-done
 
-	go func() {
-		signalType := <-sc
-		signal.Stop(sc)
-		fmt.Println(fmt.Sprintf("Shutting down nicely from signal type: %s", signalType))
-
-		// Cleanly close down the Discord session by disconnecting
-		// from any connected voice channels
-		fmt.Println("Disconnecting from voice channels...")
-		if currentVoiceChannel != nil {
-			if currentVoiceChannel.ChannelID != "" {
-				currentVoiceChannel.Disconnect()
-			}
+	// Cleanly close down the Discord session by disconnecting
+	// from any connected voice channels
+	fmt.Println("Disconnecting from voice channels...")
+	if currentVoiceChannel != nil {
+		if currentVoiceChannel.ChannelID != "" {
+			currentVoiceChannel.Disconnect()
 		}
-		fmt.Println("Closing websocket...")
-		ky.Close()
-		fmt.Println("Done...ending process...")
-		os.Exit(0)
-	}()
-
-	<-sc
+	}
+	fmt.Println("Closing websocket...")
+	ky.Close()
+	fmt.Println("Done...ending process...")
+	os.Exit(0)
 }
 
 // This function will be called (due to AddHandler above) when the bot receives
