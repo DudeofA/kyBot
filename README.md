@@ -17,4 +17,4 @@ Commands
 
 | Admin CMD   | Description
 | ----------- | -----------
-| sample      | sample
+| config      | Manipulate the config file

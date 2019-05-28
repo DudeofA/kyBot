@@ -145,7 +145,7 @@ func ready(s *discordgo.Session, event *discordgo.Ready) {
 	// Start cronjobs
 	go func() {
 		gocron.Every(1).Day().At("19:00").Do(ResetDailies) //Reset dailies task
-		gocron.Every(1).Hours().Do(SetStatus, s)
+		gocron.Every(1).Hours().Do(SetStatus, s)           //Set status of bot hourly
 
 		<-gocron.Start() //Start waiting for the cronjobs
 	}()
@@ -285,6 +285,7 @@ func ResetDailies() {
 
 //GetVersion - Get the version of the bot from the readme
 func GetVersion(s *discordgo.Session) (ver string) {
+	//Open the file and grab it line by line into textlines
 	readme, err := os.Open("README.md")
 	if err != nil {
 		panic(err)
@@ -292,14 +293,14 @@ func GetVersion(s *discordgo.Session) (ver string) {
 
 	scanner := bufio.NewScanner(readme)
 	scanner.Split(bufio.ScanLines)
-	var txtlines []string
+	var textlines []string
 
 	for scanner.Scan() {
-		txtlines = append(txtlines, scanner.Text())
+		textlines = append(textlines, scanner.Text())
 	}
 
 	//Second line of the readme will always be the version number
-	ver = txtlines[1]
+	ver = textlines[1]
 
 	readme.Close()
 
