@@ -12,9 +12,11 @@ Commands
 | ----------- | -----------
 | account     | Displays how many coins the user has
 | help        | Print out this file
-| darling     | Gives the best waifu
+| dailies     | Get daily coins/credits
+| darling     | Displays a gif of pure happiness
 | version     | Gets bot's current version
 
 | Admin CMD   | Description
 | ----------- | -----------
 | config      | Manipulate the config file
+| ip          | Display external IP of bot (not working)

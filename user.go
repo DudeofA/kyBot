@@ -116,7 +116,7 @@ func (u *ServerStats) UpdateUserFile() {
 //----- U S E R   M A N A G E M E N T -----
 
 //CreateUser - create user within the user json file and return it
-func (u *ServerStats) CreateUser(s *discordgo.Session, c interface{}) (userData UserStats) {
+func (u *ServerStats) CreateUser(s *discordgo.Session, c interface{}) (userData UserStats, index int) {
 	var user UserStats
 
 	//Temp - assign interface to MessageEmbed
@@ -131,13 +131,17 @@ func (u *ServerStats) CreateUser(s *discordgo.Session, c interface{}) (userData 
 	user.UserID = m.Author.ID
 	user.PlayAnthem = false
 
+	//Append new user to the users array
 	u.Users = append(u.Users, user)
+	//Index will be the last index, or length minus 1
+	index = len(u.Users) - 1
+	//Write to the file to update it and return the data
 	u.WriteUserFile()
-	return user
+	return user, index
 }
 
 //GetUserData - Retrieve user data
-func (u *ServerStats) GetUserData(s *discordgo.Session, c interface{}) (userData UserStats) {
+func (u *ServerStats) GetUserData(s *discordgo.Session, c interface{}) (userData UserStats, index int) {
 
 	//Temp - assign interface to message
 	m := c.(*discordgo.MessageCreate)
@@ -145,7 +149,7 @@ func (u *ServerStats) GetUserData(s *discordgo.Session, c interface{}) (userData
 	//Check if user is in the data file, return them if they are
 	for i := range u.Users {
 		if u.Users[i].UserID == m.Author.ID {
-			return u.Users[i]
+			return u.Users[i], i
 		}
 	}
 

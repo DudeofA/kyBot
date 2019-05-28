@@ -26,14 +26,15 @@ import (
 
 //Config - structure to hold variables from the config file
 type Config struct {
-	Admin    string //Admin's Discord ID
-	APIKey   string //Discord bot api key
-	BootLogo string //ASCII to display when starting up the bot
-	Coins    string //Name of currency that bot uses (i.e. <gold> coins)
-	Follow   bool   //Whether or not the bot joins/follows into voice channels for anthems
-	LogID    string //ID of channel for logging
-	Prefix   string //Prefix the bot will respond to
-	Status   string //Status of the bot (Playing <v1.0>)
+	Admin     string //Admin's Discord ID
+	APIKey    string //Discord bot api key
+	BootLogo  string //ASCII to display when starting up the bot
+	Coins     string //Name of currency that bot uses (i.e. <gold> coins)
+	Follow    bool   //Whether or not the bot joins/follows into voice channels for anthems
+	LogID     string //ID of channel for logging
+	Prefix    string //Prefix the bot will respond to
+	ResetTime string //Time when dailies reset i.e. 19:00
+	Status    string //Status of the bot (Playing <v1.0>)
 }
 
 var (
@@ -54,10 +55,24 @@ func main() {
 	if _, err := os.Stat(pwd + "/data/conf.json"); os.IsNotExist(err) {
 		fmt.Println("\nCannot find conf.json, creating new...")
 		InitConfFile()
-	}
+		fmt.Println("\nPlease fill in the config.json file located in the data folder.")
+		os.Exit(1)
+	} else {
+		//Check to make sure all needed config options are filled output and
+		// Update config to account for any data structure changes
+		config.UpdateConfig()
 
-	// Update config to account for any data structure changes
-	config.UpdateConfig()
+		//Check to see if bot token is provided
+		if config.APIKey == "" {
+			fmt.Println("No token provided. Please place your API key into the config.json file")
+			return
+		}
+
+		//Check for defaults
+		if config.ResetTime == "" {
+			config.ResetTime = "20:00"
+		}
+	}
 
 	// Read in user data file if exists
 	if _, err := os.Stat(pwd + "/data/users.json"); os.IsNotExist(err) {
@@ -71,12 +86,6 @@ func main() {
 		jcc.Users[j].PlayAnthem = true
 	}
 	jcc.WriteUserFile()
-
-	//Check to see if bot token is provided
-	if config.APIKey == "" {
-		fmt.Println("No token provided. Please place your API key into the config.json file")
-		return
-	}
 
 	// Create a new Discord session using the provided bot token.
 	ky, err := discordgo.New("Bot " + config.APIKey)
@@ -139,15 +148,20 @@ func ready(s *discordgo.Session, event *discordgo.Ready) {
 	// Set the playing status.
 	self = event.User
 
-	//Set status once at start, then cronjob takes over every hour
+	//Set status once at start, then ticker takes over every hour
 	SetStatus(s)
 
 	// Start cronjobs
 	go func() {
-		gocron.Every(1).Day().At("19:00").Do(ResetDailies) //Reset dailies task
-		gocron.Every(1).Hours().Do(SetStatus, s)           //Set status of bot hourly
+		gocron.Every(1).Day().At(config.ResetTime).Do(ResetDailies) //Reset dailies task
+		<-gocron.Start()                                            //Start waiting for the cronjob
+	}()
 
-		<-gocron.Start() //Start waiting for the cronjobs
+	ticker := time.NewTicker(1 * time.Hour)
+	go func() {
+		for range ticker.C {
+			SetStatus(s)
+		}
 	}()
 }
 
@@ -210,6 +224,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 func InitConfFile() {
 	//Default values
 	config.Prefix = "k!"
+	config.ResetTime = "20:00"
 
 	//Create and indent proper json output for the config
 	configData, err := json.MarshalIndent(config, "", "    ")
@@ -302,8 +317,8 @@ func GetVersion(s *discordgo.Session) (ver string) {
 	//Second line of the readme will always be the version number
 	ver = textlines[1]
 
+	//Close file and return version number
 	readme.Close()
-
 	return ver
 }
 

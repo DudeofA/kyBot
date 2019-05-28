@@ -10,8 +10,11 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"net/http"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/jasonlvhit/gocron"
 )
 
 func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string, data string) {
@@ -21,7 +24,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 	//----- A C C O U N T -----
 	//Get amount of coins in players account
 	case "account":
-		user := jcc.GetUserData(s, m)
+		user, _ := jcc.GetUserData(s, m)
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("💵 | You have a total of **%d** %scoins", user.Credits, config.Coins))
 		break
 
@@ -41,6 +44,49 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 		} else {
 			ErrorPrint(s, m.ChannelID, "NOPERM")
 		}
+
+	//----- D A I L I E S -----
+	//Gets daily Coins
+	case "dailies":
+		//Retrieve user data from memory
+		_, index := jcc.GetUserData(s, m)
+		userData := &jcc.Users[index]
+		//If the dailies have not been done
+		if !userData.Dailies {
+			//Mark dailies as done and add the appropriate amount
+			userData.Dailies = true
+			userData.Credits += 100
+			//Indicate to user they have recived their dailies
+			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf(
+				"💵 | Dailies received! Total %scoins: **%d**", config.Coins, userData.Credits))
+			//Write data back out to the file
+			jcc.WriteUserFile()
+		} else {
+			_, nextRuntime := gocron.NextRun()
+			timeUntil := time.Until(nextRuntime)
+			hour := timeUntil / time.Hour
+			timeUntil -= hour * time.Hour
+			min := timeUntil / time.Minute
+			timeUntil -= min * time.Minute
+			sec := timeUntil / time.Second
+
+			hourStr := "s"
+			minStr := "s"
+			secStr := "s"
+			if hour == 1 {
+				hourStr = ""
+			}
+			if min == 1 {
+				minStr = ""
+			}
+			if sec == 1 {
+				secStr = ""
+			}
+			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf(
+				"💵 | You have already collected today's dailies.\nDailies reset in %d hour%s, %d minute%s and %d second%s.",
+				hour, hourStr, min, minStr, sec, secStr))
+		}
+		break
 
 	//----- D A R L I N G -----
 	//Posts best girl gif
@@ -62,6 +108,20 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("```"+string(readme)+"```"))
 		break
 
+	//----- I P -----
+	//Displayed the external IP of the bot
+	case "ip":
+		if m.Author.ID == config.Admin {
+			resp, err := http.Get("http://myexternalip.com/raw")
+			if err != nil {
+				panic(err)
+			}
+			defer resp.Body.Close()
+			responseData, _ := ioutil.ReadAll(resp.Body)
+			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Bot's current external IP: %s", string(responseData)))
+		}
+		break
+
 	//----- V E R S I O N -----
 	//Gets the current version from the readme file and prints it
 	case "version":
@@ -69,6 +129,8 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 		s.ChannelMessageSend(m.ChannelID, ver)
 		break
 
+	default:
+		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Unknown command \"%s\"", command))
 	}
 
 }
