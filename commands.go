@@ -38,7 +38,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 				break
 
 			default:
-				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("```\nPossible Commands:\n1. reload"))
+				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("```\nPossible Commands:\n1. reload\n```"))
 
 			}
 		} else {
@@ -120,6 +120,21 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 			responseData, _ := ioutil.ReadAll(resp.Body)
 			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Bot's current external IP: %s", string(responseData)))
 		}
+		break
+
+	//----- K A R M A -----
+	//Displays the current amount of karma the bot has
+	case "karma":
+		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("☯ | Current Karma: %d", jcc.Karma))
+		break
+
+	//----- P I N G -----
+	//Replies immediately with 'pong' then calculates the difference of the timestamps to get the ping
+	case "ping":
+		pongMessage, _ := s.ChannelMessageSend(m.ChannelID, "Pong!")
+		pingTime, _ := m.Timestamp.Parse()
+		pongTime, _ := pongMessage.Timestamp.Parse()
+		s.ChannelMessageEdit(m.ChannelID, pongMessage.ID, fmt.Sprintf("Pong! %vms", pongTime.Sub(pingTime)))
 		break
 
 	//----- V E R S I O N -----
