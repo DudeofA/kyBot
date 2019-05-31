@@ -137,8 +137,8 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 	//----- Q U O T E -----
 	//Begin a vote for a new quote to be added to the list
 	case "quote":
-		if data != "" {	
-			if true {//runVote("Vote to approve quote: ", data) {
+		if data != "" {
+			if startVote(s, m, fmt.Sprintf("1 %s", data)) {
 				//addQuote
 			} else {
 				s.ChannelMessageSend(m.ChannelID, "Vote failed, quote will not be saved")
