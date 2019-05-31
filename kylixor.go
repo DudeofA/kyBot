@@ -95,16 +95,16 @@ func main() {
 	}
 
 	// Register ready for the ready event
-	ky.AddHandlerOnce(ready)
+	ky.AddHandlerOnce(Ready)
 
 	// Register messageCreate for the messageCreate events
-	ky.AddHandler(messageCreate)
+	ky.AddHandler(MessageCreate)
 
 	// Register presenceUpdate to see who is online
-	ky.AddHandler(presenceUpdate)
+	ky.AddHandler(PresenceUpdate)
 
 	// Register VoiceStateUpdate to check when users enter channel
-	ky.AddHandler(voiceStateUpdate)
+	ky.AddHandler(VoiceStateUpdate)
 
 	// Open the websocket and begin listening for above events.
 	err = ky.Open()
@@ -144,7 +144,7 @@ func main() {
 
 // This function will be called (due to AddHandler above) when the bot receives
 // the "ready" event from Discord.
-func ready(s *discordgo.Session, event *discordgo.Ready) {
+func Ready(s *discordgo.Session, event *discordgo.Ready) {
 	// Set the playing status.
 	self = event.User
 
@@ -166,17 +166,17 @@ func ready(s *discordgo.Session, event *discordgo.Ready) {
 }
 
 //presenceUpdate - Called when any user changes their status (online, away, playing a game, etc)
-func presenceUpdate(s *discordgo.Session, p *discordgo.PresenceUpdate) {
+func PresenceUpdate(s *discordgo.Session, p *discordgo.PresenceUpdate) {
 
 }
 
 //voiceStateUpdate - Called whenever a user changes their voice state (muted, deafen, connected, disconnected)
-func voiceStateUpdate(s *discordgo.Session, v *discordgo.VoiceStateUpdate) {
+func VoiceStateUpdate(s *discordgo.Session, v *discordgo.VoiceStateUpdate) {
 
 }
 
 //messageCreate - Called whenever a message is sent to the discord
-func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
+func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	//Return if the message was sent by a bot to avoid infinite loops
 	if m.Author.Bot {
 		return
@@ -325,4 +325,14 @@ func GetVersion(s *discordgo.Session) (ver string) {
 //SetStatus - sets the status of the bot to the version and the default help commands
 func SetStatus(s *discordgo.Session) {
 	s.UpdateStatus(0, fmt.Sprintf("%s - %shelp", GetVersion(s), config.Prefix))
+}
+
+//CheckAdmin - returns true if user is admin, otherwise posts that permission is denied
+func CheckAdmin(s *discordgo.Session, m *discordgo.MessageCreate) bool {
+	if config.Admin == m.Author.ID {
+		return true
+	} else {
+		s.ChannelMessageSend(m.ChannelID, "You do not have permission to use this command")
+		return false
+	}
 }

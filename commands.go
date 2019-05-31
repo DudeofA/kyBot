@@ -31,7 +31,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 	//----- C O N F I G -----
 	//Modify or reload config
 	case "config":
-		if m.Author.ID == config.Admin {
+		if CheckAdmin(s, m) {
 			switch data {
 			case "reload":
 				jcc.UpdateUserFile()
@@ -39,7 +39,6 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 
 			default:
 				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("```\nPossible Commands:\n1. reload\n```"))
-
 			}
 		} else {
 			ErrorPrint(s, m.ChannelID, "NOPERM")
@@ -111,7 +110,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 	//----- I P -----
 	//Displayed the external IP of the bot
 	case "ip":
-		if m.Author.ID == config.Admin {
+		if CheckAdmin(s, m) {
 			resp, err := http.Get("http://myexternalip.com/raw")
 			if err != nil {
 				panic(err)
@@ -134,7 +133,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 		pongMessage, _ := s.ChannelMessageSend(m.ChannelID, "Pong!")
 		pingTime, _ := m.Timestamp.Parse()
 		pongTime, _ := pongMessage.Timestamp.Parse()
-		s.ChannelMessageEdit(m.ChannelID, pongMessage.ID, fmt.Sprintf("Pong! %vms", pongTime.Sub(pingTime)))
+		s.ChannelMessageEdit(m.ChannelID, pongMessage.ID, fmt.Sprintf("Pong! %v", pongTime.Sub(pingTime)))
 		break
 
 	//----- V E R S I O N -----
