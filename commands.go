@@ -40,8 +40,6 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 			default:
 				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("```\nPossible Commands:\n1. reload\n```"))
 			}
-		} else {
-			ErrorPrint(s, m.ChannelID, "NOPERM")
 		}
 
 	//----- D A I L I E S -----
@@ -134,6 +132,20 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 		pingTime, _ := m.Timestamp.Parse()
 		pongTime, _ := pongMessage.Timestamp.Parse()
 		s.ChannelMessageEdit(m.ChannelID, pongMessage.ID, fmt.Sprintf("Pong! %v", pongTime.Sub(pingTime)))
+		break
+
+	//----- Q U O T E -----
+	//Begin a vote for a new quote to be added to the list
+	case "quote":
+		if data != "" {	
+			if true {//runVote("Vote to approve quote: ", data) {
+				//addQuote
+			} else {
+				s.ChannelMessageSend(m.ChannelID, "Vote failed, quote will not be saved")
+			}
+		} else {
+			s.ChannelMessageSend(m.ChannelID, "Command Syntax: quote <quote content here>")
+		}
 		break
 
 	//----- V E R S I O N -----
