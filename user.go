@@ -17,9 +17,10 @@ import (
 
 //ServerStats - Hold all the pertaining information for each server
 type ServerStats struct {
-	GID   string      `json:"gID"`   //discord guild ID
-	Karma int         `json:"karma"` //bots karma - per server
-	Users []UserStats `json:"users"` //Array of users' information
+	GID    string      `json:"gID"`    //discord guild ID
+	Emotes Emotes      `json:"emotes"` //String of customizable emotes
+	Karma  int         `json:"karma"`  //bots karma - per server
+	Users  []UserStats `json:"users"`  //Array of users' information
 }
 
 //UserStats - Hold all pertaining information for each user
@@ -42,19 +43,26 @@ type Reminders struct {
 	RemindMsg  string    `json:"remindMsg"`
 }
 
-var jcc ServerStats
+//Emotes - customizable emotes for reactions the bot adds
+type Emotes struct {
+	UPVOTE   string `json:"upvote"`   //Upvote emotes
+	DOWNVOTE string `json:"downvote"` //Downvote emotes
+}
+
+//Kylixor ""Database""
+var kdb []ServerStats
 
 //----- U S E R   F I L E   F U N C T I O N S -----
 
 //InitUserFile - Create and initialize user data file
 func InitUserFile() {
 	//Indent so its readable
-	userData, err := json.MarshalIndent(jcc, "", "    ")
+	userData, err := json.MarshalIndent(kdb, "", "    ")
 	if err != nil {
 		panic(err)
 	}
 	//Open file
-	jsonFile, err := os.Create(pwd + "/data/users.json")
+	jsonFile, err := os.Create(pwd + "/data/kdb.json")
 	if err != nil {
 		panic(err)
 	}
@@ -68,16 +76,16 @@ func InitUserFile() {
 }
 
 //ReadUserFile - Read in the user file into the structure
-func (u *ServerStats) ReadUserFile() {
+func ReadUserFile() {
 	//Open file
-	file, err := os.Open(pwd + "/data/users.json")
+	file, err := os.Open(pwd + "/data/kdb.json")
 	if err != nil {
 		panic(err)
 	}
 
 	//Decode JSON and inject into structure
 	decoder := json.NewDecoder(file)
-	err = decoder.Decode(&u)
+	err = decoder.Decode(&kdb)
 	if err != nil {
 		panic(err)
 	}
@@ -87,14 +95,14 @@ func (u *ServerStats) ReadUserFile() {
 }
 
 //WriteUserFile - Write the file
-func (u *ServerStats) WriteUserFile() {
+func WriteUserFile() {
 	//Marshal global variable data
-	jsonData, err := json.MarshalIndent(u, "", "    ")
+	jsonData, err := json.MarshalIndent(kdb, "", "    ")
 	if err != nil {
 		panic(err)
 	}
 	//Open file
-	jsonFile, err := os.Create(pwd + "/data/users.json")
+	jsonFile, err := os.Create(pwd + "/data/kdb.json")
 	if err != nil {
 		panic(err)
 	}
@@ -108,9 +116,9 @@ func (u *ServerStats) WriteUserFile() {
 }
 
 //UpdateUserFile - Read then write the user jsonFile
-func (u *ServerStats) UpdateUserFile() {
-	u.ReadUserFile()
-	u.WriteUserFile()
+func UpdateUserFile() {
+	ReadUserFile()
+	WriteUserFile()
 }
 
 //----- U S E R   M A N A G E M E N T -----
@@ -136,7 +144,7 @@ func (u *ServerStats) CreateUser(s *discordgo.Session, c interface{}) (userData 
 	//Index will be the last index, or length minus 1
 	index = len(u.Users) - 1
 	//Write to the file to update it and return the data
-	u.WriteUserFile()
+	WriteUserFile()
 	return user, index
 }
 
@@ -161,4 +169,19 @@ func (u *ServerStats) GetUserData(s *discordgo.Session, c interface{}) (userData
 func (u *ServerStats) UpdateUser(s *discordgo.Session, c interface{}) bool {
 	//Return true if update was needed
 	return false
+}
+
+//----- M I S C   F U N C T I O N S -----
+
+//GetGuildByID - Get the correct ServerStats array from the kdb
+func GetGuildByID(id string) (index int) {
+	for i, ss := range kdb {
+		if ss.GID == id {
+			return i
+		}
+	}
+
+	//Guild not found
+	kdb = append(kdb, ServerStats{GID: id})
+	return len(kdb) - 1
 }

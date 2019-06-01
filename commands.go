@@ -24,7 +24,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 	//----- A C C O U N T -----
 	//Get amount of coins in players account
 	case "account":
-		user, _ := jcc.GetUserData(s, m)
+		user, _ := kdb[GetGuildByID(m.GuildID)].GetUserData(s, m)
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("💵 | You have a total of **%d** %scoins", user.Credits, config.Coins))
 		break
 
@@ -34,7 +34,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 		if CheckAdmin(s, m) {
 			switch data {
 			case "reload":
-				jcc.UpdateUserFile()
+				UpdateUserFile()
 				break
 
 			default:
@@ -46,8 +46,8 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 	//Gets daily Coins
 	case "dailies":
 		//Retrieve user data from memory
-		_, index := jcc.GetUserData(s, m)
-		userData := &jcc.Users[index]
+		_, index := kdb[GetGuildByID(m.GuildID)].GetUserData(s, m)
+		userData := &kdb[GetGuildByID(m.GuildID)].Users[index]
 		//If the dailies have not been done
 		if !userData.Dailies {
 			//Mark dailies as done and add the appropriate amount
@@ -57,7 +57,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf(
 				"💵 | Dailies received! Total %scoins: **%d**", config.Coins, userData.Credits))
 			//Write data back out to the file
-			jcc.WriteUserFile()
+			WriteUserFile()
 		} else {
 			_, nextRuntime := gocron.NextRun()
 			timeUntil := time.Until(nextRuntime)
@@ -122,7 +122,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 	//----- K A R M A -----
 	//Displays the current amount of karma the bot has
 	case "karma":
-		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("☯ | Current Karma: %d", jcc.Karma))
+		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("☯ | Current Karma: %d", kdb[GetGuildByID(m.GuildID)].Karma))
 		break
 
 	//----- P I N G -----

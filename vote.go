@@ -18,22 +18,23 @@ import (
 //startVote - begin a vote with variable vote options
 func startVote(s *discordgo.Session, m *discordgo.MessageCreate, data string) bool {
 	//Parse the incoming command into data and strings
-	array := strings.SplitAfterN(data, " ", 1)
+	array := strings.SplitAfter(data, " ")
 	options := array[0]
-	text := array[1]
-	optionNum, err := strconv.Atoi(options)
+	optionNum, err := strconv.Atoi(strings.TrimSpace(options))
 	if err != nil {
 		panic(err)
 	}
+	//Take off formatting
+	text := strings.TrimLeft(data, options)
 
 	//How many vote options
 	switch optionNum {
 	case 1:
 		s.ChannelMessageSend(m.ChannelID, "Starting vote...Upvote/Downvote to cast your vote")
-		quoteMsg, _ := s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("```\n%s\n```", text))
-		s.MessageReactionAdd(m.ChannelID, quoteMsg.ID, "upvote:402490285365657600")
-		s.MessageReactionAdd(m.ChannelID, quoteMsg.ID, "downvote:402490335789318144")
-		//GetVoteResults(s, m, optionNum)
+		voteMsg, _ := s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("```\n%s\n```", text))
+		ReactionAdd(s, voteMsg, "UPVOTE")
+		ReactionAdd(s, voteMsg, "DOWNVOTE")
+
 		break
 
 	default:
@@ -41,4 +42,40 @@ func startVote(s *discordgo.Session, m *discordgo.MessageCreate, data string) bo
 	}
 
 	return false
+}
+
+//ReactionAdd - add a reaction to the passed-in message
+func ReactionAdd(s *discordgo.Session, m *discordgo.Message, reaction string) {
+	switch reaction {
+	case "UPVOTE":
+		if kdb[GetGuildByID(m.GuildID)].Emotes.UPVOTE != "" {
+			err := s.MessageReactionAdd(m.ChannelID, m.ID, kdb[GetGuildByID(m.GuildID)].Emotes.UPVOTE)
+			if err != nil {
+				s.ChannelMessageSend(m.ChannelID, "Unable to use upvote emote, check custom emotes")
+			}
+		} else {
+			err := s.MessageReactionAdd(m.ChannelID, m.ID, "⬆")
+			if err != nil {
+				s.ChannelMessageSend(m.ChannelID, "Unable to use fallback upvote emote, that is bad")
+			}
+		}
+		break
+
+	case "DOWNVOTE":
+		if kdb[GetGuildByID(m.GuildID)].Emotes.DOWNVOTE != "" {
+			err := s.MessageReactionAdd(m.ChannelID, m.ID, kdb[GetGuildByID(m.GuildID)].Emotes.DOWNVOTE)
+			if err != nil {
+				s.ChannelMessageSend(m.ChannelID, "Unable to use downvote emote, check custom emotes")
+			}
+		} else {
+			err := s.MessageReactionAdd(m.ChannelID, m.ID, "⬇")
+			if err != nil {
+				s.ChannelMessageSend(m.ChannelID, "Unable to use fallback downvote emote, that is bad")
+			}
+		}
+		break
+	default:
+		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Unable to post emote: %s", reaction))
+		break
+	}
 }

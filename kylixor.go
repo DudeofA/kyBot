@@ -75,17 +75,19 @@ func main() {
 	}
 
 	// Read in user data file if exists
-	if _, err := os.Stat(pwd + "/data/users.json"); os.IsNotExist(err) {
-		fmt.Println("\nCannot find users.json, creating new...")
+	if _, err := os.Stat(pwd + "/data/kdb.json"); os.IsNotExist(err) {
+		fmt.Println("\nCannot find kdb.json, creating new...")
 		InitUserFile()
 	}
 
 	// Reset all anthems
-	jcc.ReadUserFile()
-	for j := range jcc.Users {
-		jcc.Users[j].PlayAnthem = true
+	ReadUserFile()
+	for _, ss := range kdb {
+		for j := range ss.Users {
+			ss.Users[j].PlayAnthem = true
+		}
 	}
-	jcc.WriteUserFile()
+	WriteUserFile()
 
 	// Create a new Discord session using the provided bot token.
 	ky, err := discordgo.New("Bot " + config.APIKey)
@@ -142,7 +144,7 @@ func main() {
 	os.Exit(0)
 }
 
-// This function will be called (due to AddHandler above) when the bot receives
+//Ready - This function will be called (due to AddHandler above) when the bot receives
 // the "ready" event from Discord.
 func Ready(s *discordgo.Session, event *discordgo.Ready) {
 	// Set the playing status.
@@ -165,17 +167,17 @@ func Ready(s *discordgo.Session, event *discordgo.Ready) {
 	}()
 }
 
-//presenceUpdate - Called when any user changes their status (online, away, playing a game, etc)
+//PresenceUpdate - Called when any user changes their status (online, away, playing a game, etc)
 func PresenceUpdate(s *discordgo.Session, p *discordgo.PresenceUpdate) {
 
 }
 
-//voiceStateUpdate - Called whenever a user changes their voice state (muted, deafen, connected, disconnected)
+//VoiceStateUpdate - Called whenever a user changes their voice state (muted, deafen, connected, disconnected)
 func VoiceStateUpdate(s *discordgo.Session, v *discordgo.VoiceStateUpdate) {
 
 }
 
-//messageCreate - Called whenever a message is sent to the discord
+//MessageCreate - Called whenever a message is sent to the discord
 func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	//Return if the message was sent by a bot to avoid infinite loops
 	if m.Author.Bot {
@@ -189,15 +191,15 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	//Good Karma
 	if strings.ToLower(m.Content) == "good bot" {
-		jcc.Karma++
-		jcc.WriteUserFile()
+		kdb[GetGuildByID(m.GuildID)].Karma++
+		WriteUserFile()
 		s.MessageReactionAdd(m.ChannelID, m.ID, "😊")
 	}
 
 	//Bad Karma
 	if strings.ToLower(m.Content) == "bad bot" {
-		jcc.Karma--
-		jcc.WriteUserFile()
+		kdb[GetGuildByID(m.GuildID)].Karma--
+		WriteUserFile()
 		s.MessageReactionAdd(m.ChannelID, m.ID, "😞")
 	}
 
@@ -292,10 +294,12 @@ func (c *Config) UpdateConfig() {
 
 //ResetDailies - Function to call once a day to reset dailies
 func ResetDailies() {
-	for j := range jcc.Users {
-		jcc.Users[j].Dailies = false
+	for _, ss := range kdb {
+		for j := range ss.Users {
+			ss.Users[j].Dailies = false
+		}
 	}
-	jcc.WriteUserFile()
+	WriteUserFile()
 }
 
 //GetVersion - Get the version of the bot from the readme
@@ -331,8 +335,8 @@ func SetStatus(s *discordgo.Session) {
 func CheckAdmin(s *discordgo.Session, m *discordgo.MessageCreate) bool {
 	if config.Admin == m.Author.ID {
 		return true
-	} else {
-		s.ChannelMessageSend(m.ChannelID, "You do not have permission to use this command")
-		return false
 	}
+
+	s.ChannelMessageSend(m.ChannelID, "You do not have permission to use this command")
+	return false
 }
