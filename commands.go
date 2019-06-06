@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -18,27 +19,27 @@ import (
 )
 
 func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string, data string) {
+	guildIndex := GetGuildByID(m.GuildID)
 
 	switch command {
 
 	//----- A C C O U N T -----
 	//Get amount of coins in players account
 	case "account":
-		user, _ := kdb[GetGuildByID(m.GuildID)].GetUserData(s, m)
-		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("💵 | You have a total of **%d** %scoins", user.Credits, config.Coins))
+		user, _ := kdb[guildIndex].GetUserData(s, m)
+		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("💵 | You have a total of **%d** %scoins", user.Credits, kdb[guildIndex].Config.Coins))
 		break
 
 	//----- C O N F I G -----
 	//Modify or reload config
 	case "config":
 		if CheckAdmin(s, m) {
-			switch data {
-			case "reload":
-				UpdateUserFile()
-				break
-
-			default:
-				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("```\nPossible Commands:\n1. reload\n```"))
+			if strings.ToLower(data) == "reload" {
+				UpdateKDB()
+			} else if strings.HasPrefix(strings.ToLower(data), "edit") {
+				//EditConfig(s, m)
+			} else {
+				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("```\nPossible Commands:\n* reload\n* edit```"))
 			}
 		}
 
@@ -46,18 +47,18 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 	//Gets daily Coins
 	case "dailies":
 		//Retrieve user data from memory
-		_, index := kdb[GetGuildByID(m.GuildID)].GetUserData(s, m)
-		userData := &kdb[GetGuildByID(m.GuildID)].Users[index]
+		_, index := kdb[guildIndex].GetUserData(s, m)
+		userData := &kdb[guildIndex].Users[index]
 		//If the dailies have not been done
 		if !userData.Dailies {
 			//Mark dailies as done and add the appropriate amount
 			userData.Dailies = true
-			userData.Credits += 100
+			userData.Credits += botConfig.DailyAmt
 			//Indicate to user they have recived their dailies
 			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf(
-				"💵 | Dailies received! Total %scoins: **%d**", config.Coins, userData.Credits))
+				"💵 | Daily %d coins received! Total %scoins: **%d**", botConfig.DailyAmt, kdb[guildIndex].Config.Coins, userData.Credits))
 			//Write data back out to the file
-			WriteUserFile()
+			WriteKDB()
 		} else {
 			_, nextRuntime := gocron.NextRun()
 			timeUntil := time.Until(nextRuntime)
@@ -122,7 +123,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 	//----- K A R M A -----
 	//Displays the current amount of karma the bot has
 	case "karma":
-		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("☯ | Current Karma: %d", kdb[GetGuildByID(m.GuildID)].Karma))
+		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("☯ | Current Karma: %d", kdb[guildIndex].Karma))
 		break
 
 	//----- P I N G -----
@@ -138,11 +139,9 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 	//Begin a vote for a new quote to be added to the list
 	case "quote":
 		if data != "" {
-			if startVote(s, m, fmt.Sprintf("1 %s", data)) {
-				//addQuote
-			} else {
-				s.ChannelMessageSend(m.ChannelID, "Vote failed, quote will not be saved")
-			}
+			go func() {
+				startVote(s, m, fmt.Sprintf("0 %s", data))
+			}()
 		} else {
 			s.ChannelMessageSend(m.ChannelID, "Command Syntax: quote <quote content here>")
 		}

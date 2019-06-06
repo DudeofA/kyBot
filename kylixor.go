@@ -24,21 +24,19 @@ import (
 
 // ----- GLOBAL VARIABLES -----
 
-//Config - structure to hold variables from the config file
-type Config struct {
+//BotConfig - Global bot config
+type BotConfig struct {
 	Admin     string //Admin's Discord ID
 	APIKey    string //Discord bot api key
 	BootLogo  string //ASCII to display when starting up the bot
-	Coins     string //Name of currency that bot uses (i.e. <gold> coins)
-	Follow    bool   //Whether or not the bot joins/follows into voice channels for anthems
-	LogID     string //ID of channel for logging
+	DailyAmt  int    //Amount of dailies to be collected daily
 	Prefix    string //Prefix the bot will respond to
 	ResetTime string //Time when dailies reset i.e. 19:00
 	Status    string //Status of the bot (Playing <v1.0>)
 }
 
 var (
-	config              = Config{}                 //Config structure from file
+	botConfig           = BotConfig{}              //Global bot config
 	currentVoiceChannel *discordgo.VoiceConnection //Current voice channel bot is in, nil if none
 	self                *discordgo.User            //Discord user type of self (for storing bots user account)
 	pwd, _              = os.Getwd()
@@ -54,43 +52,43 @@ func main() {
 	// Read in config file if exists
 	if _, err := os.Stat(pwd + "/data/conf.json"); os.IsNotExist(err) {
 		fmt.Println("\nCannot find conf.json, creating new...")
-		InitConfFile()
+		InitBotConfFile()
 		fmt.Println("\nPlease fill in the config.json file located in the data folder.")
 		os.Exit(1)
 	} else {
 		//Check to make sure all needed config options are filled output and
 		// Update config to account for any data structure changes
-		config.UpdateConfig()
+		botConfig.Update()
 
 		//Check to see if bot token is provided
-		if config.APIKey == "" {
+		if botConfig.APIKey == "" {
 			fmt.Println("No token provided. Please place your API key into the config.json file")
 			return
 		}
 
 		//Check for defaults
-		if config.ResetTime == "" {
-			config.ResetTime = "20:00"
+		if botConfig.ResetTime == "" {
+			botConfig.ResetTime = "20:00"
 		}
 	}
 
 	// Read in user data file if exists
 	if _, err := os.Stat(pwd + "/data/kdb.json"); os.IsNotExist(err) {
 		fmt.Println("\nCannot find kdb.json, creating new...")
-		InitUserFile()
+		InitKDB()
 	}
 
-	// Reset all anthems
-	ReadUserFile()
+	//Reset all anthems
+	ReadKDB()
 	for _, ss := range kdb {
 		for j := range ss.Users {
 			ss.Users[j].PlayAnthem = true
 		}
 	}
-	WriteUserFile()
+	WriteKDB()
 
 	// Create a new Discord session using the provided bot token.
-	ky, err := discordgo.New("Bot " + config.APIKey)
+	ky, err := discordgo.New("Bot " + botConfig.APIKey)
 	if err != nil {
 		fmt.Println("Error creating Discord session: ", err)
 		return
@@ -126,7 +124,7 @@ func main() {
 	}()
 
 	// Wait here until CTRL-C or other term signal is received.
-	fmt.Printf(config.BootLogo)
+	fmt.Printf(botConfig.BootLogo)
 	fmt.Println("\nKylixor is now running.  Press CTRL-C to exit.")
 	<-done
 
@@ -155,8 +153,8 @@ func Ready(s *discordgo.Session, event *discordgo.Ready) {
 
 	// Start cronjobs
 	go func() {
-		gocron.Every(1).Day().At(config.ResetTime).Do(ResetDailies) //Reset dailies task
-		<-gocron.Start()                                            //Start waiting for the cronjob
+		gocron.Every(1).Day().At(botConfig.ResetTime).Do(ResetDailies) //Reset dailies task
+		<-gocron.Start()                                               //Start waiting for the cronjob
 	}()
 
 	ticker := time.NewTicker(1 * time.Hour)
@@ -179,6 +177,9 @@ func VoiceStateUpdate(s *discordgo.Session, v *discordgo.VoiceStateUpdate) {
 
 //MessageCreate - Called whenever a message is sent to the discord
 func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
+	//Get Guild index to use later on
+	guildIndex := GetGuildByID(m.GuildID)
+
 	//Return if the message was sent by a bot to avoid infinite loops
 	if m.Author.Bot {
 		return
@@ -191,22 +192,22 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	//Good Karma
 	if strings.ToLower(m.Content) == "good bot" {
-		kdb[GetGuildByID(m.GuildID)].Karma++
-		WriteUserFile()
+		kdb[guildIndex].Karma++
+		WriteKDB()
 		s.MessageReactionAdd(m.ChannelID, m.ID, "😊")
 	}
 
 	//Bad Karma
 	if strings.ToLower(m.Content) == "bad bot" {
-		kdb[GetGuildByID(m.GuildID)].Karma--
-		WriteUserFile()
+		kdb[guildIndex].Karma--
+		WriteKDB()
 		s.MessageReactionAdd(m.ChannelID, m.ID, "😞")
 	}
 
 	//If the message sent is a command with the set prefix
-	if strings.HasPrefix(m.Content, config.Prefix) {
+	if strings.HasPrefix(m.Content, kdb[guildIndex].Config.Prefix) {
 		//Trim the prefix to extract the command
-		input := strings.TrimPrefix(m.Content, config.Prefix)
+		input := strings.TrimPrefix(m.Content, kdb[guildIndex].Config.Prefix)
 		//Split command into the command and what comes after
 		inputPieces := strings.SplitN(input, " ", 2)
 		command := strings.ToLower(inputPieces[0])
@@ -222,14 +223,13 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 //----- I N I T I A L   S E T U P   F U N C T I O N S -----
 
-//InitConfFile - Initialize config file if one is not found
-func InitConfFile() {
+//InitBotConfFile - Initialize config file if one is not found
+func InitBotConfFile() {
 	//Default values
-	config.Prefix = "k!"
-	config.ResetTime = "20:00"
+	botConfig.ResetTime = "20:00"
 
 	//Create and indent proper json output for the config
-	configData, err := json.MarshalIndent(config, "", "    ")
+	configData, err := json.MarshalIndent(botConfig, "", "    ")
 	if err != nil {
 		panic(err)
 	}
@@ -251,8 +251,8 @@ func InitConfFile() {
 	jsonFile.Close()
 }
 
-//ReadConfig - Read in config file into Config structure
-func (c *Config) ReadConfig() {
+//ReadBotConfig - Read in config file into Config structure
+func (c *BotConfig) Read() {
 	file, _ := os.Open(pwd + "/data/conf.json")
 	decoder := json.NewDecoder(file)
 	err := decoder.Decode(&c)
@@ -262,8 +262,8 @@ func (c *Config) ReadConfig() {
 	file.Close()
 }
 
-//WriteConfig - Write out the current Config structure to file, indented nicely
-func (c *Config) WriteConfig() {
+//WriteBotConfig - Write out the current Config structure to file, indented nicely
+func (c *BotConfig) Write() {
 	//Indent so its readable
 	configData, err := json.MarshalIndent(c, "", "    ")
 	if err != nil {
@@ -283,11 +283,11 @@ func (c *Config) WriteConfig() {
 	jsonFile.Close()
 }
 
-//UpdateConfig - update configuration file by reading then writing
+//Update - update configuration file by reading then writing
 //Updates config file to correct syntax
-func (c *Config) UpdateConfig() {
-	config.ReadConfig()
-	config.WriteConfig()
+func (c *BotConfig) Update() {
+	botConfig.Read()
+	botConfig.Write()
 }
 
 //----- M I S C .   F U N C T I O N S -----
@@ -299,7 +299,7 @@ func ResetDailies() {
 			ss.Users[j].Dailies = false
 		}
 	}
-	WriteUserFile()
+	WriteKDB()
 }
 
 //GetVersion - Get the version of the bot from the readme
@@ -328,12 +328,12 @@ func GetVersion(s *discordgo.Session) (ver string) {
 
 //SetStatus - sets the status of the bot to the version and the default help commands
 func SetStatus(s *discordgo.Session) {
-	s.UpdateStatus(0, fmt.Sprintf("%s - %shelp", GetVersion(s), config.Prefix))
+	s.UpdateStatus(0, fmt.Sprintf("%s - %shelp", GetVersion(s), botConfig.Prefix))
 }
 
 //CheckAdmin - returns true if user is admin, otherwise posts that permission is denied
 func CheckAdmin(s *discordgo.Session, m *discordgo.MessageCreate) bool {
-	if config.Admin == m.Author.ID {
+	if botConfig.Admin == m.Author.ID {
 		return true
 	}
 

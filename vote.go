@@ -11,13 +11,14 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 )
 
 //startVote - begin a vote with variable vote options
-func startVote(s *discordgo.Session, m *discordgo.MessageCreate, data string) bool {
-	//Parse the incoming command into data and strings
+func startVote(s *discordgo.Session, m *discordgo.MessageCreate, data string) {
+	//Parse the incoming command into # of vote options and string afterward
 	array := strings.SplitAfter(data, " ")
 	options := array[0]
 	optionNum, err := strconv.Atoi(strings.TrimSpace(options))
@@ -27,55 +28,93 @@ func startVote(s *discordgo.Session, m *discordgo.MessageCreate, data string) bo
 	//Take off formatting
 	text := strings.TrimLeft(data, options)
 
+	//Declare variable so that it persists throughout the switch options
+	var voteMsg *discordgo.Message
+
 	//How many vote options
 	switch optionNum {
-	case 1:
+	case 0:
 		s.ChannelMessageSend(m.ChannelID, "Starting vote...Upvote/Downvote to cast your vote")
-		voteMsg, _ := s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("```\n%s\n```", text))
+		voteMsg, _ = s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("```\n%s\n```", text))
 		ReactionAdd(s, voteMsg, "UPVOTE")
 		ReactionAdd(s, voteMsg, "DOWNVOTE")
-
 		break
 
 	default:
 		break
 	}
 
-	return false
+	//Pend on the votes until they pass or timeout
+	result := WaitForVotes(s, voteMsg, optionNum)
+
+	switch result {
+	case -1:
+		s.ChannelMessageSend(m.ChannelID, "Vote failed, yikes")
+		break
+
+	case 0:
+		s.ChannelMessageSend(m.ChannelID, "Vote succeeded, yay!")
+		break
+
+	default:
+		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Option %d wins the vote!", result))
+	}
+
 }
 
 //ReactionAdd - add a reaction to the passed-in message
 func ReactionAdd(s *discordgo.Session, m *discordgo.Message, reaction string) {
 	switch reaction {
 	case "UPVOTE":
-		if kdb[GetGuildByID(m.GuildID)].Emotes.UPVOTE != "" {
-			err := s.MessageReactionAdd(m.ChannelID, m.ID, kdb[GetGuildByID(m.GuildID)].Emotes.UPVOTE)
-			if err != nil {
-				s.ChannelMessageSend(m.ChannelID, "Unable to use upvote emote, check custom emotes")
-			}
-		} else {
-			err := s.MessageReactionAdd(m.ChannelID, m.ID, "⬆")
-			if err != nil {
-				s.ChannelMessageSend(m.ChannelID, "Unable to use fallback upvote emote, that is bad")
-			}
+		err := s.MessageReactionAdd(m.ChannelID, m.ID, kdb[GetGuildByID(m.GuildID)].Emotes.UPVOTE)
+		if err != nil {
+			s.ChannelMessageSend(m.ChannelID, "Unable to use upvote emote, check emote config")
 		}
 		break
 
 	case "DOWNVOTE":
-		if kdb[GetGuildByID(m.GuildID)].Emotes.DOWNVOTE != "" {
-			err := s.MessageReactionAdd(m.ChannelID, m.ID, kdb[GetGuildByID(m.GuildID)].Emotes.DOWNVOTE)
-			if err != nil {
-				s.ChannelMessageSend(m.ChannelID, "Unable to use downvote emote, check custom emotes")
-			}
-		} else {
-			err := s.MessageReactionAdd(m.ChannelID, m.ID, "⬇")
-			if err != nil {
-				s.ChannelMessageSend(m.ChannelID, "Unable to use fallback downvote emote, that is bad")
-			}
+		err := s.MessageReactionAdd(m.ChannelID, m.ID, kdb[GetGuildByID(m.GuildID)].Emotes.DOWNVOTE)
+		if err != nil {
+			s.ChannelMessageSend(m.ChannelID, "Unable to use downvote emote, check emote config")
 		}
 		break
 	default:
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Unable to post emote: %s", reaction))
 		break
 	}
+}
+
+//WaitForVotes - wait for enough votes to pass the vote or timeout and fail
+func WaitForVotes(s *discordgo.Session, m *discordgo.Message, options int) (result int) {
+	voteAlive := true
+	for voteAlive {
+		//One options = upvote vs downvote
+		if options == 0 {
+			//Get each reaction
+			upReact, err := s.MessageReactions(m.ChannelID, m.ID, kdb[GetGuildByID(m.GuildID)].Emotes.UPVOTE, 10)
+			if err != nil {
+				s.ChannelMessageSend(m.ChannelID, "Unable to use upvote emote, check config")
+			}
+			downReact, err := s.MessageReactions(m.ChannelID, m.ID, kdb[GetGuildByID(m.GuildID)].Emotes.DOWNVOTE, 10)
+			if err != nil {
+				s.ChannelMessageSend(m.ChannelID, "Unable to use downvote emote, check config")
+			}
+
+			//If there are enough upvote, approve vote
+			if len(upReact) > 1 {
+				return 0
+			}
+			//If there are enough downvotes, fail vote
+			if len(downReact) > 1 {
+				return -1
+			}
+
+			//Otherwise 1-9 options
+		} else {
+			//hm
+		}
+		time.Sleep(1 * time.Second)
+	}
+
+	return 0
 }
