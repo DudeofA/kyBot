@@ -1,3 +1,10 @@
+/* 	error.go
+_________________________________
+Parses errors and prints them for Kylixor Discord Bot
+Andrew Langhill
+kylixor.com
+*/
+
 package main
 
 import "github.com/bwmarrin/discordgo"

@@ -56,19 +56,23 @@ func main() {
 		fmt.Println("\nPlease fill in the config.json file located in the data folder.")
 		os.Exit(1)
 	} else {
-		//Check to make sure all needed config options are filled output and
-		// Update config to account for any data structure changes
 		botConfig.Update()
+
+		//Default mandatory values
+		if botConfig.ResetTime == "" {
+			botConfig.ResetTime = "20:00"
+		}
+		if botConfig.DailyAmt == 0 {
+			botConfig.DailyAmt = 100
+		}
+		if botConfig.Prefix == "" {
+			botConfig.Prefix = "k!"
+		}
 
 		//Check to see if bot token is provided
 		if botConfig.APIKey == "" {
 			fmt.Println("No token provided. Please place your API key into the config.json file")
 			return
-		}
-
-		//Check for defaults
-		if botConfig.ResetTime == "" {
-			botConfig.ResetTime = "20:00"
 		}
 	}
 
@@ -225,9 +229,6 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 //InitBotConfFile - Initialize config file if one is not found
 func InitBotConfFile() {
-	//Default values
-	botConfig.ResetTime = "20:00"
-
 	//Create and indent proper json output for the config
 	configData, err := json.MarshalIndent(botConfig, "", "    ")
 	if err != nil {
@@ -328,7 +329,7 @@ func GetVersion(s *discordgo.Session) (ver string) {
 
 //SetStatus - sets the status of the bot to the version and the default help commands
 func SetStatus(s *discordgo.Session) {
-	s.UpdateStatus(0, fmt.Sprintf("%s - %shelp", GetVersion(s), botConfig.Prefix))
+	s.UpdateStatus(0, fmt.Sprintf("%shelp - %s", botConfig.Prefix, GetVersion(s)))
 }
 
 //CheckAdmin - returns true if user is admin, otherwise posts that permission is denied

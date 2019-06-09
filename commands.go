@@ -140,10 +140,12 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 	case "quote":
 		if data != "" {
 			go func() {
-				startVote(s, m, fmt.Sprintf("0 %s", data))
+				if startVote(s, m, fmt.Sprintf("0 %s", data)) == 0 {
+					QuoteAdd(s, m, data)
+				}
 			}()
 		} else {
-			s.ChannelMessageSend(m.ChannelID, "Command Syntax: quote <quote content here>")
+			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Command Syntax: %squote <quote content here>", kdb[guildIndex].Config.Prefix))
 		}
 		break
 
@@ -157,5 +159,4 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 	default:
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Unknown command \"%s\"", command))
 	}
-
 }

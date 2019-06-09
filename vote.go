@@ -1,6 +1,6 @@
 /* 	vote.go
 _________________________________
-Parses commands and executes them for Kylixor Discord Bot
+Parses votes and executes them for Kylixor Discord Bot
 Andrew Langhill
 kylixor.com
 */
@@ -17,7 +17,7 @@ import (
 )
 
 //startVote - begin a vote with variable vote options
-func startVote(s *discordgo.Session, m *discordgo.MessageCreate, data string) {
+func startVote(s *discordgo.Session, m *discordgo.MessageCreate, data string) int {
 	//Parse the incoming command into # of vote options and string afterward
 	array := strings.SplitAfter(data, " ")
 	options := array[0]
@@ -34,8 +34,10 @@ func startVote(s *discordgo.Session, m *discordgo.MessageCreate, data string) {
 	//How many vote options
 	switch optionNum {
 	case 0:
-		s.ChannelMessageSend(m.ChannelID, "Starting vote...Upvote/Downvote to cast your vote")
+		s.ChannelMessageSend(m.ChannelID, "Starting vote...cast your vote now!")
+		//Send and save the vote message to be modified later
 		voteMsg, _ = s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("```\n%s\n```", text))
+		voteMsg.GuildID = m.GuildID
 		ReactionAdd(s, voteMsg, "UPVOTE")
 		ReactionAdd(s, voteMsg, "DOWNVOTE")
 		break
@@ -60,20 +62,23 @@ func startVote(s *discordgo.Session, m *discordgo.MessageCreate, data string) {
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Option %d wins the vote!", result))
 	}
 
+	return result
 }
 
 //ReactionAdd - add a reaction to the passed-in message
 func ReactionAdd(s *discordgo.Session, m *discordgo.Message, reaction string) {
+	gIndex := GetGuildByID(m.GuildID)
+
 	switch reaction {
 	case "UPVOTE":
-		err := s.MessageReactionAdd(m.ChannelID, m.ID, kdb[GetGuildByID(m.GuildID)].Emotes.UPVOTE)
+		err := s.MessageReactionAdd(m.ChannelID, m.ID, kdb[gIndex].Emotes.UPVOTE)
 		if err != nil {
 			s.ChannelMessageSend(m.ChannelID, "Unable to use upvote emote, check emote config")
 		}
 		break
 
 	case "DOWNVOTE":
-		err := s.MessageReactionAdd(m.ChannelID, m.ID, kdb[GetGuildByID(m.GuildID)].Emotes.DOWNVOTE)
+		err := s.MessageReactionAdd(m.ChannelID, m.ID, kdb[gIndex].Emotes.DOWNVOTE)
 		if err != nil {
 			s.ChannelMessageSend(m.ChannelID, "Unable to use downvote emote, check emote config")
 		}
@@ -86,16 +91,17 @@ func ReactionAdd(s *discordgo.Session, m *discordgo.Message, reaction string) {
 
 //WaitForVotes - wait for enough votes to pass the vote or timeout and fail
 func WaitForVotes(s *discordgo.Session, m *discordgo.Message, options int) (result int) {
+	gIndex := GetGuildByID(m.GuildID)
 	voteAlive := true
 	for voteAlive {
 		//One options = upvote vs downvote
 		if options == 0 {
 			//Get each reaction
-			upReact, err := s.MessageReactions(m.ChannelID, m.ID, kdb[GetGuildByID(m.GuildID)].Emotes.UPVOTE, 10)
+			upReact, err := s.MessageReactions(m.ChannelID, m.ID, kdb[gIndex].Emotes.UPVOTE, 10)
 			if err != nil {
 				s.ChannelMessageSend(m.ChannelID, "Unable to use upvote emote, check config")
 			}
-			downReact, err := s.MessageReactions(m.ChannelID, m.ID, kdb[GetGuildByID(m.GuildID)].Emotes.DOWNVOTE, 10)
+			downReact, err := s.MessageReactions(m.ChannelID, m.ID, kdb[gIndex].Emotes.DOWNVOTE, 10)
 			if err != nil {
 				s.ChannelMessageSend(m.ChannelID, "Unable to use downvote emote, check config")
 			}
@@ -116,5 +122,5 @@ func WaitForVotes(s *discordgo.Session, m *discordgo.Message, options int) (resu
 		time.Sleep(1 * time.Second)
 	}
 
-	return 0
+	return -2
 }
