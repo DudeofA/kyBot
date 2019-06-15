@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -149,12 +150,66 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 		}
 		break
 
+	//----- Q U O T E L I S T -----
+	//List specified quote
+	case "quotelist":
+		i, err := strconv.Atoi(data)
+		if err != nil {
+			s.ChannelMessageSend(m.ChannelID, "Not a valid number (quotelist <quote index number>)")
+		} else {
+			//Print quote corresponding to the index number
+			QuotePrint(s, m, QuoteGet(m, i-1))
+		}
+		break
+
+	//----- Q U O T E R A N D -----
+	//Displays a random quote from the database
+	case "quoterandom":
+		QuotePrint(s, m, QuoteGet(m, -1))
+		break
+
+	//----- T E S T -----
+	//Runs the commands in a file because I have no idea what I'm doing
+	case "test":
+		if CheckAdmin(s, m) {
+			Test(s, m, command, data)
+		}
+		break
+
 	//----- V E R S I O N -----
 	//Gets the current version from the readme file and prints it
 	case "version":
 		ver := GetVersion(s)
 		s.ChannelMessageSend(m.ChannelID, ver)
 		break
+
+	//----- V O I C E   S E R V E R -----
+	//Changes the voice server in case of server outage
+	case "voiceserver":
+		//Get guild data
+		guild, err := s.Guild(m.GuildID)
+		if err != nil {
+			panic(err)
+		}
+
+		var gParam discordgo.GuildParams
+
+		switch data {
+		case "us-east", "us-west", "us-central", "us-south":
+			gParam.Region = data
+			_, err := s.GuildEdit(m.GuildID, gParam)
+			if err != nil {
+				s.ChannelMessageSend(m.ChannelID, err.Error())
+			}
+			break
+		case "":
+			region := fmt.Sprintf("The server is currently in region: %s\nTo change it, use %svoiceserver <server name>\nOptions are: \n```\nus-east, us-central, us-south, us-west\n```", guild.Region, kdb[guildIndex].Config.Prefix)
+			s.ChannelMessageSend(m.ChannelID, region)
+			break
+
+		default:
+			s.ChannelMessageSend(m.ChannelID, "Invalid voice server region")
+		}
 
 	default:
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Unknown command \"%s\"", command))

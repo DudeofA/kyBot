@@ -18,11 +18,11 @@ import (
 //ServerStats - Hold all the pertaining information for each server
 type ServerStats struct {
 	Config Config      `json:"config"` //guild specific config
-	Emotes Emotes      `json:"emotes"` //String of customizable emotes
+	Emotes Emote       `json:"emotes"` //String of customizable emotes
 	GID    string      `json:"gID"`    //discord guild ID
 	Karma  int         `json:"karma"`  //bots karma - per server
 	Users  []UserStats `json:"users"`  //Array of users' information
-	Quoted []Quotes    `json:"quotes"` //Array of quotes
+	Quotes []Quote     `json:"quotes"` //Array of quotes
 }
 
 //Config - structure to hold variables specifically for that guild
@@ -53,14 +53,14 @@ type Reminders struct {
 	RemindMsg  string    `json:"remindMsg"`
 }
 
-//Emotes - customizable emotes for reactions the bot adds
-type Emotes struct {
+//Emote - customizable emotes for reactions the bot adds
+type Emote struct {
 	UPVOTE   string `json:"upvote"`   //Upvote emotes
 	DOWNVOTE string `json:"downvote"` //Downvote emotes
 }
 
-//Quotes - Data about quotes and quotes themselves
-type Quotes struct {
+//Quote - Data about quotes and quotes themselves
+type Quote struct {
 	Quote     string    `json:"quote"`     //Actual quoted text
 	Timestamp time.Time `json:"timestamp"` //Timestamp when quote was recorded
 }

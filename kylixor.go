@@ -47,7 +47,7 @@ var (
 //------------------------------------------------------------------------------
 func main() {
 	//Get random seed for later random number generation
-	rand.Seed(time.Now().Unix())
+	rand.Seed(time.Now().UTC().UnixNano())
 
 	// Read in config file if exists
 	if _, err := os.Stat(pwd + "/data/conf.json"); os.IsNotExist(err) {

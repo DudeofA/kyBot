@@ -36,7 +36,7 @@ func startVote(s *discordgo.Session, m *discordgo.MessageCreate, data string) in
 	case 0:
 		s.ChannelMessageSend(m.ChannelID, "Starting vote...cast your vote now!")
 		//Send and save the vote message to be modified later
-		voteMsg, _ = s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("```\n%s\n```", text))
+		voteMsg = QuotePrint(s, m, Quote{fmt.Sprint(text), time.Now()})
 		voteMsg.GuildID = m.GuildID
 		ReactionAdd(s, voteMsg, "UPVOTE")
 		ReactionAdd(s, voteMsg, "DOWNVOTE")
@@ -45,6 +45,9 @@ func startVote(s *discordgo.Session, m *discordgo.MessageCreate, data string) in
 	default:
 		break
 	}
+
+	//Remove original vote post
+	s.ChannelMessageDelete(m.ChannelID, m.ID)
 
 	//Pend on the votes until they pass or timeout
 	result := WaitForVotes(s, voteMsg, optionNum)
