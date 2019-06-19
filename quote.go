@@ -46,7 +46,7 @@ func QuoteGet(m *discordgo.MessageCreate, index int) Quote {
 		//Get original quote
 		rawQuote := kdb[gIndex].Quotes[index]
 		//Add index of quote to be displayed
-		rawQuote.Quote = fmt.Sprintf("(%d) %s", index+1, rawQuote.Quote)
+		rawQuote.Quote = fmt.Sprintf("[%d]# %s", index+1, rawQuote.Quote)
 		return rawQuote
 	}
 
@@ -57,7 +57,7 @@ func QuoteGet(m *discordgo.MessageCreate, index int) Quote {
 //QuotePrint - Prints the quote with nice colors
 func QuotePrint(s *discordgo.Session, m *discordgo.MessageCreate, q Quote) *discordgo.Message {
 	//Format quote with colors using the CSS formatting
-	fmtQuote := fmt.Sprintf("```css\n[ %s ]\n%s\n```", q.Timestamp.Format("Jan 2 3:04:05PM 2006"), q.Quote)
+	fmtQuote := fmt.Sprintf("```ini\n[ %s ]\n%s\n```", q.Timestamp.Format("Jan 2 3:04:05PM 2006"), q.Quote)
 	//Return the sent message for vote monitoring
 	msg, _ := s.ChannelMessageSend(m.ChannelID, fmtQuote)
 	return msg
