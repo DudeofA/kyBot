@@ -99,7 +99,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 	//----- H E L P -----
 	//Display the readme file
 	case "help", "h":
-		readme, err := ioutil.ReadFile("README.md")
+		readme, err := ioutil.ReadFile(pwd + "README.md")
 		if err != nil {
 			s.ChannelMessageSend(m.ChannelID, "Error openning README, contact bot admin for assistance")
 		}
