@@ -27,10 +27,10 @@ type ServerStats struct {
 
 //Config - structure to hold variables specifically for that guild
 type Config struct {
-	Coins  string `json:"coins"`  //Name of currency that bot uses (i.e. <gold> coins)
-	Follow bool   `json:"follow"` //Whether or not the bot joins/follows into voice channels for anthems
-	LogID  string `json:"logID"`  //ID of channel for logging
-	Prefix string `json:"prefix"` //Prefix the bot will respond to
+	Coins    string `json:"coins"`    //Name of currency that bot uses (i.e. <gold> coins)
+	Follow   bool   `json:"follow"`   //Whether or not the bot joins/follows into voice channels for anthems
+	MinVotes int    `json:"minVotes"` //Minimum upvotes to pass a vote
+	Prefix   string `json:"prefix"`   //Prefix the bot will respond to
 }
 
 //UserStats - Hold all pertaining information for each user
@@ -205,6 +205,8 @@ func GetGuildByID(id string) (index int) {
 	newServer.Emotes.DOWNVOTE = "⬇"
 	//Set prefix to default
 	newServer.Config.Prefix = "k!"
+	//Set votes to default minimum
+	newServer.Config.MinVotes = 3
 
 	//Append guild to kdb, write it, and return the index of the guild
 	kdb = append(kdb, newServer)

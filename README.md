@@ -1,29 +1,26 @@
 **Kylixor Multi-Purpose Discord Bot**
-v1.0
+v1.0.0
 =====================================
-
-Version 1.0
--------------
 
 Commands
 --------
 
-| Command     | Description
-| ----------- | -----------
-| account     | Displays how many coins the user has
-| help        | Print out this file
-| dailies     | Get daily coins/credits
-| darling     | Displays a gif of pure happiness
-| karma       | Displays the current level of karma for the bot
-| ping        | Send a ping to the bot to measure latency
-| quote       | Starts a vote to save a memorable quote
-| quotelist   | Lists the specified quote (i.e. quotelist 4)
-| quoterandom | Print a random quote from the database
-| version     | Gets bot's current version
-| voiceserver | Change the voice server region
+| Command     | Alias | Description
+| ----------- | ----- | -----------
+| account     | acc   | Displays how many coins the user has
+| help        | h     | Print out this file
+| dailies     | day   | Get daily coins/credits
+| darling     | 02    | Displays a gif of pure happiness
+| karma       | karma | Displays the current level of karma for the bot
+| ping        | ping  | Send a ping to the bot to measure latency
+| quote       | q     | Starts a vote to save a memorable quote
+| quotelist   | ql    | Lists the specified quote (i.e. quotelist 4)
+| quoterandom | qr    | Print a random quote from the database
+| version     | v     | Gets bot's current version
+| voiceserver | vs    | Change the voice server region
 
-| Admin CMD   | Description
-| ----------- | -----------
-| config      | Manipulate the config file
-| ip          | Display external IP of bot
-| test        | test
+| Admin CMD   | Alias | Description
+| ----------- | ----- | -----------
+| config      | c     | Manipulate the config file
+| ip          | ip    | Display external IP of bot
+| test        | test  | test

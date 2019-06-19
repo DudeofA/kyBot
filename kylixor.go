@@ -14,6 +14,7 @@ import (
 	"math/rand"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -30,33 +31,43 @@ type BotConfig struct {
 	APIKey    string //Discord bot api key
 	BootLogo  string //ASCII to display when starting up the bot
 	DailyAmt  int    //Amount of dailies to be collected daily
+	LogID     string //ID of channel for logging
 	Prefix    string //Prefix the bot will respond to
 	ResetTime string //Time when dailies reset i.e. 19:00
 	Status    string //Status of the bot (Playing <v1.0>)
+	Version   string //Current version of the bot
 }
 
 var (
 	botConfig           = BotConfig{}              //Global bot config
 	currentVoiceChannel *discordgo.VoiceConnection //Current voice channel bot is in, nil if none
 	self                *discordgo.User            //Discord user type of self (for storing bots user account)
-	pwd, _              = os.Getwd()
+	pwd                 string                     //Current working directory
 )
 
 //------------------------------------------------------------------------------
 //-----------------               M A I N ( )               --------------------
 //------------------------------------------------------------------------------
 func main() {
+	//Set pwd to the directory of the bot's files
+	ex, err := os.Executable()
+	if err != nil {
+		panic(err)
+	}
+	bin := filepath.Dir(ex)
+	pwd = filepath.Dir(bin)
+
 	//Get random seed for later random number generation
 	rand.Seed(time.Now().UTC().UnixNano())
 
 	// Read in config file if exists
-	if _, err := os.Stat(pwd + "/data/conf.json"); os.IsNotExist(err) {
+	if _, err = os.Stat(pwd + "/data/conf.json"); os.IsNotExist(err) {
 		fmt.Println("\nCannot find conf.json, creating new...")
 		InitBotConfFile()
 		fmt.Println("\nPlease fill in the config.json file located in the data folder.")
 		os.Exit(1)
 	} else {
-		botConfig.Update()
+		botConfig.Read()
 
 		//Default mandatory values
 		if botConfig.ResetTime == "" {
@@ -69,15 +80,20 @@ func main() {
 			botConfig.Prefix = "k!"
 		}
 
+		//Save version
+		botConfig.Version = GetVersion()
+
 		//Check to see if bot token is provided
 		if botConfig.APIKey == "" {
 			fmt.Println("No token provided. Please place your API key into the config.json file")
 			return
 		}
+
+		botConfig.Write()
 	}
 
 	// Read in user data file if exists
-	if _, err := os.Stat(pwd + "/data/kdb.json"); os.IsNotExist(err) {
+	if _, err = os.Stat(pwd + "/data/kdb.json"); os.IsNotExist(err) {
 		fmt.Println("\nCannot find kdb.json, creating new...")
 		InitKDB()
 	}
@@ -116,6 +132,7 @@ func main() {
 		fmt.Println("Error opening Discord session: ", err)
 	}
 
+	//Create channels to watch for kill signals
 	botChan := make(chan os.Signal, 1)
 	done := make(chan bool, 1)
 
@@ -188,6 +205,8 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.Bot {
 		return
 	}
+
+	LogMsg(s, m)
 
 	//Fix any flipped tables
 	if m.Content == "(╯°□°）╯︵ ┻━┻" {
@@ -304,9 +323,9 @@ func ResetDailies() {
 }
 
 //GetVersion - Get the version of the bot from the readme
-func GetVersion(s *discordgo.Session) (ver string) {
+func GetVersion() (ver string) {
 	//Open the file and grab it line by line into textlines
-	readme, err := os.Open("README.md")
+	readme, err := os.Open(pwd + "/README.md")
 	if err != nil {
 		panic(err)
 	}
@@ -320,16 +339,21 @@ func GetVersion(s *discordgo.Session) (ver string) {
 	}
 
 	//Second line of the readme will always be the version number
-	ver = textlines[1]
+	if len(textlines) < 2 {
+		panic("Version needs to be in the second line of the README in format: <v#.#.#")
+	} else {
+		ver = textlines[1]
+	}
 
-	//Close file and return version number
+	//Close file, save version number, and return version number
 	readme.Close()
+	botConfig.Version = ver
 	return ver
 }
 
 //SetStatus - sets the status of the bot to the version and the default help commands
 func SetStatus(s *discordgo.Session) {
-	s.UpdateStatus(0, fmt.Sprintf("%shelp - %s", botConfig.Prefix, GetVersion(s)))
+	s.UpdateStatus(0, fmt.Sprintf("%shelp - %s", botConfig.Prefix, botConfig.Version))
 }
 
 //CheckAdmin - returns true if user is admin, otherwise posts that permission is denied
@@ -340,4 +364,27 @@ func CheckAdmin(s *discordgo.Session, m *discordgo.MessageCreate) bool {
 
 	s.ChannelMessageSend(m.ChannelID, "You do not have permission to use this command")
 	return false
+}
+
+//MemberHasPermission - Checks if the user has permission to do the given action in the given channels
+func MemberHasPermission(s *discordgo.Session, guildID string, userID string, permission int) (bool, error) {
+	member, err := s.State.Member(guildID, userID)
+	if err != nil {
+		if member, err = s.GuildMember(guildID, userID); err != nil {
+			return false, err
+		}
+	}
+
+	// Iterate through the role IDs stored in member.Roles to check permissions
+	for _, roleID := range member.Roles {
+		role, err := s.State.Role(guildID, roleID)
+		if err != nil {
+			return false, err
+		}
+		if role.Permissions&permission != 0 {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }

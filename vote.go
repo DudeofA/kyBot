@@ -110,11 +110,11 @@ func WaitForVotes(s *discordgo.Session, m *discordgo.Message, options int) (resu
 			}
 
 			//If there are enough upvote, approve vote
-			if len(upReact) > 1 {
+			if len(upReact) > kdb[gIndex].Config.MinVotes {
 				return 0
 			}
 			//If there are enough downvotes, fail vote
-			if len(downReact) > 1 {
+			if len(downReact) > kdb[gIndex].Config.MinVotes {
 				return -1
 			}
 

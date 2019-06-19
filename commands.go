@@ -26,17 +26,18 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 
 	//----- A C C O U N T -----
 	//Get amount of coins in players account
-	case "account":
+	case "account", "acc":
 		user, _ := kdb[guildIndex].GetUserData(s, m)
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("💵 | You have a total of **%d** %scoins", user.Credits, kdb[guildIndex].Config.Coins))
 		break
 
 	//----- C O N F I G -----
 	//Modify or reload config
-	case "config":
+	case "config", "c":
 		if CheckAdmin(s, m) {
 			if strings.ToLower(data) == "reload" {
 				UpdateKDB()
+				botConfig.Update()
 			} else if strings.HasPrefix(strings.ToLower(data), "edit") {
 				//EditConfig(s, m)
 			} else {
@@ -46,7 +47,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 
 	//----- D A I L I E S -----
 	//Gets daily Coins
-	case "dailies":
+	case "dailies", "day":
 		//Retrieve user data from memory
 		_, index := kdb[guildIndex].GetUserData(s, m)
 		userData := &kdb[guildIndex].Users[index]
@@ -89,7 +90,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 
 	//----- D A R L I N G -----
 	//Posts best girl gif
-	case "darling":
+	case "darling", "02":
 		embedMsg := &discordgo.MessageEmbed{Description: "Zehro Twu", Color: 0xfa00ff,
 			Image: &discordgo.MessageEmbedImage{URL: "https://cdn.discordapp.com/emojis/496406418962776065.gif"}}
 		s.ChannelMessageSendEmbed(m.ChannelID, embedMsg)
@@ -97,7 +98,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 
 	//----- H E L P -----
 	//Display the readme file
-	case "help":
+	case "help", "h":
 		readme, err := ioutil.ReadFile("README.md")
 		if err != nil {
 			s.ChannelMessageSend(m.ChannelID, "Error openning README, contact bot admin for assistance")
@@ -138,7 +139,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 
 	//----- Q U O T E -----
 	//Begin a vote for a new quote to be added to the list
-	case "quote":
+	case "quote", "q":
 		if data != "" {
 			go func() {
 				if startVote(s, m, fmt.Sprintf("0 %s", data)) == 0 {
@@ -150,9 +151,9 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 		}
 		break
 
-	//----- Q U O T E L I S T -----
-	//List specified quote
-	case "quotelist":
+		//----- Q U O T E L I S T -----
+		//List specified quote
+	case "quotelist", "ql":
 		i, err := strconv.Atoi(data)
 		if err != nil {
 			s.ChannelMessageSend(m.ChannelID, "Not a valid number (quotelist <quote index number>)")
@@ -164,7 +165,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 
 	//----- Q U O T E R A N D -----
 	//Displays a random quote from the database
-	case "quoterandom":
+	case "quoterandom", "qr":
 		QuotePrint(s, m, QuoteGet(m, -1))
 		break
 
@@ -178,14 +179,14 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 
 	//----- V E R S I O N -----
 	//Gets the current version from the readme file and prints it
-	case "version":
-		ver := GetVersion(s)
+	case "version", "v":
+		ver := GetVersion()
 		s.ChannelMessageSend(m.ChannelID, ver)
 		break
 
 	//----- V O I C E   S E R V E R -----
 	//Changes the voice server in case of server outage
-	case "voiceserver":
+	case "voiceserver", "vc":
 		//Get guild data
 		guild, err := s.Guild(m.GuildID)
 		if err != nil {
