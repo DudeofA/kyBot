@@ -38,8 +38,8 @@ func LogMsg(s *discordgo.Session, m *discordgo.MessageCreate) {
 				guild.Name,
 				channel.Name,
 				name,
-				cleanMsg,
-				m.ID)
+				m.ID,
+				cleanMsg)
 
 			s.ChannelMessageSend(botConfig.LogID, fmtMsg)
 		} else {
