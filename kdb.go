@@ -15,14 +15,23 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
+//----- K D B   S T R U C T U R E -----
+
+//KDB - "Database"
+type KDB struct {
+	Servers []ServerStats `json:"servers"` //Servers array
+	Users   []UserStats   `json:"users"`   //Users array
+}
+
+//----- S E R V E R   S T A T S -----
+
 //ServerStats - Hold all the pertaining information for each server
 type ServerStats struct {
-	Config Config      `json:"config"` //guild specific config
-	Emotes Emote       `json:"emotes"` //String of customizable emotes
-	GID    string      `json:"gID"`    //discord guild ID
-	Karma  int         `json:"karma"`  //bots karma - per server
-	Users  []UserStats `json:"users"`  //Array of users' information
-	Quotes []Quote     `json:"quotes"` //Array of quotes
+	Config Config  `json:"config"` //guild specific config
+	Emotes Emote   `json:"emotes"` //String of customizable emotes
+	GID    string  `json:"gID"`    //discord guild ID
+	Karma  int     `json:"karma"`  //bots karma - per server
+	Quotes []Quote `json:"quotes"` //Array of quotes
 }
 
 //Config - structure to hold variables specifically for that guild
@@ -32,6 +41,20 @@ type Config struct {
 	MinVotes int    `json:"minVotes"` //Minimum upvotes to pass a vote
 	Prefix   string `json:"prefix"`   //Prefix the bot will respond to
 }
+
+//Emote - customizable emotes for reactions the bot adds
+type Emote struct {
+	UPVOTE   string `json:"upvote"`   //Upvote emotes
+	DOWNVOTE string `json:"downvote"` //Downvote emotes
+}
+
+//Quote - Data about quotes and quotes themselves
+type Quote struct {
+	Quote     string    `json:"quote"`     //Actual quoted text
+	Timestamp time.Time `json:"timestamp"` //Timestamp when quote was recorded
+}
+
+//----- U S E R   S T A T S -----
 
 //UserStats - Hold all pertaining information for each user
 type UserStats struct {
@@ -53,20 +76,9 @@ type Reminders struct {
 	RemindMsg  string    `json:"remindMsg"`
 }
 
-//Emote - customizable emotes for reactions the bot adds
-type Emote struct {
-	UPVOTE   string `json:"upvote"`   //Upvote emotes
-	DOWNVOTE string `json:"downvote"` //Downvote emotes
-}
-
-//Quote - Data about quotes and quotes themselves
-type Quote struct {
-	Quote     string    `json:"quote"`     //Actual quoted text
-	Timestamp time.Time `json:"timestamp"` //Timestamp when quote was recorded
-}
-
+//----- M A S T E R   D A T A B A S E
 //Kylixor """"Database""""
-var kdb []ServerStats
+var kdb KDB
 
 //----- U S E R   F I L E   F U N C T I O N S -----
 
@@ -92,7 +104,7 @@ func InitKDB() {
 }
 
 //ReadKDB - Read in the user file into the structure
-func ReadKDB() {
+func (k *KDB) Read() {
 	//Open file
 	file, err := os.Open(pwd + "/data/kdb.json")
 	if err != nil {
@@ -111,7 +123,7 @@ func ReadKDB() {
 }
 
 //WriteKDB - Write the file
-func WriteKDB() {
+func (k *KDB) Write() {
 	//Marshal global variable data
 	jsonData, err := json.MarshalIndent(kdb, "", "    ")
 	if err != nil {
@@ -133,14 +145,14 @@ func WriteKDB() {
 
 //UpdateKDB - Read then write the user jsonFile
 func UpdateKDB() {
-	ReadKDB()
-	WriteKDB()
+	kdb.Read()
+	kdb.Write()
 }
 
 //----- U S E R   M A N A G E M E N T -----
 
 //CreateUser - create user within the user json file and return it
-func (u *ServerStats) CreateUser(s *discordgo.Session, c interface{}) (userData UserStats, index int) {
+func (k *KDB) CreateUser(s *discordgo.Session, c interface{}) (userData UserStats, index int) {
 	var user UserStats
 
 	//Temp - assign interface to MessageEmbed
@@ -156,29 +168,29 @@ func (u *ServerStats) CreateUser(s *discordgo.Session, c interface{}) (userData 
 	user.PlayAnthem = false
 
 	//Append new user to the users array
-	u.Users = append(u.Users, user)
+	k.Users = append(k.Users, user)
 	//Index will be the last index, or length minus 1
-	index = len(u.Users) - 1
+	index = len(k.Users) - 1
 	//Write to the file to update it and return the data
-	WriteKDB()
+	kdb.Write()
 	return user, index
 }
 
 //GetUserData - Retrieve user data
-func (u *ServerStats) GetUserData(s *discordgo.Session, c interface{}) (userData UserStats, index int) {
+func (k *KDB) GetUserData(s *discordgo.Session, c interface{}) (userData UserStats, index int) {
 
 	//Temp - assign interface to message
 	m := c.(*discordgo.MessageCreate)
 
 	//Check if user is in the data file, return them if they are
-	for i := range u.Users {
-		if u.Users[i].UserID == m.Author.ID {
-			return u.Users[i], i
+	for i := range k.Users {
+		if k.Users[i].UserID == m.Author.ID {
+			return k.Users[i], i
 		}
 	}
 
 	//return user
-	return u.CreateUser(s, c)
+	return k.CreateUser(s, c)
 }
 
 //UpdateUser - Update user data json jsonFile
@@ -191,8 +203,8 @@ func (u *ServerStats) UpdateUser(s *discordgo.Session, c interface{}) bool {
 
 //GetGuildByID - Get the correct ServerStats array from the kdb
 func GetGuildByID(id string) (index int) {
-	for i, ss := range kdb {
-		if ss.GID == id {
+	for i, server := range kdb.Servers {
+		if server.GID == id {
 			return i
 		}
 	}
@@ -209,8 +221,8 @@ func GetGuildByID(id string) (index int) {
 	newServer.Config.MinVotes = 3
 
 	//Append guild to kdb, write it, and return the index of the guild
-	kdb = append(kdb, newServer)
-	newGuildIndex := len(kdb) - 1
-	WriteKDB()
+	kdb.Servers = append(kdb.Servers, newServer)
+	newGuildIndex := len(kdb.Servers) - 1
+	kdb.Write()
 	return newGuildIndex
 }

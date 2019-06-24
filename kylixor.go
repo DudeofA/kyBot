@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -99,13 +100,14 @@ func main() {
 	}
 
 	//Reset all anthems
-	ReadKDB()
-	for _, ss := range kdb {
-		for j := range ss.Users {
-			ss.Users[j].PlayAnthem = true
-		}
-	}
-	WriteKDB()
+	//Disabled for different use
+	// ReadKDB()
+	// for _, ss := range kdb {
+	// 	for j := range ss.Users {
+	// 		ss.Users[j].PlayAnthem = true
+	// 	}
+	// }
+	// WriteKDB()
 
 	// Create a new Discord session using the provided bot token.
 	ky, err := discordgo.New("Bot " + botConfig.APIKey)
@@ -136,11 +138,12 @@ func main() {
 	botChan := make(chan os.Signal, 1)
 	done := make(chan bool, 1)
 
+	//Bot will end on any of the following signals
 	signal.Notify(botChan, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 
 	go func() {
 		signalType := <-botChan
-		fmt.Println(fmt.Sprintf("Shutting down nicely from signal type: %s", signalType))
+		fmt.Println(fmt.Sprintf("\nShutting down from signal: %s", signalType))
 		done <- true
 	}()
 
@@ -159,7 +162,7 @@ func main() {
 	}
 	fmt.Println("Closing websocket...")
 	ky.Close()
-	fmt.Println("Done...ending process...")
+	fmt.Println("Done...ending process...goodbye...")
 	os.Exit(0)
 }
 
@@ -206,6 +209,7 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
+	//Log message to log channel for debugging
 	LogMsg(s, m)
 
 	//Fix any flipped tables
@@ -215,22 +219,29 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	//Good Karma
 	if strings.ToLower(m.Content) == "good bot" {
-		kdb[guildIndex].Karma++
-		WriteKDB()
+		kdb.Servers[guildIndex].Karma++
+		kdb.Write()
 		s.MessageReactionAdd(m.ChannelID, m.ID, "😊")
 	}
 
 	//Bad Karma
 	if strings.ToLower(m.Content) == "bad bot" {
-		kdb[guildIndex].Karma--
-		WriteKDB()
+		kdb.Servers[guildIndex].Karma--
+		kdb.Write()
 		s.MessageReactionAdd(m.ChannelID, m.ID, "😞")
 	}
 
+	if m.Content == fmt.Sprintf("<@%s>", self.ID) {
+		err := s.MessageReactionAdd(m.ChannelID, m.ID, "👋")
+		if err != nil {
+			panic(err)
+		}
+	}
+
 	//If the message sent is a command with the set prefix
-	if strings.HasPrefix(m.Content, kdb[guildIndex].Config.Prefix) {
+	if strings.HasPrefix(m.Content, kdb.Servers[guildIndex].Config.Prefix) {
 		//Trim the prefix to extract the command
-		input := strings.TrimPrefix(m.Content, kdb[guildIndex].Config.Prefix)
+		input := strings.TrimPrefix(m.Content, kdb.Servers[guildIndex].Config.Prefix)
 		//Split command into the command and what comes after
 		inputPieces := strings.SplitN(input, " ", 2)
 		command := strings.ToLower(inputPieces[0])
@@ -314,12 +325,11 @@ func (c *BotConfig) Update() {
 
 //ResetDailies - Function to call once a day to reset dailies
 func ResetDailies() {
-	for _, ss := range kdb {
-		for j := range ss.Users {
-			ss.Users[j].Dailies = false
-		}
+	for i := range kdb.Users {
+		kdb.Users[i].Dailies = false
 	}
-	WriteKDB()
+
+	kdb.Write()
 }
 
 //GetVersion - Get the version of the bot from the readme
@@ -387,4 +397,16 @@ func MemberHasPermission(s *discordgo.Session, guildID string, userID string, pe
 	}
 
 	return false, nil
+}
+
+// CreationTime returns the creation time of a Snowflake ID relative to the creation of Discord.
+// Taken from https://github.com/Moonlington/FloSelfbot/blob/master/commands/commandutils.go#L117
+func CreationTime(ID string) (t time.Time, err error) {
+	i, err := strconv.ParseInt(ID, 10, 64)
+	if err != nil {
+		return
+	}
+	timestamp := (i >> 22) + 1420070400000
+	t = time.Unix(timestamp/1000, 0)
+	return
 }

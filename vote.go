@@ -74,14 +74,14 @@ func ReactionAdd(s *discordgo.Session, m *discordgo.Message, reaction string) {
 
 	switch reaction {
 	case "UPVOTE":
-		err := s.MessageReactionAdd(m.ChannelID, m.ID, kdb[gIndex].Emotes.UPVOTE)
+		err := s.MessageReactionAdd(m.ChannelID, m.ID, kdb.Servers[gIndex].Emotes.UPVOTE)
 		if err != nil {
 			s.ChannelMessageSend(m.ChannelID, "Unable to use upvote emote, check emote config")
 		}
 		break
 
 	case "DOWNVOTE":
-		err := s.MessageReactionAdd(m.ChannelID, m.ID, kdb[gIndex].Emotes.DOWNVOTE)
+		err := s.MessageReactionAdd(m.ChannelID, m.ID, kdb.Servers[gIndex].Emotes.DOWNVOTE)
 		if err != nil {
 			s.ChannelMessageSend(m.ChannelID, "Unable to use downvote emote, check emote config")
 		}
@@ -100,21 +100,21 @@ func WaitForVotes(s *discordgo.Session, m *discordgo.Message, options int) (resu
 		//One options = upvote vs downvote
 		if options == 0 {
 			//Get each reaction
-			upReact, err := s.MessageReactions(m.ChannelID, m.ID, kdb[gIndex].Emotes.UPVOTE, 10)
+			upReact, err := s.MessageReactions(m.ChannelID, m.ID, kdb.Servers[gIndex].Emotes.UPVOTE, 10)
 			if err != nil {
 				s.ChannelMessageSend(m.ChannelID, "Unable to use upvote emote, check config")
 			}
-			downReact, err := s.MessageReactions(m.ChannelID, m.ID, kdb[gIndex].Emotes.DOWNVOTE, 10)
+			downReact, err := s.MessageReactions(m.ChannelID, m.ID, kdb.Servers[gIndex].Emotes.DOWNVOTE, 10)
 			if err != nil {
 				s.ChannelMessageSend(m.ChannelID, "Unable to use downvote emote, check config")
 			}
 
 			//If there are enough upvote, approve vote
-			if len(upReact) > kdb[gIndex].Config.MinVotes {
+			if len(upReact) > kdb.Servers[gIndex].Config.MinVotes {
 				return 0
 			}
 			//If there are enough downvotes, fail vote
-			if len(downReact) > kdb[gIndex].Config.MinVotes {
+			if len(downReact) > kdb.Servers[gIndex].Config.MinVotes {
 				return -1
 			}
 

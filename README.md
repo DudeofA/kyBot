@@ -1,5 +1,5 @@
 **Kylixor Multi-Purpose Discord Bot**
-v1.0.3
+v1.0.4
 =====================================
 
 Commands
@@ -8,6 +8,7 @@ Commands
 | Command     | Alias | Description
 | ----------- | ----- | -----------
 | account     | acc   | Displays how many coins the user has
+| age         | age   | Display the create date of the user or Snowflake ID
 | help        | h     | Print out this file
 | dailies     | day   | Get daily coins/credits
 | darling     | 02    | Displays a gif of pure happiness
