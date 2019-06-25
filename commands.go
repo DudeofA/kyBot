@@ -64,7 +64,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 	case "config", "c":
 		if CheckAdmin(s, m) {
 			if strings.ToLower(data) == "reload" {
-				UpdateKDB()
+				kdb.Update()
 				botConfig.Update()
 				s.ChannelMessageSend(m.ChannelID, "Updated KDB and botConfig")
 			} else if strings.HasPrefix(strings.ToLower(data), "edit") {

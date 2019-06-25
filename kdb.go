@@ -27,7 +27,7 @@ type KDB struct {
 
 //ServerStats - Hold all the pertaining information for each server
 type ServerStats struct {
-	Config Config  `json:"config"` //guild specific config
+	Config Config  `json:"config"` //Guild specific config
 	Emotes Emote   `json:"emotes"` //String of customizable emotes
 	GID    string  `json:"gID"`    //discord guild ID
 	Karma  int     `json:"karma"`  //bots karma - per server
@@ -113,7 +113,7 @@ func (k *KDB) Read() {
 
 	//Decode JSON and inject into structure
 	decoder := json.NewDecoder(file)
-	err = decoder.Decode(&kdb)
+	err = decoder.Decode(&k)
 	if err != nil {
 		panic(err)
 	}
@@ -124,8 +124,8 @@ func (k *KDB) Read() {
 
 //WriteKDB - Write the file
 func (k *KDB) Write() {
-	//Marshal global variable data
-	jsonData, err := json.MarshalIndent(kdb, "", "    ")
+	//Marshal data to be readable
+	jsonData, err := json.MarshalIndent(k, "", "    ")
 	if err != nil {
 		panic(err)
 	}
@@ -143,10 +143,10 @@ func (k *KDB) Write() {
 	jsonFile.Close()
 }
 
-//UpdateKDB - Read then write the user jsonFile
-func UpdateKDB() {
-	kdb.Read()
-	kdb.Write()
+//Update - Read then write the user jsonFile
+func (k *KDB) Update() {
+	k.Read()
+	k.Write()
 }
 
 //----- U S E R   M A N A G E M E N T -----
@@ -172,7 +172,7 @@ func (k *KDB) CreateUser(s *discordgo.Session, c interface{}) (userData UserStat
 	//Index will be the last index, or length minus 1
 	index = len(k.Users) - 1
 	//Write to the file to update it and return the data
-	kdb.Write()
+	k.Write()
 	return user, index
 }
 
@@ -193,6 +193,7 @@ func (k *KDB) GetUserData(s *discordgo.Session, c interface{}) (userData UserSta
 	return k.CreateUser(s, c)
 }
 
+//TODO
 //UpdateUser - Update user data json jsonFile
 func (u *ServerStats) UpdateUser(s *discordgo.Session, c interface{}) bool {
 	//Return true if update was needed

@@ -101,13 +101,14 @@ func main() {
 
 	//Reset all anthems
 	//Disabled for different use
-	// ReadKDB()
 	// for _, ss := range kdb {
 	// 	for j := range ss.Users {
 	// 		ss.Users[j].PlayAnthem = true
 	// 	}
 	// }
-	// WriteKDB()
+
+	//Update Kylixor database
+	kdb.Update()
 
 	// Create a new Discord session using the provided bot token.
 	ky, err := discordgo.New("Bot " + botConfig.APIKey)
