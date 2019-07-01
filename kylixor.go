@@ -411,3 +411,41 @@ func CreationTime(ID string) (t time.Time, err error) {
 	t = time.Unix(timestamp/1000, 0)
 	return
 }
+
+//GetAge - Take in a string that should be a discord snowflake ID, then calulate, format, and return the age
+func GetAge(rawID string) string {
+
+	id := rawID
+	id = strings.TrimPrefix(id, "<#")
+	id = strings.TrimPrefix(id, "<@")
+	id = strings.TrimPrefix(id, "!")
+	id = strings.TrimSuffix(id, ">")
+	//Attempt to get the creation time of the ID given
+	t, err := CreationTime(id)
+	if err != nil {
+		return fmt.Sprintf("Not a valid Discord Snowflake ID: \"%s\"", rawID)
+	}
+
+	day := time.Hour * 24
+	year := 365 * day
+	var years time.Duration
+
+	tAlive := time.Now().Sub(t)
+
+	if tAlive >= year {
+		//At least a year
+		years = tAlive / year
+		tAlive -= years * year
+	}
+
+	days := tAlive / day
+	tAlive -= days * day
+
+	//If the age is more than a year
+	tYears := fmt.Sprintf("%d years, ", years)
+	and := "and "
+	tDays := fmt.Sprintf("%d days, ", days)
+
+	return fmt.Sprintf("%s was created on %s. They are %s%s%s%d hours old.",
+		rawID, t.Format("Jan 2 3:04:05PM 2006"), tYears, tDays, and, int(tAlive.Hours()))
+}

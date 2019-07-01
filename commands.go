@@ -35,58 +35,14 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 	//Get the age of the (user, channel, guild) ID entered as the argument, or the message creator
 	case "age":
 		var msg string
+		//If no arguments, return age of sender
 		if data == "" {
-			//If no arguments, get create date of user
-			t, err := CreationTime(m.Author.ID)
-			if err != nil {
-				panic(err)
-			}
-
-			tAlive := time.Now().Sub(t)
-
-			day := time.Hour * 24
-			year := 365 * day
-			var years time.Duration
-
-			if tAlive < day {
-				//Only hours
-			}
-
-			if tAlive >= year {
-				//At least a year
-				years = tAlive / year
-				tAlive -= years * year
-			}
-
-			days := tAlive / day
-			tAlive -= days * day
-
-			//Declare variables to hold years/days/hours of age
-			and := ""
-			tYears := ""
-			tDays := ""
-
-			//If the age is more than a year
-			tYears = fmt.Sprintf("%d years, ", years)
-			and = "and "
-			tDays = fmt.Sprintf("%d days, ", days)
-
-			msg = fmt.Sprintf("The object was created on %s. It is %s%s%s%d hours old.",
-				t.Format("Jan 2 3:04:05PM 2006"), tYears, tDays, and, int(tAlive.Hours()))
+			msg = GetAge(m.Author.Mention())
 		} else {
-			//Else try to take argument as string
-			id := data
-			id = strings.TrimPrefix(id, "<#")
-			id = strings.TrimPrefix(id, "<@")
-			id = strings.TrimPrefix(id, "!")
-			id = strings.TrimSuffix(id, ">")
-			t, err := CreationTime(id)
-			if err != nil {
-				msg = fmt.Sprintf("Not a valid Discord ID: \"%s\"", data)
-			} else {
-				msg = fmt.Sprintf("The object was created on %s. It is %s old.", t.Format("Jan 2 3:04:05PM 2006"), time.Now().Sub(t).String())
-			}
+			//Attempt to get age of argument
+			msg = GetAge(data)
 		}
+
 		s.ChannelMessageSend(m.ChannelID, msg)
 		break
 
