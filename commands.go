@@ -189,7 +189,9 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 	//Runs the commands in a file because I have no idea what I'm doing
 	case "test":
 		if CheckAdmin(s, m) {
-			Test(s, m, command, data)
+			s.ChannelMessageSend(m.ChannelID, "Starting testing...")
+
+			s.ChannelMessageSend(m.ChannelID, "Testing finshed.")
 		}
 		break
 

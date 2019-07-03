@@ -1,5 +1,5 @@
 **Kylixor Multi-Purpose Discord Bot**
-v1.1.4
+v1.1.5
 =====================================
 
 Commands
@@ -9,9 +9,9 @@ Commands
 | ----------- | ----- | -----------
 | account     | acc   | Displays how many coins the user has
 | age         | age   | Display the create date of the user or Snowflake ID
-| help        | h     | Print out this file
 | dailies     | day   | Get daily coins/credits
 | darling     | 02    | Displays a gif of pure happiness
+| help        | h     | Print out this file
 | karma       | karma | Displays the current level of karma for the bot
 | ping        | ping  | Send a ping to the bot to measure latency
 | quote       | q     | Starts a vote to save a memorable quote
