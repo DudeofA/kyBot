@@ -79,6 +79,14 @@ func LogMsg(s *discordgo.Session, m *discordgo.MessageCreate) {
 		//Format name
 		name := m.Author.Username + "#" + m.Author.Discriminator
 
+		//Append attachment URLs to the end of the messages
+		fullMsg := m.ContentWithMentionsReplaced()
+		if len(m.Attachments) > 0 {
+			for _, v := range m.Attachments {
+				fullMsg += "\nProxyURL: " + v.ProxyURL + "\nURL: " + v.URL
+			}
+		}
+
 		//Generate remaining formatting
 		PrintLog(s,
 			"Message",
@@ -87,10 +95,13 @@ func LogMsg(s *discordgo.Session, m *discordgo.MessageCreate) {
 			channel.Name,
 			name,
 			m.ID,
-			m.ContentWithMentionsReplaced())
+			fullMsg)
 	} else {
 		fmt.Printf("No permission/unaccessable log channel: \"%s\"", botConfig.LogID)
 	}
+
+	//Update KDB
+	kdb.GetUser(s, m.Author.ID)
 }
 
 //LogVoice - log voice events in the log channel
@@ -140,7 +151,7 @@ func LogVoice(s *discordgo.Session, v *discordgo.VoiceStateUpdate) {
 			guild.Name,
 			channelName,
 			user.Username+"#"+user.Discriminator,
-			v.SessionID,
+			"",
 			event)
 	} else {
 		fmt.Printf("No permission/unaccessable log channel: \"%s\"", botConfig.LogID)

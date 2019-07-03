@@ -1,5 +1,5 @@
 **Kylixor Multi-Purpose Discord Bot**
-v1.1.2
+v1.1.4
 =====================================
 
 Commands
