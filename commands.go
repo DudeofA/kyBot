@@ -27,7 +27,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 	//----- A C C O U N T -----
 	//Get amount of coins in players account
 	case "account", "acc":
-		user, _ := kdb.GetUserData(s, m)
+		user, _ := kdb.GetUser(s, m.Author.ID)
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("💵 | You have a total of **%d** %scoins", user.Credits, kdb.Servers[guildIndex].Config.Coins))
 		break
 
@@ -65,7 +65,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 	//Gets daily Coins
 	case "dailies", "day":
 		//Retrieve user data from memory
-		_, index := kdb.GetUserData(s, m)
+		_, index := kdb.GetUser(s, m.Author.ID)
 		userData := &kdb.Users[index]
 		//If the dailies have not been done
 		if !userData.Dailies {

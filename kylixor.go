@@ -197,7 +197,7 @@ func PresenceUpdate(s *discordgo.Session, p *discordgo.PresenceUpdate) {
 
 //VoiceStateUpdate - Called whenever a user changes their voice state (muted, deafen, connected, disconnected)
 func VoiceStateUpdate(s *discordgo.Session, v *discordgo.VoiceStateUpdate) {
-
+	LogVoice(s, v)
 }
 
 //MessageCreate - Called whenever a message is sent to the discord
@@ -206,7 +206,7 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	guildIndex := GetGuildByID(m.GuildID)
 
 	//Return if the message was sent by a bot to avoid infinite loops
-	if m.Author.Bot {
+	if m.Author.Bot || m.ChannelID == botConfig.LogID {
 		return
 	}
 

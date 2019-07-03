@@ -152,19 +152,16 @@ func (k *KDB) Update() {
 //----- U S E R   M A N A G E M E N T -----
 
 //CreateUser - create user within the user json file and return it
-func (k *KDB) CreateUser(s *discordgo.Session, c interface{}) (userData UserStats, index int) {
+func (k *KDB) CreateUser(s *discordgo.Session, id string) (userData UserStats, index int) {
 	var user UserStats
 
-	//Temp - assign interface to MessageEmbed
-	m := c.(*discordgo.MessageCreate)
-
 	//Pull user info from discord
-	discordUser, _ := s.User(m.Author.ID)
+	discordUser, _ := s.User(id)
 
 	//Put user data into user structure
 	user.Name = discordUser.Username
 	user.Credits = 0
-	user.UserID = m.Author.ID
+	user.UserID = id
 	user.PlayAnthem = false
 
 	//Append new user to the users array
@@ -176,24 +173,22 @@ func (k *KDB) CreateUser(s *discordgo.Session, c interface{}) (userData UserStat
 	return user, index
 }
 
-//GetUserData - Retrieve user data
-func (k *KDB) GetUserData(s *discordgo.Session, c interface{}) (userData UserStats, index int) {
-
-	//Temp - assign interface to message
-	m := c.(*discordgo.MessageCreate)
+//GetUser - Retrieve user data
+func (k *KDB) GetUser(s *discordgo.Session, id string) (userData UserStats, index int) {
 
 	//Check if user is in the data file, return them if they are
 	for i := range k.Users {
-		if k.Users[i].UserID == m.Author.ID {
+		if k.Users[i].UserID == id {
 			return k.Users[i], i
 		}
 	}
 
 	//return user
-	return k.CreateUser(s, c)
+	return k.CreateUser(s, id)
 }
 
 //TODO
+
 //UpdateUser - Update user data json jsonFile
 func (u *ServerStats) UpdateUser(s *discordgo.Session, c interface{}) bool {
 	//Return true if update was needed
