@@ -117,6 +117,9 @@ func main() {
 		return
 	}
 
+	//Use the state to cache messages
+	ky.State.MaxMessageCount = 100
+
 	// Register ready for the ready event
 	ky.AddHandlerOnce(Ready)
 
@@ -188,6 +191,10 @@ func Ready(s *discordgo.Session, event *discordgo.Ready) {
 			SetStatus(s)
 		}
 	}()
+
+	if LogValid(s) {
+		PrintLog(s, "INFO", time.Now(), "INFO", "INFO", "INFO", "INFO", "Bot starting up...")
+	}
 }
 
 //PresenceUpdate - Called when any user changes their status (online, away, playing a game, etc)

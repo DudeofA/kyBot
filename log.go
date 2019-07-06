@@ -18,12 +18,15 @@ import (
 //LogValid - tests if the log is valid
 func LogValid(s *discordgo.Session) bool {
 	var perm bool
-	//Check to see if Log channel is defined
+	//Check to see if Log channel is defined by first checking the state, then DiscordAPI
 	if botConfig.LogID != "" {
 		logChannel, err := s.State.Channel(botConfig.LogID)
 		if err != nil {
-			fmt.Printf("Log channel does not exist or is not defined")
-			return false
+			logChannel, err = s.Channel(botConfig.LogID)
+			if err != nil {
+				fmt.Printf("Log channel does not exist or is not defined")
+				return false
+			}
 		}
 		//Check if bot has permission to Send Messages and is accessable
 		perm, err = MemberHasPermission(s, logChannel.GuildID, self.ID, 2048)
@@ -108,6 +111,11 @@ func LogMsg(s *discordgo.Session, m *discordgo.MessageCreate) {
 func LogVoice(s *discordgo.Session, v *discordgo.VoiceStateUpdate) {
 	//Get KDB user data
 	KDBuser, uIndex := kdb.GetUser(s, v.UserID)
+
+	//If user hasn't changed channels, do nothing (usually a mute or deafen)
+	if KDBuser.CurrentCID == v.ChannelID {
+		return
+	}
 
 	//If logs are able to be written to a channel
 	if LogValid(s) {
