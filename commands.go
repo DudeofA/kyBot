@@ -112,6 +112,12 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 		s.ChannelMessageSendEmbed(m.ChannelID, embedMsg)
 		break
 
+	//----- G A M B L E -----
+	//Gamble away your coins
+	case "gamble", "slots":
+		Slots(s, m, data)
+		break
+
 	//----- H E L P -----
 	//Display the readme file
 	case "help", "h":
