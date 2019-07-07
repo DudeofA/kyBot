@@ -21,13 +21,13 @@ func Slots(s *discordgo.Session, m *discordgo.MessageCreate, data string) {
 	var jackpotMultiplier = 10
 
 	//Gamble item string - Jackbot item MUST be at the end
-	var slots = []string{":green_apple:", ":lemon:", ":cherries:", ":eggplant:", ":peach:", ":moneybag:"}
+	var slots = []string{":lemon:", ":cherries:", ":eggplant:", ":peach:", ":moneybag:"}
 
 	//Explain rules
 	if data == "" {
 		usage := "Slots:\n\tUsage: slots <amount to gamble> (amount must be multiple of 10)"
 		payouts := fmt.Sprintf("\n\tPayouts: \n\t\t2 of a kind - Nothing lost\n\t\t3 of a kind - %dx wager\n\t\t3 money bags - %dx wager", winMultiplier, jackpotMultiplier)
-		options := fmt.Sprintf("\n\tChances: \n\t\tThere are %d options, and each slot is a simple random function (verify on Github)", len(slots))
+		options := fmt.Sprintf("\n\tChances: \n\t\tThere are %d options, each of the 3 slots are fully random", len(slots))
 
 		//Print terms
 		s.ChannelMessageSend(m.ChannelID, usage+payouts+options)
@@ -64,9 +64,6 @@ func Slots(s *discordgo.Session, m *discordgo.MessageCreate, data string) {
 	slot2 := rand.Intn(len(slots))
 	slot3 := rand.Intn(len(slots))
 
-	//Display the slots
-	s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s %s %s", slots[slot1], slots[slot2], slots[slot3]))
-
 	//-- Winnings --
 	var winnings int
 	var result string
@@ -76,11 +73,11 @@ func Slots(s *discordgo.Session, m *discordgo.MessageCreate, data string) {
 		//If all 3 are the same
 		if slot1 == len(slots)-1 {
 			//Jackpot
-			winnings = wager * 10
+			winnings = wager*jackpotMultiplier + wager
 			result = "WOW JACKPOT - DING DING DING - YOU JUST WON BIG TIME"
 		} else {
 			//Normal winnings
-			winnings = wager * 3
+			winnings = wager*winMultiplier + wager
 			result = "YOU WON - CONGRATS - EZ MONEY"
 		}
 	} else if slot1 == slot2 || slot1 == slot3 || slot2 == slot3 {
@@ -97,11 +94,16 @@ func Slots(s *discordgo.Session, m *discordgo.MessageCreate, data string) {
 	kdb.Users[gamblerIndex].Credits += winnings
 	kdb.Write()
 
-	//Display balance
-	s.ChannelMessageSend(m.ChannelID, result)
-	balanceNotice := fmt.Sprintf("Current coins balance: %d", kdb.Users[gamblerIndex].Credits)
+	//Display the slots
+	s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s %s %s", slots[slot1], slots[slot2], slots[slot3]))
+
+	//Display balance and result message
+	balanceNotice := fmt.Sprintf(":dollar: | You now have a total of **%d** coins", kdb.Users[gamblerIndex].Credits)
 	if winnings != 0 && winnings != wager {
-		balanceNotice = fmt.Sprintf("Old coins balance: %d - ", originalCredits) + balanceNotice
+		balanceNotice = fmt.Sprintf(":dollar: | Old coins balance: **%d** - You won **%d** coins!\n",
+			originalCredits, winnings-wager) + balanceNotice
 	}
-	s.ChannelMessageSend(m.ChannelID, balanceNotice)
+	s.ChannelMessageSend(m.ChannelID, result+"\n"+balanceNotice)
 }
+
+//Hangman - ...its hangman, in Discord!
