@@ -9,8 +9,11 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"math/rand"
+	"os"
 	"strconv"
+	"strings"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -106,4 +109,103 @@ func Slots(s *discordgo.Session, m *discordgo.MessageCreate, data string) {
 	s.ChannelMessageSend(m.ChannelID, result+"\n"+balanceNotice)
 }
 
-//Hangman - ...its hangman, in Discord!
+//HangmanGame - ...its hangman, in Discord!
+func HangmanGame(s *discordgo.Session, m *discordgo.MessageCreate, data string) {
+	var usage = "hangman (start, channel, guess <word/phrase>, quit)\nReact with the letter to guess"
+	//var alphabet = []string{"🇦", "🇧", "🇨", "🇩", "🇪", "🇫", "🇬", "🇭", "🇮", "🇯", "🇰", "🇱", "🇲", "🇳", "🇴", "🇵", "🇶", "🇷", "🇸", "🇹", "🇺", "🇻", "🇼", "🇽", "🇾", "🇿"}
+
+	gID := GetGuildByID(m.GuildID)
+	hmSession := kdb.Servers[gID].HM
+
+	//Parse the data passed along with the command
+	var command string
+	var argument string
+	dataArray := strings.SplitN(data, " ", 1)
+	if len(dataArray) > 0 {
+		command = dataArray[0]
+	}
+	if len(dataArray) > 1 {
+		argument = dataArray[1]
+	}
+
+	switch strings.ToLower(command) {
+	//Usage
+	case "":
+		s.ChannelMessageSend(m.ChannelID, usage)
+		break
+
+	//Start a game if not started
+	case "start":
+		if hmSession.State != 0 {
+			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Game is already in progress in <#%s>", hmSession.Channel))
+			return
+		}
+		break
+
+	//Move game to another channel
+	case "channel":
+		chanID := strings.TrimPrefix(argument, "<#")
+		chanID = strings.TrimSuffix(chanID, ">")
+		hmChannel, err := s.Channel(chanID)
+		if err != nil {
+			s.ChannelMessageSend(m.ChannelID, "Please provide a valid channel to move the game to")
+			return
+		}
+
+		//Get permision of bot
+		gamePerm, err := s.State.UserChannelPermissions(self.ID, hmChannel.ID)
+		if err != nil {
+			panic(err)
+		}
+
+		//If bot cannot type here, abort
+		if (gamePerm&0x800) != 0x800 || (gamePerm&0x40) == 0x40 {
+			s.ChannelMessageSend(m.ChannelID, "Bot cannot send messages/add reactions to this channel")
+			return
+		}
+
+		kdb.Servers[gID].HM.Channel = hmChannel.ID
+		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Changed game channel to %s", hmChannel.Mention()))
+		break
+
+	//Guess final word/phrase
+	case "guess":
+		phrase := HMGenerator(1)
+		s.ChannelMessageSend(m.ChannelID, phrase)
+		break
+
+	case "quit":
+		break
+	}
+}
+
+//HMGenerator - Generate random phrase/word for Hangman
+func HMGenerator(num int) (phrase string) {
+	//If you request a strange amount of
+	if num < 1 || num > 5 {
+		return ""
+	}
+
+	//Open ENTIRE dictionary
+	file, err := os.Open("/usr/share/dict/words")
+	if err != nil {
+		panic(err)
+	}
+
+	//Read file into array
+	bytes, err := ioutil.ReadAll(file)
+	if err != nil {
+		panic(err)
+	}
+	allWords := strings.Split(string(bytes), "\n")
+
+	//Generate a random phrase of the specified length
+	var phraseArray []string
+	for i := 0; i < num; i++ {
+		phraseArray = append(phraseArray, allWords[rand.Intn(len(allWords))])
+	}
+
+	//Combine and remove 's
+	phrase = strings.Join(phraseArray, " ")
+	return strings.Replace(phrase, "'s", "", -1)
+}

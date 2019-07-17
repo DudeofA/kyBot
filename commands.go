@@ -118,6 +118,12 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 		Slots(s, m, data)
 		break
 
+	//----- H A N G M A N -----
+	//Play hangman
+	case "hangman", "hm":
+		HangmanGame(s, m, data)
+		break
+
 	//----- H E L P -----
 	//Display the readme file
 	case "help", "h":

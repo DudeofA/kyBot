@@ -27,11 +27,12 @@ type KDB struct {
 
 //ServerStats - Hold all the pertaining information for each server
 type ServerStats struct {
-	Config Config  `json:"config"` //Guild specific config
-	Emotes Emote   `json:"emotes"` //String of customizable emotes
-	GID    string  `json:"gID"`    //discord guild ID
-	Karma  int     `json:"karma"`  //bots karma - per server
-	Quotes []Quote `json:"quotes"` //Array of quotes
+	Config Config  `json:"config"`  //Guild specific config
+	Emotes Emote   `json:"emotes"`  //String of customizable emotes
+	GID    string  `json:"gID"`     //discord guild ID
+	HM     Hangman `json:"hangman"` //Holds hangman data
+	Karma  int     `json:"karma"`   //bots karma - per server
+	Quotes []Quote `json:"quotes"`  //Array of quotes
 }
 
 //Config - structure to hold variables specifically for that guild
@@ -46,6 +47,13 @@ type Config struct {
 type Emote struct {
 	UPVOTE   string `json:"upvote"`   //Upvote emotes
 	DOWNVOTE string `json:"downvote"` //Downvote emotes
+}
+
+//Hangman - State of hangman game
+type Hangman struct {
+	Channel string `json:"channel"` //ChannelID where game is played
+	State   int    `json:"state"`   //State of game, 1-7 until you lose
+	Word    string `json:"word"`    //Word/phrase for the game
 }
 
 //Quote - Data about quotes and quotes themselves
