@@ -113,33 +113,67 @@ func Slots(s *discordgo.Session, m *discordgo.MessageCreate, data string) {
 func HangmanGame(s *discordgo.Session, m *discordgo.MessageCreate, data string) {
 	var usage = "hangman (start, channel, guess <word/phrase>, quit)\nReact with the letter to guess"
 	//var alphabet = []string{"🇦", "🇧", "🇨", "🇩", "🇪", "🇫", "🇬", "🇭", "🇮", "🇯", "🇰", "🇱", "🇲", "🇳", "🇴", "🇵", "🇶", "🇷", "🇸", "🇹", "🇺", "🇻", "🇼", "🇽", "🇾", "🇿"}
+	var link = "https://discordapp.com/channels/"
+	var messageLink string
 
 	gID := GetGuildByID(m.GuildID)
-	hmSession := kdb.Servers[gID].HM
+	hmSession := &kdb.Servers[gID].HM
 
 	//Parse the data passed along with the command
 	var command string
 	var argument string
-	dataArray := strings.SplitN(data, " ", 1)
+	dataArray := strings.SplitN(data, " ", 2)
 	if len(dataArray) > 0 {
-		command = dataArray[0]
+		command = strings.TrimSpace(dataArray[0])
 	}
+
 	if len(dataArray) > 1 {
-		argument = dataArray[1]
+		argument = strings.TrimSpace(dataArray[1])
 	}
 
 	switch strings.ToLower(command) {
 	//Usage
 	case "":
+		if hmSession.State == 1 {
+			messageLink = link + m.GuildID + "/" + hmSession.Channel + "/" + hmSession.Message
+			usage += fmt.Sprintf("Game is already in progress [here](%s)", messageLink)
+		}
 		s.ChannelMessageSend(m.ChannelID, usage)
 		break
 
 	//Start a game if not started
 	case "start":
+		//Check if game isn't already started
 		if hmSession.State != 0 {
-			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Game is already in progress in <#%s>", hmSession.Channel))
+			messageLink := link + m.GuildID + "/" + hmSession.Channel + "/" + hmSession.Message
+			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Game is already in progress [here](%s)", messageLink))
 			return
 		}
+
+		//Check if game channel is specified
+		if hmSession.Channel == "" {
+			s.ChannelMessageSend(m.ChannelID, "Please specify a channel first with 'hm channel <channel>'.")
+			return
+		}
+
+		//Start the game
+		hmSession.State = 1
+
+		//Generate word and board
+		hmSession.Word = HMGenerator(1)
+
+		var wordUnderlines []string
+		var i int
+		for i = 0; i < len(hmSession.Word); i++ {
+			wordUnderlines = append(wordUnderlines, "_")
+		}
+
+		var wordPrint string
+		for i = 0; i < len(wordUnderlines); i++ {
+			wordPrint += fmt.Sprintf("%s%s", wordUnderlines[i], " ")
+		}
+		hmGame, _ := s.ChannelMessageSend(m.ChannelID, "```\n"+wordPrint+"\n```")
+		hmSession.Message = hmGame.ID
 		break
 
 	//Move game to another channel
@@ -159,22 +193,28 @@ func HangmanGame(s *discordgo.Session, m *discordgo.MessageCreate, data string) 
 		}
 
 		//If bot cannot type here, abort
-		if (gamePerm&0x800) != 0x800 || (gamePerm&0x40) == 0x40 {
+		if (gamePerm&0x40 != 0x40) || (gamePerm&0x800 != 0x800) {
 			s.ChannelMessageSend(m.ChannelID, "Bot cannot send messages/add reactions to this channel")
 			return
 		}
 
 		kdb.Servers[gID].HM.Channel = hmChannel.ID
+		kdb.Write()
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Changed game channel to %s", hmChannel.Mention()))
 		break
 
 	//Guess final word/phrase
 	case "guess":
-		phrase := HMGenerator(1)
-		s.ChannelMessageSend(m.ChannelID, phrase)
+
 		break
 
 	case "quit":
+		hmSession.State = 0
+		s.ChannelMessageEdit(hmSession.Channel, hmSession.Message, fmt.Sprintf("GAMEOVER\nWord: \"%s\"", hmSession.Word))
+		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("End result [here](%s)", messageLink))
+		var embed *discordgo.MessageEmbed
+		embed.Description = "[test](https://google.com)"
+		s.ChannelMessageSendEmbed(m.ChannelID, embed)
 		break
 	}
 }
