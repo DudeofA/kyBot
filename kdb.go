@@ -10,6 +10,7 @@ package main
 import (
 	"encoding/json"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -100,7 +101,7 @@ func InitKDB() {
 		panic(err)
 	}
 	//Open file
-	jsonFile, err := os.Create(pwd + "/data/kdb.json")
+	jsonFile, err := os.Create(filepath.FromSlash(pwd + "/data/kdb.json"))
 	if err != nil {
 		panic(err)
 	}
@@ -116,7 +117,7 @@ func InitKDB() {
 //ReadKDB - Read in the user file into the structure
 func (k *KDB) Read() {
 	//Open file
-	file, err := os.Open(pwd + "/data/kdb.json")
+	file, err := os.Open(filepath.FromSlash(pwd + "/data/kdb.json"))
 	if err != nil {
 		panic(err)
 	}
@@ -140,7 +141,7 @@ func (k *KDB) Write() {
 		panic(err)
 	}
 	//Open file
-	jsonFile, err := os.Create(pwd + "/data/kdb.json")
+	jsonFile, err := os.Create(filepath.FromSlash(pwd + "/data/kdb.json"))
 	if err != nil {
 		panic(err)
 	}

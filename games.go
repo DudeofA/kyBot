@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -230,9 +231,14 @@ func HMGenerator(num int) (phrase string) {
 	}
 
 	//Open ENTIRE dictionary
+	var err error
 	file, err := os.Open("/usr/share/dict/words")
+
 	if err != nil {
-		panic(err)
+		file, err = os.Open(filepath.FromSlash(pwd + "/data/words.txt"))
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	//Read file into array

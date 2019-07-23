@@ -62,7 +62,7 @@ func main() {
 	rand.Seed(time.Now().UTC().UnixNano())
 
 	// Read in config file if exists
-	if _, err = os.Stat(pwd + "/data/conf.json"); os.IsNotExist(err) {
+	if _, err = os.Stat(filepath.FromSlash(pwd + "/data/conf.json")); os.IsNotExist(err) {
 		fmt.Println("\nCannot find conf.json, creating new...")
 		InitBotConfFile()
 		fmt.Println("\nPlease fill in the config.json file located in the data folder.")
@@ -94,7 +94,7 @@ func main() {
 	}
 
 	// Read in user data file if exists
-	if _, err = os.Stat(pwd + "/data/kdb.json"); os.IsNotExist(err) {
+	if _, err = os.Stat(filepath.FromSlash(pwd + "/data/kdb.json")); os.IsNotExist(err) {
 		fmt.Println("\nCannot find kdb.json, creating new...")
 		InitKDB()
 	}
@@ -277,7 +277,7 @@ func InitBotConfFile() {
 	_ = os.Mkdir("data", 0755)
 
 	// Open file
-	jsonFile, err := os.Create(pwd + "/data/conf.json")
+	jsonFile, err := os.Create(filepath.FromSlash(pwd + "/data/conf.json"))
 	if err != nil {
 		panic(err)
 	}
@@ -292,7 +292,7 @@ func InitBotConfFile() {
 
 //ReadBotConfig - Read in config file into Config structure
 func (c *BotConfig) Read() {
-	file, _ := os.Open(pwd + "/data/conf.json")
+	file, _ := os.Open(filepath.FromSlash(pwd + "/data/conf.json"))
 	decoder := json.NewDecoder(file)
 	err := decoder.Decode(&c)
 	if err != nil {
@@ -309,7 +309,7 @@ func (c *BotConfig) Write() {
 		panic(err)
 	}
 	//Open file
-	jsonFile, err := os.Create(pwd + "/data/conf.json")
+	jsonFile, err := os.Create(filepath.FromSlash(pwd + "/data/conf.json"))
 	if err != nil {
 		panic(err)
 	}
@@ -343,7 +343,7 @@ func ResetDailies() {
 //GetVersion - Get the version of the bot from the readme
 func GetVersion() (ver string) {
 	//Open the file and grab it line by line into textlines
-	readme, err := os.Open(pwd + "/README.md")
+	readme, err := os.Open(filepath.FromSlash(pwd + "/README.md"))
 	if err != nil {
 		panic(err)
 	}

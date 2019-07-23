@@ -1,4 +1,4 @@
 data/
 bin/
-.bat
-.exe
+*.bat
+*.exe
