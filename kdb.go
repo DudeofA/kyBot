@@ -53,10 +53,11 @@ type Emote struct {
 //Hangman - State of hangman game
 type Hangman struct {
 	Channel   string   `json:"channel"`   //ChannelID where game is played
-	WordState []string `json:"hmState"`   //State of game's word
-	Message   string   `json:"message"`   //MessageID of current hangman game
 	GameState int      `json:"gameState"` //State of game, 1-7 until you lose
+	Guessed   []string `json:"guessed"`   //Characters/words that have been guessed
+	Message   string   `json:"message"`   //MessageID of current hangman game
 	Word      string   `json:"word"`      //Word/phrase for the game
+	WordState []string `json:"hmState"`   //State of game's word
 }
 
 //Quote - Data about quotes and quotes themselves
