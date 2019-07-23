@@ -271,6 +271,7 @@ func HMPrintState(s *discordgo.Session, hmSession *Hangman) (hmGame *discordgo.M
 		return
 	}
 
+	//Stages of the hanging
 	stages := []string{
 		"\n/---|\n|\n|\n|\n|\n",
 		"\n/---|\n|   o\n|\n|\n|\n",
