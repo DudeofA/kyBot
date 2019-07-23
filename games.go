@@ -113,8 +113,6 @@ func Slots(s *discordgo.Session, m *discordgo.MessageCreate, data string) {
 func HangmanGame(s *discordgo.Session, m *discordgo.MessageCreate, data string) {
 	var usage = "hangman (start, channel, guess <word/phrase>, quit)\nReact with the letter to guess"
 	//var alphabet = []string{"🇦", "🇧", "🇨", "🇩", "🇪", "🇫", "🇬", "🇭", "🇮", "🇯", "🇰", "🇱", "🇲", "🇳", "🇴", "🇵", "🇶", "🇷", "🇸", "🇹", "🇺", "🇻", "🇼", "🇽", "🇾", "🇿"}
-	var link = "https://discordapp.com/channels/"
-	var messageLink string
 
 	gID := GetGuildByID(m.GuildID)
 	hmSession := &kdb.Servers[gID].HM
@@ -134,19 +132,19 @@ func HangmanGame(s *discordgo.Session, m *discordgo.MessageCreate, data string) 
 	switch strings.ToLower(command) {
 	//Usage
 	case "":
-		if hmSession.State == 1 {
-			messageLink = link + m.GuildID + "/" + hmSession.Channel + "/" + hmSession.Message
-			usage += fmt.Sprintf("Game is already in progress [here](%s)", messageLink)
-		}
 		s.ChannelMessageSend(m.ChannelID, usage)
+		if hmSession.GameState > 0 {
+			embed := GenerateLinkEmbed(m.GuildID, hmSession)
+			s.ChannelMessageSendEmbed(m.ChannelID, embed)
+		}
 		break
 
 	//Start a game if not started
 	case "start":
 		//Check if game isn't already started
-		if hmSession.State != 0 {
-			messageLink := link + m.GuildID + "/" + hmSession.Channel + "/" + hmSession.Message
-			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Game is already in progress [here](%s)", messageLink))
+		if hmSession.GameState > 0 {
+			embed := GenerateLinkEmbed(m.GuildID, hmSession)
+			s.ChannelMessageSendEmbed(m.ChannelID, embed)
 			return
 		}
 
@@ -157,22 +155,16 @@ func HangmanGame(s *discordgo.Session, m *discordgo.MessageCreate, data string) 
 		}
 
 		//Start the game
-		hmSession.State = 1
+		hmSession.GameState = 1
 
 		//Generate word and board
 		hmSession.Word = HMGenerator(1)
 
-		var wordUnderlines []string
-		var i int
-		for i = 0; i < len(hmSession.Word); i++ {
-			wordUnderlines = append(wordUnderlines, "_")
+		for i := 0; i < len(hmSession.Word); i++ {
+			hmSession.WordState = append(hmSession.WordState, "_")
 		}
 
-		var wordPrint string
-		for i = 0; i < len(wordUnderlines); i++ {
-			wordPrint += fmt.Sprintf("%s%s", wordUnderlines[i], " ")
-		}
-		hmGame, _ := s.ChannelMessageSend(m.ChannelID, "```\n"+wordPrint+"\n```")
+		hmGame := HMPrintState(s, hmSession)
 		hmSession.Message = hmGame.ID
 		break
 
@@ -199,24 +191,35 @@ func HangmanGame(s *discordgo.Session, m *discordgo.MessageCreate, data string) 
 		}
 
 		kdb.Servers[gID].HM.Channel = hmChannel.ID
-		kdb.Write()
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Changed game channel to %s", hmChannel.Mention()))
 		break
 
 	//Guess final word/phrase
 	case "guess":
-
+		hmSession.GameState++
+		HMPrintState(s, hmSession)
+		s.ChannelMessageDelete(m.ChannelID, m.ID)
 		break
 
 	case "quit":
-		hmSession.State = 0
+		if hmSession.GameState == 0 {
+			s.ChannelMessageSend(m.ChannelID, "There is no game currently running...")
+			return
+		}
+
+		//Edit game
 		s.ChannelMessageEdit(hmSession.Channel, hmSession.Message, fmt.Sprintf("GAMEOVER\nWord: \"%s\"", hmSession.Word))
-		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("End result [here](%s)", messageLink))
-		var embed *discordgo.MessageEmbed
-		embed.Description = "[test](https://google.com)"
+		embed := GenerateLinkEmbed(m.GuildID, hmSession)
 		s.ChannelMessageSendEmbed(m.ChannelID, embed)
+
+		hmSession.GameState = 0
+		hmSession.Message = ""
+		hmSession.Word = ""
+		hmSession.WordState = nil
 		break
 	}
+
+	kdb.Write()
 }
 
 //HMGenerator - Generate random phrase/word for Hangman
@@ -248,4 +251,70 @@ func HMGenerator(num int) (phrase string) {
 	//Combine and remove 's
 	phrase = strings.Join(phraseArray, " ")
 	return strings.Replace(phrase, "'s", "", -1)
+}
+
+//GenerateLinkEmbed - generate a simple embed to link to the current game of Hangman
+func GenerateLinkEmbed(guildID string, hmSession *Hangman) (embed *discordgo.MessageEmbed) {
+	link := "https://discordapp.com/channels/"
+	messageLink := link + guildID + "/" + hmSession.Channel + "/" + hmSession.Message
+	embedLink := fmt.Sprintf("Click [here](%s) to jump to the game", messageLink)
+	embed = &discordgo.MessageEmbed{
+		Color:       0xB134EB,
+		Description: embedLink,
+	}
+	return embed
+}
+
+//HMPrintState - prints the current state of the hangman game
+func HMPrintState(s *discordgo.Session, hmSession *Hangman) (hmGame *discordgo.Message) {
+	if hmSession.GameState <= 0 {
+		return
+	}
+
+	stages := []string{
+		"\n/---|\n|\n|\n|\n|\n",
+		"\n/---|\n|   o\n|\n|\n|\n",
+		"\n/---|\n|   o\n|   |\n|\n|\n",
+		"\n/---|\n|   o\n|  /|\n|\n|\n",
+		"\n/---|\n|   o\n|  /|\\\n|\n|\n",
+		"\n/---|\n|   o\n|  /|\\\n|  /\n|\n",
+		"\n/---|\n|   o\n|  /|\\\n|  / \\\n|\n",
+	}
+
+	//Write out the current word status
+	var wordPrint string
+	for i := 0; i < len(hmSession.WordState); i++ {
+		wordPrint += fmt.Sprintf("%s%s", hmSession.WordState[i], " ")
+	}
+	wordPrint += "\n"
+
+	gameMessage := []string{
+		"YOU GOT IT - Enjoy the coins!",
+		"GAME OVER - Try again next time...",
+		"Game running...react to guess or use 'hm guess <word>'!\n",
+	}
+
+	//Assemble and print the game
+	var msgIndex int
+	if hmSession.GameState < 0 {
+		msgIndex = 0
+	} else if hmSession.GameState == 0 {
+		msgIndex = 1
+	} else {
+		msgIndex = 2
+	}
+	game := "```\n" + gameMessage[msgIndex] + wordPrint + stages[hmSession.GameState-1] + "\n```"
+
+	//If the game is just starting
+	if hmSession.Message == "" {
+		hmGame, _ = s.ChannelMessageSend(hmSession.Channel, game)
+		return
+	}
+
+	//Otherwise just edit the existing game
+	hmGame, err := s.ChannelMessageEdit(hmSession.Channel, hmSession.Message, game)
+	if err != nil {
+		s.ChannelMessageSend(hmSession.Channel, "Game message is missing :c")
+	}
+	return
 }
