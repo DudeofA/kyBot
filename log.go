@@ -99,8 +99,6 @@ func LogMsg(s *discordgo.Session, m *discordgo.MessageCreate) {
 			name,
 			m.ID,
 			fullMsg)
-	} else {
-		fmt.Printf("No permission/unaccessable log channel: \"%s\"", botConfig.LogID)
 	}
 
 	//Update KDB

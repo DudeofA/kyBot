@@ -301,6 +301,14 @@ func HMPrintState(s *discordgo.Session, hmSession *Hangman) (hmGame *discordgo.M
 		"Game running...react to guess or use 'hm guess <word>'!\n",
 	}
 
+	//Append guesses into one big string
+	guesses := "Guesses: "
+	for _, guess := range hmSession.Guessed {
+		guesses += guess + ", "
+	}
+	strings.TrimSuffix(guesses, ", ")
+	guesses += "\n"
+
 	//Assemble and print the game
 	var msgIndex int
 	if hmSession.GameState < 0 {
@@ -310,7 +318,7 @@ func HMPrintState(s *discordgo.Session, hmSession *Hangman) (hmGame *discordgo.M
 	} else {
 		msgIndex = 2
 	}
-	game := "```\n" + gameMessage[msgIndex] + wordPrint + stages[hmSession.GameState-1] + "\n```"
+	game := "```\n" + gameMessage[msgIndex] + guesses + wordPrint + stages[hmSession.GameState-1] + "\n```"
 
 	//If the game is just starting
 	if hmSession.Message == "" {

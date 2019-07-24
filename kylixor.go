@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
@@ -97,6 +98,21 @@ func main() {
 	if _, err = os.Stat(filepath.FromSlash(pwd + "/data/kdb.json")); os.IsNotExist(err) {
 		fmt.Println("\nCannot find kdb.json, creating new...")
 		InitKDB()
+	}
+
+	// Check for dictionary file
+	if runtime.GOOS == "windows" {
+		_, err = os.Stat(filepath.FromSlash(pwd + "/data/words.txt"))
+		if err != nil {
+			fmt.Println("No dictionary file supplied, please add words.txt to the data folder, full of words to use for hangman")
+			return
+		}
+	} else {
+		_, err = os.Stat(filepath.FromSlash("/usr/share/dict/words"))
+		if err != nil {
+			fmt.Println("Error accessing dictionary")
+			return
+		}
 	}
 
 	//Reset all anthems
