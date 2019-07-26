@@ -102,7 +102,7 @@ func main() {
 
 	// Check for dictionary file
 	if runtime.GOOS == "windows" {
-		_, err = os.Stat(filepath.FromSlash(pwd + "/data/words.txt"))
+		_, err = os.Stat(filepath.FromSlash(pwd + "/dict/words.txt"))
 		if err != nil {
 			fmt.Println("No dictionary file supplied, please add words.txt to the data folder, full of words to use for hangman")
 			return
@@ -114,14 +114,6 @@ func main() {
 			return
 		}
 	}
-
-	//Reset all anthems
-	//Disabled for different use
-	// for _, ss := range kdb {
-	// 	for j := range ss.Users {
-	// 		ss.Users[j].PlayAnthem = true
-	// 	}
-	// }
 
 	//Update Kylixor database
 	kdb.Update()
