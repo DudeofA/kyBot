@@ -108,7 +108,7 @@ func LogMsg(s *discordgo.Session, m *discordgo.MessageCreate) {
 //LogVoice - log voice events in the log channel
 func LogVoice(s *discordgo.Session, v *discordgo.VoiceStateUpdate) {
 	//Get KDB user data
-	KDBuser, uIndex := kdb.GetUser(s, v.UserID)
+	KDBuser := kdb.GetUser(s, v.UserID)
 
 	//If user hasn't changed channels, do nothing (usually a mute or deafen)
 	if KDBuser.CurrentCID == v.ChannelID {
@@ -164,7 +164,7 @@ func LogVoice(s *discordgo.Session, v *discordgo.VoiceStateUpdate) {
 	}
 
 	//Update KDB with voice channel info
-	kdb.Users[uIndex].LastSeenCID = kdb.Users[uIndex].CurrentCID
-	kdb.Users[uIndex].CurrentCID = v.ChannelID
+	KDBuser.LastSeenCID = KDBuser.CurrentCID
+	KDBuser.CurrentCID = v.ChannelID
 	kdb.Write()
 }

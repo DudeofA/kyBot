@@ -164,7 +164,7 @@ func (k *KDB) Update() {
 //----- U S E R   M A N A G E M E N T -----
 
 //CreateUser - create user within the user json file and return it
-func (k *KDB) CreateUser(s *discordgo.Session, id string) (userData UserStats, index int) {
+func (k *KDB) CreateUser(s *discordgo.Session, id string) (userData *UserStats) {
 	var user UserStats
 
 	//Pull user info from discord
@@ -178,20 +178,18 @@ func (k *KDB) CreateUser(s *discordgo.Session, id string) (userData UserStats, i
 
 	//Append new user to the users array
 	k.Users = append(k.Users, user)
-	//Index will be the last index, or length minus 1
-	index = len(k.Users) - 1
 	//Write to the file to update it and return the data
 	k.Write()
-	return user, index
+	return &user
 }
 
 //GetUser - Retrieve user data
-func (k *KDB) GetUser(s *discordgo.Session, id string) (userData UserStats, index int) {
+func (k *KDB) GetUser(s *discordgo.Session, id string) (userData *UserStats) {
 
 	//Check if user is in the data file, return them if they are
 	for i := range k.Users {
 		if k.Users[i].UserID == id {
-			return k.Users[i], i
+			return &k.Users[i]
 		}
 	}
 
