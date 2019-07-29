@@ -114,7 +114,6 @@ func Slots(s *discordgo.Session, m *discordgo.MessageCreate, data string) {
 func HangmanGame(s *discordgo.Session, m *discordgo.MessageCreate, data string) {
 	var hmStages = 7
 	var usage = "hangman (start, channel, guess <word/phrase>, quit)\nReact with the letter to guess"
-	//var alphabet = []string{"🇦", "🇧", "🇨", "🇩", "🇪", "🇫", "🇬", "🇭", "🇮", "🇯", "🇰", "🇱", "🇲", "🇳", "🇴", "🇵", "🇶", "🇷", "🇸", "🇹", "🇺", "🇻", "🇼", "🇽", "🇾", "🇿"}
 
 	gID := GetGuildByID(m.GuildID)
 	hmSession := &kdb.Servers[gID].HM
@@ -165,6 +164,8 @@ func HangmanGame(s *discordgo.Session, m *discordgo.MessageCreate, data string) 
 		for i := 0; i < len(hmSession.Word); i++ {
 			hmSession.WordState = append(hmSession.WordState, "_")
 		}
+
+		s.AddHandler(ReactionGuess)
 
 		HMUpdateState(s, m, hmSession)
 		break
@@ -350,7 +351,7 @@ func HMUpdateState(s *discordgo.Session, m *discordgo.MessageCreate, hmSession *
 	}
 
 	//If player just won or lost, reset game
-	if hmSession.GameState < 0 || hmSession.GameState == 0 {
+	if hmSession.GameState <= 0 {
 		HMResetGame(hmSession)
 	}
 }
@@ -362,4 +363,26 @@ func HMResetGame(hmSession *Hangman) {
 	hmSession.Message = ""
 	hmSession.Word = ""
 	hmSession.WordState = nil
+}
+
+//ReactionGuess - processes letter guesses on hangman using reactions
+func ReactionGuess(s *discordgo.Session, r *discordgo.MessageReactionAdd) {
+	var alphabet = []string{"🇦", "🇧", "🇨", "🇩", "🇪", "🇫", "🇬", "🇭", "🇮", "🇯", "🇰", "🇱", "🇲", "🇳", "🇴", "🇵", "🇶", "🇷", "🇸", "🇹", "🇺", "🇻", "🇼", "🇽", "🇾", "🇿"}
+
+	var i int
+	var server ServerStats
+	for i, server = range kdb.Servers {
+		if server.HM.Message == r.MessageID {
+			break
+		}
+	}
+	hmSession := &kdb.Servers[i].HM
+
+	for i := range alphabet {
+		if r.Emoji.Name == alphabet[i] {
+			//AddGuess
+			hmSession.Guessed = append(hmSession.Guessed, r.Emoji.Name)
+			//HMUpdateState(s, m, hmSession)
+		}
+	}
 }
