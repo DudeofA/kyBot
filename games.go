@@ -21,6 +21,7 @@ import (
 
 //Stages of the hanging
 var hmStages = []string{
+	"",
 	"\n/---|\n|\n|\n|\n|\n",
 	"\n/---|\n|   o\n|\n|\n|\n",
 	"\n/---|\n|   o\n|   |\n|\n|\n",
@@ -28,7 +29,10 @@ var hmStages = []string{
 	"\n/---|\n|   o\n|  /|\\\n|\n|\n",
 	"\n/---|\n|   o\n|  /|\\\n|  /\n|\n",
 	"\n/---|\n|   o\n|  /|\\\n|  / \\\n|\n",
+	"\n/---|\n|   o\n|  /|\\\n| _/ \\\n|\n",
+	"\n/---|\n|   o\n|  /|\\\n| _/ \\_\n|\n",
 }
+var alphaBlocks = []string{"🇦", "🇧", "🇨", "🇩", "🇪", "🇫", "🇬", "🇭", "🇮", "🇯", "🇰", "🇱", "🇲", "🇳", "🇴", "🇵", "🇶", "🇷", "🇸", "🇹", "🇺", "🇻", "🇼", "🇽", "🇾", "🇿"}
 
 //Slots - gamble away your credits in a slot machine
 func Slots(s *discordgo.Session, m *discordgo.MessageCreate, data string) {
@@ -123,7 +127,7 @@ func Slots(s *discordgo.Session, m *discordgo.MessageCreate, data string) {
 
 //HangmanGame - ...its hangman, in Discord!
 func HangmanGame(s *discordgo.Session, m *discordgo.MessageCreate, data string) {
-	var usage = "hangman (start, channel, guess <word/phrase>, quit)\nReact with the letter to guess"
+	var usage = "```\n----- HANGMAN -----\nhangman (start, channel, guess <word/phrase>, quit)\nReact with the letter to guess\n```"
 
 	gID := GetGuildByID(m.GuildID)
 	hmSession := &kdb.Servers[gID].HM
@@ -145,7 +149,7 @@ func HangmanGame(s *discordgo.Session, m *discordgo.MessageCreate, data string) 
 	case "":
 		s.ChannelMessageSend(m.ChannelID, usage)
 		if hmSession.GameState > 0 {
-			embed := GenerateLinkEmbed(m.GuildID, hmSession, "")
+			embed := GenerateHMLinkEmbed(m.GuildID, hmSession, "")
 			s.ChannelMessageSendEmbed(m.ChannelID, embed)
 		}
 		break
@@ -154,7 +158,7 @@ func HangmanGame(s *discordgo.Session, m *discordgo.MessageCreate, data string) 
 	case "start":
 		//Check if game isn't already started
 		if hmSession.GameState > 0 {
-			embed := GenerateLinkEmbed(m.GuildID, hmSession, "Game started...\n")
+			embed := GenerateHMLinkEmbed(m.GuildID, hmSession, "Game started...\n")
 			s.ChannelMessageSendEmbed(m.ChannelID, embed)
 			return
 		}
@@ -216,10 +220,10 @@ func HangmanGame(s *discordgo.Session, m *discordgo.MessageCreate, data string) 
 		}
 
 		//Edit game
-		hmSession.GameState = 0
-		hmSession.UpdateState(s, m.Author.ID)
-		embed := GenerateLinkEmbed(m.GuildID, hmSession, "Game ended\n")
+		embed := GenerateHMLinkEmbed(m.GuildID, hmSession, "Game ended\n")
 		s.ChannelMessageSendEmbed(m.ChannelID, embed)
+		hmSession.GameState = len(hmStages)
+		hmSession.UpdateState(s, m.Author.ID)
 
 		hmSession.ResetGame()
 		break
@@ -262,8 +266,8 @@ func (hmSession *Hangman) GenerateWord() {
 	}
 }
 
-//GenerateLinkEmbed - generate a simple embed to link to the current game of Hangman
-func GenerateLinkEmbed(guildID string, hmSession *Hangman, note string) (embed *discordgo.MessageEmbed) {
+//GenerateHMLinkEmbed - generate a simple embed to link to the current game of Hangman
+func GenerateHMLinkEmbed(guildID string, hmSession *Hangman, note string) (embed *discordgo.MessageEmbed) {
 	link := "https://discordapp.com/channels/"
 	messageLink := link + guildID + "/" + hmSession.Channel + "/" + hmSession.Message
 	embedLink := fmt.Sprintf("%sClick [here](%s) to jump to the game", note, messageLink)
@@ -276,7 +280,6 @@ func GenerateLinkEmbed(guildID string, hmSession *Hangman, note string) (embed *
 
 //UpdateState - prints the current state of the hangman game
 func (hmSession *Hangman) UpdateState(s *discordgo.Session, authorID string) {
-	hmWinnings := 100
 
 	//Append guesses into one big string
 	guesses := "Guesses: "
@@ -289,6 +292,7 @@ func (hmSession *Hangman) UpdateState(s *discordgo.Session, authorID string) {
 	//Assemble and print the game
 	var gameMessage string
 	if hmSession.GameState < 0 {
+		hmWinnings := len(hmSession.Word) * 100
 		winner := kdb.GetUser(s, authorID)
 		gameMessage = fmt.Sprintf("Guessed correctly by %s\n", winner.Name)
 		s.ChannelMessageSend(hmSession.Channel, fmt.Sprintf("YOU GOT IT <@%s> - Enjoy the %d coins!\n", winner.UserID, hmWinnings))
@@ -299,7 +303,7 @@ func (hmSession *Hangman) UpdateState(s *discordgo.Session, authorID string) {
 		for i := range hmSession.WordState {
 			hmSession.WordState[i] = wordSplice[i]
 		}
-	} else if hmSession.GameState == 0 {
+	} else if hmSession.GameState >= len(hmStages) - 1 {
 		gameMessage = fmt.Sprintf("GAME OVER - Try again next time...Word was \"%s\"\n", hmSession.Word)
 	} else {
 		gameMessage = "Game running...react a blue letter to guess or use 'hm guess <word>'!\n"
@@ -312,8 +316,16 @@ func (hmSession *Hangman) UpdateState(s *discordgo.Session, authorID string) {
 	}
 	wordPrint += "\n"
 
+	//Determine stage to draw
+	var stage string
+	if hmSession.GameState >= len(hmStages) - 1 {
+		stage = hmStages[len(hmStages) - 1]
+	} else {
+		stage = hmStages[len(hmSession.Guessed)]
+	}
+
 	//Assemble the master string of the game status
-	game := "```\n" + gameMessage + guesses + wordPrint + hmStages[len(hmSession.Guessed)] + "\n```"
+	game := "```\n" + gameMessage + guesses + wordPrint + stage + "\n```"
 
 	//If the game is just starting
 	if hmSession.Message == "" {
@@ -328,7 +340,7 @@ func (hmSession *Hangman) UpdateState(s *discordgo.Session, authorID string) {
 	}
 
 	//If player just won or lost, reset game
-	if hmSession.GameState <= 0 {
+	if hmSession.GameState < 0  || hmSession.GameState <= len(hmStages) - 1 {
 		hmSession.ResetGame()
 	}
 }
@@ -344,7 +356,6 @@ func (hmSession *Hangman) ResetGame() {
 
 //ReactionGuess - processes letter guesses on hangman using reactions
 func ReactionGuess(s *discordgo.Session, r *discordgo.MessageReactionAdd, hmSession *Hangman) {
-	var alphaBlocks = []string{"🇦", "🇧", "🇨", "🇩", "🇪", "🇫", "🇬", "🇭", "🇮", "🇯", "🇰", "🇱", "🇲", "🇳", "🇴", "🇵", "🇶", "🇷", "🇸", "🇹", "🇺", "🇻", "🇼", "🇽", "🇾", "🇿"}
 	var alphabet = []string{"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"}
 
 	for i := range alphaBlocks {
@@ -354,6 +365,8 @@ func ReactionGuess(s *discordgo.Session, r *discordgo.MessageReactionAdd, hmSess
 			hmSession.UpdateState(s, r.UserID)
 		}
 	}
+
+	kdb.Write()
 }
 
 //Guess - Guess word or letter in the given hangman session
@@ -375,6 +388,12 @@ func (hmSession *Hangman) Guess(s *discordgo.Session, guess string) {
 		}
 	} else if len(guess) == 1 {
 		//Guess is a letter
+
+		//Mimic reaction
+		guessLetter := []rune(guess)
+		guessReaction := alphaBlocks[guessLetter[0]-'a']
+		s.MessageReactionAdd(hmSession.Channel, hmSession.Message, guessReaction)
+
 		guessCorrect := false
 
 		wordSplice := strings.Split(hmSession.Word, "")
@@ -393,7 +412,6 @@ func (hmSession *Hangman) Guess(s *discordgo.Session, guess string) {
 				return //Won game
 			}
 
-			s.MessageReactionAdd(hmSession.Channel, hmSession.Message, guess)
 			return
 		}
 	} else {

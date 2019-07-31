@@ -216,6 +216,10 @@ func Ready(s *discordgo.Session, event *discordgo.Ready) {
 
 //MessageReactionAdd - Called whenever a message is sent to the discord
 func MessageReactionAdd(s *discordgo.Session, r *discordgo.MessageReactionAdd) {
+	if r.UserID == self.ID {
+		return
+	}
+
 	for i := range kdb.Servers {
 		if kdb.Servers[i].HM.Message == r.MessageID {
 			ReactionGuess(s, r, &kdb.Servers[i].HM)
