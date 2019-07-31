@@ -140,6 +140,12 @@ func main() {
 	// Register VoiceStateUpdate to check when users enter channel
 	ky.AddHandler(VoiceStateUpdate)
 
+	// Register MessageAddReaction to check for reactions (for hangman)
+	ky.AddHandler(MessageReactionAdd)
+
+	//BootLogo
+	fmt.Printf(botConfig.BootLogo)
+
 	// Open the websocket and begin listening for above events.
 	err = ky.Open()
 	if err != nil {
@@ -160,8 +166,6 @@ func main() {
 	}()
 
 	// Wait here until CTRL-C or other term signal is received.
-	fmt.Printf(botConfig.BootLogo)
-	fmt.Println("\nKylixor is now running.  Press CTRL-C to exit.")
 	<-done
 
 	// Cleanly close down the Discord session by disconnecting
@@ -184,6 +188,9 @@ func Ready(s *discordgo.Session, event *discordgo.Ready) {
 	// Set the playing status.
 	self = event.User
 
+	servers := s.State.Guilds
+	fmt.Printf("\nKylixor has started on %d servers\n", len(servers))
+
 	//Set status once at start, then ticker takes over every hour
 	SetStatus(s)
 
@@ -202,6 +209,17 @@ func Ready(s *discordgo.Session, event *discordgo.Ready) {
 
 	if LogValid(s) {
 		PrintLog(s, "INFO", time.Now(), "INFO", "INFO", "INFO", "INFO", "Bot starting up...")
+	}
+
+	fmt.Println("\nKylixor is now running.  Press CTRL-C to exit.")
+}
+
+//MessageReactionAdd - Called whenever a message is sent to the discord
+func MessageReactionAdd(s *discordgo.Session, r *discordgo.MessageReactionAdd) {
+	for i := range kdb.Servers {
+		if kdb.Servers[i].HM.Message == r.MessageID {
+			ReactionGuess(s, r, &kdb.Servers[i].HM)
+		}
 	}
 }
 
