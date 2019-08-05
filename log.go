@@ -168,3 +168,9 @@ func LogVoice(s *discordgo.Session, v *discordgo.VoiceStateUpdate) {
 	KDBuser.CurrentCID = v.ChannelID
 	kdb.Write()
 }
+
+//LogText - log system events to log channel, falling back to standard output
+func LogText(s *discordgo.Session, guildID string, msg string) {
+	s.ChannelMessageSend(botConfig.LogID, msg)
+
+}
