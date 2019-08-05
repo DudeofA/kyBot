@@ -364,11 +364,15 @@ func ReactionGuess(s *discordgo.Session, r *discordgo.MessageReactionAdd, hmSess
 
 	for i := range alphaBlocks {
 		if r.Emoji.Name == alphaBlocks[i] {
-			//Add Guess
-			hmSession.Guess(s, alphabet[i])
-			hmSession.UpdateState(s, r.UserID)
+			//Add Guess if not already guessed
+			for _, emote := range r.MessageReaction.Emoji.Name {
+				if r.Emoji.Name != string(emote) {
+					hmSession.Guess(s, alphabet[i])
+				}
+			}
 		}
 	}
+	hmSession.UpdateState(s, r.UserID)
 
 	kdb.Write()
 }
@@ -403,6 +407,7 @@ func (hmSession *Hangman) Guess(s *discordgo.Session, guess string) {
 		s.MessageReactionAdd(hmSession.Channel, hmSession.Message, guessReaction)
 
 		//Check if the guessed letter is in the word and put those matches in the wordState
+		correctGuess := false
 		wordSplice := strings.Split(hmSession.Word, "")
 		for i := range wordSplice {
 			//If guess is correct, check if you won, return if not
@@ -414,8 +419,12 @@ func (hmSession *Hangman) Guess(s *discordgo.Session, guess string) {
 					hmSession.GameState = -1
 					return //Won game
 				}
-				return
+				correctGuess = true
 			}
+		}
+
+		if correctGuess {
+			return
 		}
 	} else {
 		return //Invalid guess
