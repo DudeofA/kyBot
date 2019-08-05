@@ -11,6 +11,7 @@ Commands
 | age         | age   | Display the create date of the user or Snowflake ID
 | dailies     | day   | Get daily coins/credits
 | darling     | 02    | Displays a gif of pure happiness
+| hangman     | hm    | Interacts with the current hangman game
 | gamble      | slots | Gambles the given credits
 | help        | h     | Print out this file
 | karma       | karma | Displays the current level of karma for the bot
