@@ -364,9 +364,15 @@ func ReactionGuess(s *discordgo.Session, r *discordgo.MessageReactionAdd, hmSess
 
 	for i := range alphaBlocks {
 		if r.Emoji.Name == alphaBlocks[i] {
+			//Get all reactions already on the message
+			gameMsg, err := s.ChannelMessage(hmSession.Channel, hmSession.Message)
+			if err != nil {
+				panic(err)
+			}
+
 			//Add Guess if not already guessed
-			for _, emote := range r.MessageReaction.Emoji.Name {
-				if r.Emoji.Name != string(emote) {
+			for _, emote := range gameMsg.Reactions {
+				if r.Emoji.Name != emote.Emoji.Name {
 					hmSession.Guess(s, alphabet[i])
 				}
 			}
