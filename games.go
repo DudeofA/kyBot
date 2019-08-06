@@ -362,20 +362,22 @@ func (hmSession *Hangman) ResetGame() {
 func ReactionGuess(s *discordgo.Session, r *discordgo.MessageReactionAdd, hmSession *Hangman) {
 	var alphabet = []string{"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"}
 
+	//Get all reactions already on the message
+	gameMsg, err := s.ChannelMessage(hmSession.Channel, hmSession.Message)
+	if err != nil {
+		panic(err)
+	}
+
+	//If already guessed, ignore guess
+	for _, emote := range gameMsg.Reactions {
+		if r.Emoji.Name == emote.Emoji.Name {
+			return
+		}
+	}
+
 	for i := range alphaBlocks {
 		if r.Emoji.Name == alphaBlocks[i] {
-			//Get all reactions already on the message
-			gameMsg, err := s.ChannelMessage(hmSession.Channel, hmSession.Message)
-			if err != nil {
-				panic(err)
-			}
-
-			//Add Guess if not already guessed
-			for _, emote := range gameMsg.Reactions {
-				if r.Emoji.Name != emote.Emoji.Name {
-					hmSession.Guess(s, alphabet[i])
-				}
-			}
+			hmSession.Guess(s, alphabet[i])
 		}
 	}
 	hmSession.UpdateState(s, r.UserID)
