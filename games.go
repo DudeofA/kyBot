@@ -371,15 +371,28 @@ func ReactionGuess(s *discordgo.Session, r *discordgo.MessageReactionAdd, hmSess
 	//If already guessed, ignore guess
 	for _, emote := range gameMsg.Reactions {
 		if r.Emoji.Name == emote.Emoji.Name {
+			fmt.Println("\"" + r.Emoji.Name + "\" ==  \"" + emote.Emoji.Name + "\"")
 			return
 		}
 	}
 
+	//Get the letter to guess
+	var guess string
 	for i := range alphaBlocks {
 		if r.Emoji.Name == alphaBlocks[i] {
-			hmSession.Guess(s, alphabet[i])
+			guess = alphabet[i]
 		}
 	}
+
+	//Check that it hasn't been guessed yet
+	for _, prevGuess := range hmSession.Guessed {
+		if guess == prevGuess {
+			return
+		}
+	}
+
+	//Make the guess and update the board
+	hmSession.Guess(s, guess)
 	hmSession.UpdateState(s, r.UserID)
 
 	kdb.Write()
