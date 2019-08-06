@@ -313,6 +313,7 @@ func (hmSession *Hangman) UpdateState(s *discordgo.Session, authorID string) {
 		for i := range hmSession.WordState {
 			hmSession.WordState[i] = wordSplice[i]
 		}
+		stage = hmStages[len(hmSession.Guessed)]
 	} else if hmSession.GameState == len(hmStages) {
 		gameMessage = fmt.Sprintf("GAME OVER - Try again next time...Word was \"%s\"\n", hmSession.Word)
 		stage = hmStages[len(hmStages)-1]
@@ -361,20 +362,6 @@ func (hmSession *Hangman) ResetGame() {
 //ReactionGuess - processes letter guesses on hangman using reactions
 func ReactionGuess(s *discordgo.Session, r *discordgo.MessageReactionAdd, hmSession *Hangman) {
 	var alphabet = []string{"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"}
-
-	//Get all reactions already on the message
-	gameMsg, err := s.ChannelMessage(hmSession.Channel, hmSession.Message)
-	if err != nil {
-		panic(err)
-	}
-
-	//If already guessed, ignore guess
-	for _, emote := range gameMsg.Reactions {
-		if r.Emoji.Name == emote.Emoji.Name {
-			fmt.Println("\"" + r.Emoji.Name + "\" ==  \"" + emote.Emoji.Name + "\"")
-			return
-		}
-	}
 
 	//Get the letter to guess
 	var guess string
