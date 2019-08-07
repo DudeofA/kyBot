@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -346,6 +347,14 @@ func (hmSession *Hangman) UpdateState(s *discordgo.Session, authorID string) {
 
 	//If player just won or lost, reset game
 	if hmSession.GameState < 0 || hmSession.GameState == len(hmStages) {
+		guildName := "N/A"
+		channel, err := s.Channel(hmSession.Channel)
+		if err == nil {
+			guild, _ := s.Guild(channel.GuildID)
+			guildName = guild.Name
+		}
+		PrintLog(s, "HANGMAN", time.Now(), guildName, hmSession.Channel, authorID, "N/A", "Hangman game reseting...")
+
 		hmSession.ResetGame()
 	}
 }
@@ -373,7 +382,7 @@ func ReactionGuess(s *discordgo.Session, r *discordgo.MessageReactionAdd, hmSess
 
 	//Check that it hasn't been guessed yet
 	for _, prevGuess := range hmSession.Guessed {
-		if guess == prevGuess {
+		if strings.ToLower(guess) == prevGuess {
 			return
 		}
 	}
