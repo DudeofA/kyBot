@@ -1,5 +1,5 @@
 **Kylixor Multi-Purpose Discord Bot**
-v1.2.6
+v1.2.7
 =====================================
 
 Commands
@@ -12,8 +12,8 @@ Commands
 | dailies     | day   | Get daily coins/credits
 | darling     | 02    | Displays a gif of pure happiness
 | hangman     | hm    | Interacts with the current hangman game
-| gamble      | slots | Gambles the given credits
 | help        | h     | Print out this file
+| gamble      | slots | Gambles the given credits
 | karma       | karma | Displays the current level of karma for the bot
 | ping        | ping  | Send a ping to the bot to measure latency
 | quote       | q     | Starts a vote to save a memorable quote
