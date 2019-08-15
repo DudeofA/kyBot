@@ -303,7 +303,7 @@ func (hmSession *Hangman) UpdateState(s *discordgo.Session, authorID string) {
 	var stage string
 	var gameMessage string
 	if hmSession.GameState < 0 {
-		hmWinnings := len(hmSession.Word) * 50
+		hmWinnings := len(hmSession.Word) * 10
 		winner := kdb.GetUser(s, authorID)
 		gameMessage = fmt.Sprintf("Guessed correctly by %s\n", winner.Name)
 		s.ChannelMessageSend(hmSession.Channel, fmt.Sprintf("YOU GOT IT <@%s> - Enjoy the %d coins!\n", winner.UserID, hmWinnings))
