@@ -40,7 +40,7 @@ func Slots(s *discordgo.Session, m *discordgo.MessageCreate, data string) {
 	var jackpotMultiplier = 100
 
 	//Gamble item string - Jackbot item MUST be at the end
-	var slots = []string{":lemon:", ":cherries:", ":eggplant:", ":peach:", "strawberry", ":moneybag:"}
+	var slots = []string{":lemon:", ":cherries:", ":eggplant:", ":peach:", ":strawberry:", ":moneybag:"}
 
 	//Explain rules
 	if data == "" {
