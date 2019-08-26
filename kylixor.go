@@ -9,8 +9,10 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"math/rand"
 	"os"
 	"os/signal"
@@ -23,27 +25,31 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/jasonlvhit/gocron"
+
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 // ----- GLOBAL VARIABLES -----
 
 //BotConfig - Global bot config
 type BotConfig struct {
-	Admin     string //Admin's Discord ID
-	APIKey    string //Discord bot api key
-	BootLogo  string //ASCII to display when starting up the bot
-	DailyAmt  int    //Amount of dailies to be collected daily
-	LogID     string //ID of channel for logging
-	Prefix    string //Prefix the bot will respond to
-	ResetTime string //Time when dailies reset i.e. 19:00
-	Status    string //Status of the bot (Playing <v1.0>)
-	Version   string //Current version of the bot
+	Admin     string `json:"admin"`     //Admin's Discord ID
+	APIKey    string `json:"apiKey"`    //Discord bot api key
+	BootLogo  string `json:"bootLogo"`  //ASCII to display when starting up the bot
+	DailyAmt  int    `json:"dailyAmt"`  //Amount of dailies to be collected daily
+	DBURI     string `json:"dbURI"`     //URI of database to connect to (can be localhost or hosted)
+	LogID     string `json:"logID"`     //ID of channel for logging
+	Prefix    string `json:"prefix"`    //Prefix the bot will respond to
+	ResetTime string `json:"resetTime"` //Time when dailies reset i.e. 19:00
+	Status    string `json:"status"`    //Status of the bot (Playing <v1.0>)
+	Version   string `json:"version"`   //Current version of the bot
 }
 
 var (
 	botConfig           = BotConfig{}              //Global bot config
 	currentVoiceChannel *discordgo.VoiceConnection //Current voice channel bot is in, nil if none
-	self                *discordgo.User            //Discord user type of self (for storing bots user account)
+	self                *discordgo.User            //Discord user type of self (for storing bot's user account)
 	pwd                 string                     //Current working directory
 )
 
@@ -51,6 +57,8 @@ var (
 //-----------------               M A I N ( )               --------------------
 //------------------------------------------------------------------------------
 func main() {
+	var startupErrors = 0
+
 	//Set pwd to the directory of the bot's files
 	ex, err := os.Executable()
 	if err != nil {
@@ -88,17 +96,44 @@ func main() {
 		//Check to see if bot token is provided
 		if botConfig.APIKey == "" {
 			fmt.Println("No token provided. Please place your API key into the config.json file")
-			return
+			startupErrors++
+		}
+
+		if botConfig.DBURI == "" {
+			fmt.Println("Database URI not provided.  Please place your database URI into the config.json file")
+			startupErrors++
 		}
 
 		botConfig.Write()
+
+		if startupErrors > 0 {
+			return
+		}
 	}
 
-	// Read in user data file if exists
-	if _, err = os.Stat(filepath.FromSlash(pwd + "/data/kdb.json")); os.IsNotExist(err) {
-		fmt.Println("\nCannot find kdb.json, creating new...")
-		InitKDB()
+	//----- D A T A B A S E   C O N N E C T I O N -----
+	clientOptions := options.Client().ApplyURI(botConfig.DBURI)
+
+	// Connect to MongoDB
+	client, err := mongo.Connect(context.TODO(), clientOptions)
+	if err != nil {
+		log.Fatal(err)
 	}
+
+	// Check the connection
+	err = client.Ping(context.TODO(), nil)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println("Connected to MongoDB!")
+
+	// // Read in user data file if exists
+	// if _, err = os.Stat(filepath.FromSlash(pwd + "/data/kdb.json")); os.IsNotExist(err) {
+	// 	fmt.Println("\nCannot find kdb.json, creating new...")
+	// 	InitKDB()
+	// }
 
 	// Check for dictionary file
 	if runtime.GOOS == "windows" {
@@ -110,13 +145,13 @@ func main() {
 	} else {
 		_, err = os.Stat(filepath.FromSlash("/usr/share/dict/words"))
 		if err != nil {
-			fmt.Println("Error accessing dictionary")
+			fmt.Println("Error accessing dictionary at /usr/share/dict/words")
 			return
 		}
 	}
 
-	//Update Kylixor database
-	kdb.Update()
+	// //Update Kylixor database
+	// kdb.Update()
 
 	// Create a new Discord session using the provided bot token.
 	ky, err := discordgo.New("Bot " + botConfig.APIKey)
