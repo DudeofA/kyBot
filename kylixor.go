@@ -12,7 +12,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"math/rand"
 	"os"
 	"os/signal"
@@ -25,41 +24,38 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/jasonlvhit/gocron"
-
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 // ----- GLOBAL VARIABLES -----
 
 //BotConfig - Global bot config
 type BotConfig struct {
-	Admin     string `json:"admin"`     //Admin's Discord ID
-	APIKey    string `json:"apiKey"`    //Discord bot api key
-	BootLogo  string `json:"bootLogo"`  //ASCII to display when starting up the bot
-	DailyAmt  int    `json:"dailyAmt"`  //Amount of dailies to be collected daily
-	DBURI     string `json:"dbURI"`     //URI of database to connect to (can be localhost or hosted)
-	LogID     string `json:"logID"`     //ID of channel for logging
-	Prefix    string `json:"prefix"`    //Prefix the bot will respond to
-	ResetTime string `json:"resetTime"` //Time when dailies reset i.e. 19:00
-	Status    string `json:"status"`    //Status of the bot (Playing <v1.0>)
-	Version   string `json:"version"`   //Current version of the bot
+	Admin     string `json:"admin"`     // Admin's Discord ID
+	APIKey    string `json:"apiKey"`    // Discord bot api key
+	BootLogo  string `json:"bootLogo"`  // ASCII to display when starting up the bot
+	DailyAmt  int    `json:"dailyAmt"`  // Amount of dailies to be collected daily
+	DBURI     string `json:"dbURI"`     // URI of database to connect to (can be localhost or hosted)
+	LogID     string `json:"logID"`     // ID of channel for logging
+	Prefix    string `json:"prefix"`    // Prefix the bot will respond to
+	ResetTime string `json:"resetTime"` // Time when dailies reset i.e. 19:00
+	Status    string `json:"status"`    // Status of the bot (Playing <v1.0>)
+	Version   string `json:"version"`   // Current version of the bot
 }
 
 var (
-	botConfig           = BotConfig{}              //Global bot config
-	currentVoiceChannel *discordgo.VoiceConnection //Current voice channel bot is in, nil if none
-	self                *discordgo.User            //Discord user type of self (for storing bot's user account)
-	pwd                 string                     //Current working directory
+	botConfig           = BotConfig{}              // Global bot config
+	currentVoiceChannel *discordgo.VoiceConnection // Current voice channel bot is in, nil if none
+	self                *discordgo.User            // Discord user type of self (for storing bot's user account)
+	pwd                 string                     // Current working directory
 )
 
 //------------------------------------------------------------------------------
 //-----------------               M A I N ( )               --------------------
 //------------------------------------------------------------------------------
 func main() {
-	var startupErrors = 0
+	fmt.Println("Starting kylixor bot...")
 
-	//Set pwd to the directory of the bot's files
+	// Set pwd to the directory of the bot's files
 	ex, err := os.Executable()
 	if err != nil {
 		panic(err)
@@ -67,7 +63,7 @@ func main() {
 	bin := filepath.Dir(ex)
 	pwd = filepath.Dir(bin)
 
-	//Get random seed for later random number generation
+	// Get random seed for later random number generation
 	rand.Seed(time.Now().UTC().UnixNano())
 
 	// Read in config file if exists
@@ -79,7 +75,7 @@ func main() {
 	} else {
 		botConfig.Read()
 
-		//Default mandatory values
+		// Default mandatory values
 		if botConfig.ResetTime == "" {
 			botConfig.ResetTime = "20:00"
 		}
@@ -90,44 +86,25 @@ func main() {
 			botConfig.Prefix = "k!"
 		}
 
-		//Save version
+		// Save version
 		botConfig.Version = GetVersion()
 
-		//Check to see if bot token is provided
+		// Check to see if bot token is provided
 		if botConfig.APIKey == "" {
 			fmt.Println("No token provided. Please place your API key into the config.json file")
-			startupErrors++
+			return
 		}
 
 		if botConfig.DBURI == "" {
 			fmt.Println("Database URI not provided.  Please place your database URI into the config.json file")
-			startupErrors++
+			return
 		}
 
 		botConfig.Write()
-
-		if startupErrors > 0 {
-			return
-		}
 	}
 
 	//----- D A T A B A S E   C O N N E C T I O N -----
-	clientOptions := options.Client().ApplyURI(botConfig.DBURI)
-
-	// Connect to MongoDB
-	client, err := mongo.Connect(context.TODO(), clientOptions)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Check the connection
-	err = client.Ping(context.TODO(), nil)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println("Connected to MongoDB!")
+	InitDB()
 
 	// // Read in user data file if exists
 	// if _, err = os.Stat(filepath.FromSlash(pwd + "/data/kdb.json")); os.IsNotExist(err) {
@@ -186,6 +163,7 @@ func main() {
 	if err != nil {
 		fmt.Println("Error opening Discord session: ", err)
 	}
+	fmt.Println("Successfully opened Discord bot session!")
 
 	//Create channels to watch for kill signals
 	botChan := make(chan os.Signal, 1)
@@ -211,29 +189,31 @@ func main() {
 			currentVoiceChannel.Disconnect()
 		}
 	}
-	fmt.Println("Closing websocket...")
+	fmt.Println("Closing discord websocket...")
 	ky.Close()
+	fmt.Println("Closing database connection...")
+	client.Disconnect(context.TODO())
 	fmt.Println("Done...ending process...goodbye...")
 	os.Exit(0)
 }
 
-//Ready - This function will be called (due to AddHandler above) when the bot receives
+// Ready - This function will be called (due to AddHandler above) when the bot receives
 // the "ready" event from Discord.
 func Ready(s *discordgo.Session, event *discordgo.Ready) {
 	// Set the playing status.
 	self = event.User
 
 	servers := s.State.Guilds
-	fmt.Printf("\nKylixor has started on %d servers\n", len(servers))
-
-	//Set status once at start, then ticker takes over every hour
-	SetStatus(s)
+	fmt.Printf("Kylixor has started on %d servers", len(servers))
 
 	// Start cronjobs
 	go func() {
 		gocron.Every(1).Day().At(botConfig.ResetTime).Do(ResetDailies) //Reset dailies task
 		<-gocron.Start()                                               //Start waiting for the cronjob
 	}()
+
+	// Set status once at start, then ticker takes over every hour
+	SetStatus(s)
 
 	ticker := time.NewTicker(1 * time.Hour)
 	go func() {
@@ -249,7 +229,7 @@ func Ready(s *discordgo.Session, event *discordgo.Ready) {
 	fmt.Println("\nKylixor is now running.  Press CTRL-C to exit.")
 }
 
-//MessageReactionAdd - Called whenever a message is sent to the discord
+// MessageReactionAdd - Called whenever a message is sent to the discord
 func MessageReactionAdd(s *discordgo.Session, r *discordgo.MessageReactionAdd) {
 	if r.UserID == self.ID {
 		return
@@ -262,42 +242,42 @@ func MessageReactionAdd(s *discordgo.Session, r *discordgo.MessageReactionAdd) {
 	}
 }
 
-//PresenceUpdate - Called when any user changes their status (online, away, playing a game, etc)
+// PresenceUpdate - Called when any user changes their status (online, away, playing a game, etc)
 func PresenceUpdate(s *discordgo.Session, p *discordgo.PresenceUpdate) {
 
 }
 
-//VoiceStateUpdate - Called whenever a user changes their voice state (muted, deafen, connected, disconnected)
+// VoiceStateUpdate - Called whenever a user changes their voice state (muted, deafen, connected, disconnected)
 func VoiceStateUpdate(s *discordgo.Session, v *discordgo.VoiceStateUpdate) {
 	LogVoice(s, v)
 }
 
-//MessageCreate - Called whenever a message is sent to the discord
+// MessageCreate - Called whenever a message is sent to the discord
 func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
-	//Get Guild index to use later on
+	// Get Guild index to use later on
 	guildIndex := GetGuildByID(m.GuildID)
 
-	//Return if the message was sent by a bot to avoid infinite loops
+	// Return if the message was sent by a bot to avoid infinite loops
 	if m.Author.Bot || m.ChannelID == botConfig.LogID {
 		return
 	}
 
-	//Log message to log channel for debugging
+	// Log message to log channel for debugging
 	LogMsg(s, m)
 
-	//Fix any flipped tables
+	// Fix any flipped tables
 	if m.Content == "(╯°□°）╯︵ ┻━┻" {
 		s.ChannelMessageSend(m.ChannelID, "┬─┬ノ( º _ ºノ)")
 	}
 
-	//Good Karma
+	// Good Karma
 	if strings.ToLower(m.Content) == "good bot" {
 		kdb.Servers[guildIndex].Karma++
 		kdb.Write()
 		s.MessageReactionAdd(m.ChannelID, m.ID, "😊")
 	}
 
-	//Bad Karma
+	// Bad Karma
 	if strings.ToLower(m.Content) == "bad bot" {
 		kdb.Servers[guildIndex].Karma--
 		kdb.Write()
@@ -311,11 +291,11 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		}
 	}
 
-	//If the message sent is a command with the set prefix
+	// If the message sent is a command with the set prefix
 	if strings.HasPrefix(m.Content, kdb.Servers[guildIndex].Config.Prefix) {
-		//Trim the prefix to extract the command
+		// Trim the prefix to extract the command
 		input := strings.TrimPrefix(m.Content, kdb.Servers[guildIndex].Config.Prefix)
-		//Split command into the command and what comes after
+		// Split command into the command and what comes after
 		inputPieces := strings.SplitN(input, " ", 2)
 		command := strings.ToLower(inputPieces[0])
 		var data string
@@ -323,22 +303,22 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			data = inputPieces[1]
 		}
 
-		//Send the data to the command function for execution
+		// Send the data to the command function for execution
 		runCommand(s, m, command, data)
 	}
 }
 
 //----- I N I T I A L   S E T U P   F U N C T I O N S -----
 
-//InitBotConfFile - Initialize config file if one is not found
+// InitBotConfFile - Initialize config file if one is not found
 func InitBotConfFile() {
-	//Create and indent proper json output for the config
+	// Create and indent proper json output for the config
 	configData, err := json.MarshalIndent(botConfig, "", "    ")
 	if err != nil {
 		panic(err)
 	}
 
-	//Create folder for data
+	// Create folder for data
 	_ = os.Mkdir("data", 0755)
 
 	// Open file
@@ -355,7 +335,7 @@ func InitBotConfFile() {
 	jsonFile.Close()
 }
 
-//ReadBotConfig - Read in config file into Config structure
+// ReadBotConfig - Read in config file into Config structure
 func (c *BotConfig) Read() {
 	file, _ := os.Open(filepath.FromSlash(pwd + "/data/conf.json"))
 	decoder := json.NewDecoder(file)
@@ -366,14 +346,14 @@ func (c *BotConfig) Read() {
 	file.Close()
 }
 
-//WriteBotConfig - Write out the current Config structure to file, indented nicely
+// WriteBotConfig - Write out the current Config structure to file, indented nicely
 func (c *BotConfig) Write() {
-	//Indent so its readable
+	// Indent so its readable
 	configData, err := json.MarshalIndent(c, "", "    ")
 	if err != nil {
 		panic(err)
 	}
-	//Open file
+	// Open file
 	jsonFile, err := os.Create(filepath.FromSlash(pwd + "/data/conf.json"))
 	if err != nil {
 		panic(err)
@@ -387,8 +367,8 @@ func (c *BotConfig) Write() {
 	jsonFile.Close()
 }
 
-//Update - update configuration file by reading then writing
-//Updates config file to correct syntax
+// Update - update configuration file by reading then writing
+// Updates config file to correct syntax
 func (c *BotConfig) Update() {
 	botConfig.Read()
 	botConfig.Write()
@@ -396,7 +376,7 @@ func (c *BotConfig) Update() {
 
 //----- M I S C .   F U N C T I O N S -----
 
-//ResetDailies - Function to call once a day to reset dailies
+// ResetDailies - Function to call once a day to reset dailies
 func ResetDailies() {
 	for i := range kdb.Users {
 		kdb.Users[i].Dailies = false
@@ -405,9 +385,9 @@ func ResetDailies() {
 	kdb.Write()
 }
 
-//GetVersion - Get the version of the bot from the readme
+// GetVersion - Get the version of the bot from the readme
 func GetVersion() (ver string) {
-	//Open the file and grab it line by line into textlines
+	// Open the file and grab it line by line into textlines
 	readme, err := os.Open(filepath.FromSlash(pwd + "/README.md"))
 	if err != nil {
 		panic(err)
@@ -421,25 +401,25 @@ func GetVersion() (ver string) {
 		textlines = append(textlines, scanner.Text())
 	}
 
-	//Second line of the readme will always be the version number
+	// Second line of the readme will always be the version number
 	if len(textlines) < 2 {
 		panic("Version needs to be in the second line of the README in format: <v#.#.#")
 	} else {
 		ver = textlines[1]
 	}
 
-	//Close file, save version number, and return version number
+	// Close file, save version number, and return version number
 	readme.Close()
 	botConfig.Version = ver
 	return ver
 }
 
-//SetStatus - sets the status of the bot to the version and the default help commands
+// SetStatus - sets the status of the bot to the version and the default help commands
 func SetStatus(s *discordgo.Session) {
 	s.UpdateStatus(0, fmt.Sprintf("%shelp - %s", botConfig.Prefix, botConfig.Version))
 }
 
-//CheckAdmin - returns true if user is admin, otherwise posts that permission is denied
+// CheckAdmin - returns true if user is admin, otherwise posts that permission is denied
 func CheckAdmin(s *discordgo.Session, m *discordgo.MessageCreate) bool {
 	if botConfig.Admin == m.Author.ID {
 		return true
@@ -449,7 +429,7 @@ func CheckAdmin(s *discordgo.Session, m *discordgo.MessageCreate) bool {
 	return false
 }
 
-//MemberHasPermission - Checks if the user has permission to do the given action in the given channels
+// MemberHasPermission - Checks if the user has permission to do the given action in the given channels
 func MemberHasPermission(s *discordgo.Session, guildID string, userID string, permission int) (bool, error) {
 	member, err := s.State.Member(guildID, userID)
 	if err != nil {
@@ -484,7 +464,7 @@ func CreationTime(ID string) (t time.Time, err error) {
 	return
 }
 
-//GetAge - Take in a string that should be a discord snowflake ID, then calulate, format, and return the age
+// GetAge - Take in a string that should be a discord snowflake ID, then calulate, format, and return the age
 func GetAge(rawID string) string {
 
 	id := rawID
@@ -492,7 +472,7 @@ func GetAge(rawID string) string {
 	id = strings.TrimPrefix(id, "<@")
 	id = strings.TrimPrefix(id, "!")
 	id = strings.TrimSuffix(id, ">")
-	//Attempt to get the creation time of the ID given
+	// Attempt to get the creation time of the ID given
 	t, err := CreationTime(id)
 	if err != nil {
 		return fmt.Sprintf("Not a valid Discord Snowflake ID: \"%s\"", rawID)
@@ -505,7 +485,7 @@ func GetAge(rawID string) string {
 	tAlive := time.Now().Sub(t)
 
 	if tAlive >= year {
-		//At least a year
+		// At least a year
 		years = tAlive / year
 		tAlive -= years * year
 	}
@@ -513,7 +493,7 @@ func GetAge(rawID string) string {
 	days := tAlive / day
 	tAlive -= days * day
 
-	//If the age is more than a year
+	// If the age is more than a year
 	tYears := fmt.Sprintf("%d years, ", years)
 	and := "and "
 	tDays := fmt.Sprintf("%d days, ", days)
