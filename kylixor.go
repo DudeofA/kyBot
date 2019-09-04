@@ -34,12 +34,18 @@ type BotConfig struct {
 	APIKey    string `json:"apiKey"`    // Discord bot api key
 	BootLogo  string `json:"bootLogo"`  // ASCII to display when starting up the bot
 	DailyAmt  int    `json:"dailyAmt"`  // Amount of dailies to be collected daily
-	DBURI     string `json:"dbURI"`     // URI of database to connect to (can be localhost or hosted)
+	DBConfig  DBConf `json:"dbConfig"`  // Database configuration
 	LogID     string `json:"logID"`     // ID of channel for logging
 	Prefix    string `json:"prefix"`    // Prefix the bot will respond to
 	ResetTime string `json:"resetTime"` // Time when dailies reset i.e. 19:00
 	Status    string `json:"status"`    // Status of the bot (Playing <v1.0>)
 	Version   string `json:"version"`   // Current version of the bot
+}
+
+// DBConf - Holds all data needed to connect and use a mongoDB database
+type DBConf struct {
+	DBName string `json:"dbName"` // Name of database where data is kept
+	URI    string `json:"dbURI"`  // URI of database to connect to (localhost or hosted)
 }
 
 var (
@@ -75,7 +81,28 @@ func main() {
 	} else {
 		botConfig.Read()
 
+		// Check DB URI
+		if botConfig.DBConfig.URI == "" {
+			fmt.Println("Database URI not provided.  Please place your database URI into the config.json file")
+			botConfig.Write()
+			return
+		}
+
+		// Check to see if bot token is provided
+		if botConfig.APIKey == "" {
+			fmt.Println("No token provided. Please place your API key into the config.json file")
+			botConfig.Write()
+			return
+		}
+
+		if botConfig.DBConfig.DBName == "" {
+			fmt.Println("Please provide the correct database name for this instance in the config.json file")
+			botConfig.Write()
+			return
+		}
+
 		// Default mandatory values
+
 		if botConfig.ResetTime == "" {
 			botConfig.ResetTime = "20:00"
 		}
@@ -89,28 +116,16 @@ func main() {
 		// Save version
 		botConfig.Version = GetVersion()
 
-		// Check to see if bot token is provided
-		if botConfig.APIKey == "" {
-			fmt.Println("No token provided. Please place your API key into the config.json file")
-			return
-		}
-
-		if botConfig.DBURI == "" {
-			fmt.Println("Database URI not provided.  Please place your database URI into the config.json file")
-			return
-		}
-
 		botConfig.Write()
 	}
 
-	//----- D A T A B A S E   C O N N E C T I O N -----
+	// Connect/Setup database
 	InitDB()
-
-	// // Read in user data file if exists
-	// if _, err = os.Stat(filepath.FromSlash(pwd + "/data/kdb.json")); os.IsNotExist(err) {
-	// 	fmt.Println("\nCannot find kdb.json, creating new...")
-	// 	InitKDB()
-	// }
+	var testuser UserInfo
+	testuser.Name = "fred"
+	testuser.UserID = "048329185901"
+	testuser.Credits = 15
+	kdb.AddUser(testuser)
 
 	// Check for dictionary file
 	if runtime.GOOS == "windows" {
@@ -126,9 +141,6 @@ func main() {
 			return
 		}
 	}
-
-	// //Update Kylixor database
-	// kdb.Update()
 
 	// Create a new Discord session using the provided bot token.
 	ky, err := discordgo.New("Bot " + botConfig.APIKey)
@@ -156,7 +168,7 @@ func main() {
 	ky.AddHandler(MessageReactionAdd)
 
 	//BootLogo
-	fmt.Printf(botConfig.BootLogo)
+	fmt.Println(botConfig.BootLogo)
 
 	// Open the websocket and begin listening for above events.
 	err = ky.Open()
@@ -204,7 +216,7 @@ func Ready(s *discordgo.Session, event *discordgo.Ready) {
 	self = event.User
 
 	servers := s.State.Guilds
-	fmt.Printf("Kylixor has started on %d servers", len(servers))
+	fmt.Printf("Kylixor discord bot has started on %d servers\n", len(servers))
 
 	// Start cronjobs
 	go func() {
@@ -226,7 +238,7 @@ func Ready(s *discordgo.Session, event *discordgo.Ready) {
 		PrintLog(s, "INFO", time.Now(), "INFO", "INFO", "INFO", "INFO", "Bot starting up...")
 	}
 
-	fmt.Println("\nKylixor is now running.  Press CTRL-C to exit.")
+	fmt.Println("\nKylixor discord bot is now running.  Press CTRL-C to exit.")
 }
 
 // MessageReactionAdd - Called whenever a message is sent to the discord
@@ -379,7 +391,7 @@ func (c *BotConfig) Update() {
 // ResetDailies - Function to call once a day to reset dailies
 func ResetDailies() {
 	for i := range kdb.Users {
-		kdb.Users[i].Dailies = false
+		kdb.Users[i].DoneDailies = false
 	}
 
 	kdb.Write()

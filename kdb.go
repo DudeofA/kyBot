@@ -28,22 +28,22 @@ var kdb KDB
 var client *mongo.Client // Database client connection
 
 //----- G L O B A L S -----
-var botDatabase = "discord"
-var userCollection = "users"
-var serverCollection = "servers"
+var db *mongo.Database
+var userCollection *mongo.Collection
+var serverCollection *mongo.Collection
 
 //----- K D B   S T R U C T U R E -----
 
 // KDB - "Database"
 type KDB struct {
-	Servers []ServerStats `json:"servers" bson:"servers"` // Servers array
-	Users   []UserStats   `json:"users" bson:"users"`     // Users array
+	Servers []ServerInfo `json:"servers" bson:"servers"` // Servers array
+	Users   []UserInfo   `json:"users" bson:"users"`     // Users array
 }
 
 //----- S E R V E R   S T A T S -----
 
-// ServerStats - Hold all the pertaining information for each server
-type ServerStats struct {
+// ServerInfo - Hold all the pertaining information for each server
+type ServerInfo struct {
 	Config Config  `json:"config" bson:"config"`   // Guild specific config
 	Emotes Emote   `json:"emotes" bson:"emotes"`   // String of customizable emotes
 	GID    string  `json:"gID" bson:"gID"`         // discord guild ID
@@ -84,8 +84,8 @@ type Quote struct {
 
 //----- U S E R   S T A T S -----
 
-// UserStats - Hold all pertaining information for each user
-type UserStats struct {
+// UserInfo - Hold all pertaining information for each user
+type UserInfo struct {
 	Name        string      `json:"name" bson:"name"`               // Username
 	UserID      string      `json:"userID" bson:"userID"`           // User ID
 	CurrentCID  string      `json:"currentCID" bson:"currentCID"`   // Current channel ID
@@ -93,7 +93,7 @@ type UserStats struct {
 	PlayAnthem  bool        `json:"playAnthem" bson:"playAnthem"`   // True if anthem should play when user joins channel
 	Anthem      string      `json:"anthem" bson:"anthem"`           // Anthem to play when joining a channel
 	Credits     int         `json:"credits" bson:"credits"`         // Credits gained from dailies
-	Dailies     bool        `json:"dailies" bson:"dailies"`         // True if dailies have been claimed today
+	DoneDailies bool        `json:"dailies" bson:"dailies"`         // True if dailies have been claimed today
 	Reminders   []Reminders `json:"reminders" bson:"reminders"`     // Array of reminders
 }
 
@@ -176,8 +176,8 @@ func (k *KDB) Update() {
 //----- U S E R   M A N A G E M E N T -----
 
 // CreateUser - create user within the user json file and return it
-func (k *KDB) CreateUser(s *discordgo.Session, id string) (userData *UserStats) {
-	var user UserStats
+func (k *KDB) CreateUser(s *discordgo.Session, id string) (userData *UserInfo) {
+	var user UserInfo
 
 	// Pull user info from discord
 	discordUser, _ := s.User(id)
@@ -196,7 +196,7 @@ func (k *KDB) CreateUser(s *discordgo.Session, id string) (userData *UserStats) 
 }
 
 // GetUser - Retrieve user data
-func (k *KDB) GetUser(s *discordgo.Session, id string) (userData *UserStats) {
+func (k *KDB) GetUser(s *discordgo.Session, id string) (userData *UserInfo) {
 
 	// Check if user is in the data file, return them if they are
 	for i := range k.Users {
@@ -210,14 +210,14 @@ func (k *KDB) GetUser(s *discordgo.Session, id string) (userData *UserStats) {
 }
 
 //UpdateUser - Update user data json jsonFile
-func (u *ServerStats) UpdateUser(s *discordgo.Session, c interface{}) bool {
+func (u *ServerInfo) UpdateUser(s *discordgo.Session, c interface{}) bool {
 	//Return true if update was needed
 	return false
 }
 
 //----- M I S C   F U N C T I O N S -----
 
-// GetGuildByID - Get the correct ServerStats array from the kdb
+// GetGuildByID - Get the correct ServerInfo array from the kdb
 func GetGuildByID(id string) (index int) {
 	for i, server := range kdb.Servers {
 		if server.GID == id {
@@ -226,7 +226,7 @@ func GetGuildByID(id string) (index int) {
 	}
 
 	// Guild not found - Create new
-	var newServer ServerStats
+	var newServer ServerInfo
 	newServer.GID = id
 	// Set emotes to default
 	newServer.Emotes.UPVOTE = "⬆"
@@ -249,7 +249,7 @@ func GetGuildByID(id string) (index int) {
 func InitDB() {
 	// Client parameters
 	var err error
-	clientOptions := options.Client().ApplyURI(botConfig.DBURI)
+	clientOptions := options.Client().ApplyURI(botConfig.DBConfig.URI)
 	client, err = mongo.NewClient(clientOptions)
 	if err != nil {
 		fmt.Println("Error creating MongoDB client")
@@ -264,20 +264,20 @@ func InitDB() {
 		os.Exit(1)
 	}
 
+	db = client.Database(botConfig.DBConfig.DBName)
+	userCollection = db.Collection("users")
+	serverCollection = db.Collection("servers")
 	fmt.Println("Connected to MongoDB!")
 }
 
 // Query data
 func (k *KDB) Query() {
-	collection := client.Database("discord").Collection("numbers")
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	cur, err := collection.Find(ctx, bson.D{})
+	cur, err := userCollection.Find(context.Background(), bson.D{})
 	if err != nil {
 		panic(err)
 	}
-	defer cur.Close(ctx)
-	for cur.Next(ctx) {
+	defer cur.Close(context.Background())
+	for cur.Next(context.Background()) {
 		var result bson.M
 		err := cur.Decode(&result)
 		if err != nil {
@@ -291,44 +291,20 @@ func (k *KDB) Query() {
 	}
 }
 
-// Insert - make a new addition to the db
-func (k *KDB) Insert() {
-	// Insert something
-	collection := client.Database("discord").Collection("numbers")
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	res, err := collection.InsertOne(ctx, bson.M{"name": "pi", "value": 3.14159})
-	if err != nil {
-		panic(err)
-	}
-	id := res.InsertedID
-	fmt.Println(id)
-}
-
 // AddUser - insert new user into database in collection 'users'
-func (k *KDB) AddUser(user UserStats) {
-	// Access correct collection
-	collection := client.Database("discord").Collection("users")
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
+func (k *KDB) AddUser(user UserInfo) {
 	// Insert user into collection
-	_, err := collection.InsertOne(ctx, user)
+	_, err := userCollection.InsertOne(context.Background(), user)
 	if err != nil {
 		panic(err)
 	}
 }
 
 // QueryUser - search for user in database in collection 'users'
-func (k *KDB) QueryUser(field string, query string) (user UserStats) {
-	// Access correct collection
-	collection := client.Database("discord").Collection("users")
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
+func (k *KDB) QueryUser(field string, query string) (user UserInfo) {
 	//Search for user by the specified field
 	filter := bson.D{{field, query}}
-	err := collection.FindOne(ctx, filter).Decode(&user)
+	err := userCollection.FindOne(context.Background(), filter).Decode(&user)
 	if err != nil {
 		panic(err)
 	}

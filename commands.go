@@ -67,9 +67,9 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 		//Retrieve user data from memory
 		userData := kdb.GetUser(s, m.Author.ID)
 		//If the dailies have not been done
-		if !userData.Dailies {
+		if !userData.DoneDailies {
 			//Mark dailies as done and add the appropriate amount
-			userData.Dailies = true
+			userData.DoneDailies = true
 			userData.Credits += botConfig.DailyAmt
 			//Indicate to user they have recived their dailies
 			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf(
