@@ -121,11 +121,6 @@ func main() {
 
 	// Connect/Setup database
 	InitDB()
-	var testuser UserInfo
-	testuser.Name = "fred"
-	testuser.UserID = "048329185901"
-	testuser.Credits = 15
-	kdb.AddUser(testuser)
 
 	// Check for dictionary file
 	if runtime.GOOS == "windows" {
@@ -234,9 +229,7 @@ func Ready(s *discordgo.Session, event *discordgo.Ready) {
 		}
 	}()
 
-	if LogValid(s) {
-		PrintLog(s, "INFO", time.Now(), "INFO", "INFO", "INFO", "INFO", "Bot starting up...")
-	}
+	LogTxt(s, "INFO", "Bot starting up...")
 
 	fmt.Println("\nKylixor discord bot is now running.  Press CTRL-C to exit.")
 }

@@ -9,10 +9,8 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -25,35 +23,35 @@ import (
 //----- M A S T E R   D A T A B A S E
 // Kylixor """"Database""""
 var kdb KDB
-var client *mongo.Client // Database client connection
-
-//----- G L O B A L S -----
-var db *mongo.Database
-var userCollection *mongo.Collection
-var serverCollection *mongo.Collection
 
 //----- K D B   S T R U C T U R E -----
 
-// KDB - "Database"
+// KDB - Structure for holding pointers to all necessary data
 type KDB struct {
-	Servers []ServerInfo `json:"servers" bson:"servers"` // Servers array
-	Users   []UserInfo   `json:"users" bson:"users"`     // Users array
+	DB     *mongo.Database // Mongo database pointer
+	Client *mongo.Client   // Database client connection
+
+	// Collections within database
+	UserColl     *mongo.Collection
+	GuildColl    *mongo.Collection
+	ReminderColl *mongo.Collection
 }
 
-//----- S E R V E R   S T A T S -----
+//----- S E R V E R   I N F O -----
 
-// ServerInfo - Hold all the pertaining information for each server
-type ServerInfo struct {
-	Config Config  `json:"config" bson:"config"`   // Guild specific config
-	Emotes Emote   `json:"emotes" bson:"emotes"`   // String of customizable emotes
-	GID    string  `json:"gID" bson:"gID"`         // discord guild ID
-	HM     Hangman `json:"hangman" bson:"hangman"` // Holds hangman data
-	Karma  int     `json:"karma" bson:"karma"`     // bots karma - per server
-	Quotes []Quote `json:"quotes" bson:"quotes"`   // Array of quotes
+// GuildInfo - Hold all the pertaining information for each server
+type GuildInfo struct {
+	Config GuildConfig `json:"config" bson:"serverConfig"` // Guild specific config
+	Emotes Emote       `json:"emotes" bson:"emotes"`       // String of customizable emotes
+	GID    string      `json:"gID" bson:"gID"`             // discord guild ID
+	HM     Hangman     `json:"hangman" bson:"hangman"`     // Holds hangman data
+	Karma  int         `json:"karma" bson:"karma"`         // Bot's karma - per server
+	Name   string      `json:"name" bson:"name"`           // Name of server
+	Quotes []Quote     `json:"quotes" bson:"quotes"`       // Array of quotes
 }
 
-// Config - structure to hold variables specifically for that guild
-type Config struct {
+// GuildConfig - structure to hold variables specifically for that guild
+type GuildConfig struct {
 	Coins    string `json:"coins" bson:"coins"`       // Name of currency that bot uses (i.e. <gold> coins)
 	Follow   bool   `json:"follow" bson:"follow"`     // Whether or not the bot joins/follows into voice channels for anthems
 	MinVotes int    `json:"minVotes" bson:"minVotes"` // Minimum upvotes to pass a vote
@@ -86,15 +84,15 @@ type Quote struct {
 
 // UserInfo - Hold all pertaining information for each user
 type UserInfo struct {
-	Name        string      `json:"name" bson:"name"`               // Username
-	UserID      string      `json:"userID" bson:"userID"`           // User ID
-	CurrentCID  string      `json:"currentCID" bson:"currentCID"`   // Current channel ID
-	LastSeenCID string      `json:"lastSeenCID" bson:"lastSeenCID"` // Last seen channel ID
-	PlayAnthem  bool        `json:"playAnthem" bson:"playAnthem"`   // True if anthem should play when user joins channel
-	Anthem      string      `json:"anthem" bson:"anthem"`           // Anthem to play when joining a channel
-	Credits     int         `json:"credits" bson:"credits"`         // Credits gained from dailies
-	DoneDailies bool        `json:"dailies" bson:"dailies"`         // True if dailies have been claimed today
-	Reminders   []Reminders `json:"reminders" bson:"reminders"`     // Array of reminders
+	UserID        string `json:"userID" bson:"userID"`               // User ID
+	Name          string `json:"name" bson:"name"`                   // Username
+	Discriminator string `json:"discriminator" bson:"discriminator"` // Unique identifier
+	CurrentCID    string `json:"currentCID" bson:"currentCID"`       // Current channel ID
+	LastSeenCID   string `json:"lastSeenCID" bson:"lastSeenCID"`     // Last seen channel ID
+	PlayAnthem    bool   `json:"playAnthem" bson:"playAnthem"`       // True if anthem should play when user joins channel
+	Anthem        string `json:"anthem" bson:"anthem"`               // Anthem to play when joining a channel
+	Credits       int    `json:"credits" bson:"credits"`             // Credits gained from dailies
+	DoneDailies   bool   `json:"dailies" bson:"dailies"`             // True if dailies have been claimed today
 }
 
 // Reminders - holds reminders for the bot to tell the user about
@@ -102,145 +100,6 @@ type Reminders struct {
 	UserID     string    `json:"userID" bson:"userID"`         // User that saved the reminder
 	RemindTime time.Time `json:"remindTime" bson:"remindTime"` // Time to remind user
 	RemindMsg  string    `json:"remindMsg" bson:"remindMsg"`   // Message to be reminded of
-}
-
-//----- U S E R   F I L E   F U N C T I O N S -----
-
-// InitKDB - Create and initialize user data file
-func InitKDB() {
-	// Indent so its readable
-	userData, err := json.MarshalIndent(kdb, "", "    ")
-	if err != nil {
-		panic(err)
-	}
-	// Open file
-	jsonFile, err := os.Create(filepath.FromSlash(pwd + "/data/kdb.json"))
-	if err != nil {
-		panic(err)
-	}
-	// Write to file
-	_, err = jsonFile.Write(userData)
-	if err != nil {
-		panic(err)
-	}
-	// Cleanup
-	jsonFile.Close()
-}
-
-// ReadKDB - Read in the user file into the structure
-func (k *KDB) Read() {
-	// Open file
-	file, err := os.Open(filepath.FromSlash(pwd + "/data/kdb.json"))
-	if err != nil {
-		panic(err)
-	}
-
-	// Decode JSON and inject into structure
-	decoder := json.NewDecoder(file)
-	err = decoder.Decode(&k)
-	if err != nil {
-		panic(err)
-	}
-
-	// Close file
-	file.Close()
-}
-
-// WriteKDB - Write the file
-func (k *KDB) Write() {
-	// Marshal data to be readable
-	jsonData, err := json.MarshalIndent(k, "", "    ")
-	if err != nil {
-		panic(err)
-	}
-	// Open file
-	jsonFile, err := os.Create(filepath.FromSlash(pwd + "/data/kdb.json"))
-	if err != nil {
-		panic(err)
-	}
-	// Write to file
-	_, err = jsonFile.Write(jsonData)
-	if err != nil {
-		panic(err)
-	}
-	// Cleanup
-	jsonFile.Close()
-}
-
-// Update - Read then write the user jsonFile
-func (k *KDB) Update() {
-	k.Read()
-	k.Write()
-}
-
-//----- U S E R   M A N A G E M E N T -----
-
-// CreateUser - create user within the user json file and return it
-func (k *KDB) CreateUser(s *discordgo.Session, id string) (userData *UserInfo) {
-	var user UserInfo
-
-	// Pull user info from discord
-	discordUser, _ := s.User(id)
-
-	// Put user data into user structure
-	user.Name = discordUser.Username
-	user.Credits = 0
-	user.UserID = id
-	user.PlayAnthem = false
-
-	// Append new user to the users array
-	k.Users = append(k.Users, user)
-	// Write to the file to update it and return the data
-	k.Write()
-	return &user
-}
-
-// GetUser - Retrieve user data
-func (k *KDB) GetUser(s *discordgo.Session, id string) (userData *UserInfo) {
-
-	// Check if user is in the data file, return them if they are
-	for i := range k.Users {
-		if k.Users[i].UserID == id {
-			return &k.Users[i]
-		}
-	}
-
-	// return user
-	return k.CreateUser(s, id)
-}
-
-//UpdateUser - Update user data json jsonFile
-func (u *ServerInfo) UpdateUser(s *discordgo.Session, c interface{}) bool {
-	//Return true if update was needed
-	return false
-}
-
-//----- M I S C   F U N C T I O N S -----
-
-// GetGuildByID - Get the correct ServerInfo array from the kdb
-func GetGuildByID(id string) (index int) {
-	for i, server := range kdb.Servers {
-		if server.GID == id {
-			return i
-		}
-	}
-
-	// Guild not found - Create new
-	var newServer ServerInfo
-	newServer.GID = id
-	// Set emotes to default
-	newServer.Emotes.UPVOTE = "⬆"
-	newServer.Emotes.DOWNVOTE = "⬇"
-	// Set prefix to default
-	newServer.Config.Prefix = "k!"
-	// Set votes to default minimum
-	newServer.Config.MinVotes = 3
-
-	// Append guild to kdb, write it, and return the index of the guild
-	kdb.Servers = append(kdb.Servers, newServer)
-	newGuildIndex := len(kdb.Servers) - 1
-	kdb.Write()
-	return newGuildIndex
 }
 
 //----- M O N G O D B   F U N C T I O N S -----
@@ -265,49 +124,111 @@ func InitDB() {
 	}
 
 	db = client.Database(botConfig.DBConfig.DBName)
-	userCollection = db.Collection("users")
-	serverCollection = db.Collection("servers")
+	k.userCollection = db.Collection("users")
+	k.serverCollection = db.Collection("servers")
+	k.reminderCollection = db.Collection("reminders")
 	fmt.Println("Connected to MongoDB!")
 }
 
-// Query data
-func (k *KDB) Query() {
-	cur, err := userCollection.Find(context.Background(), bson.D{})
-	if err != nil {
-		panic(err)
-	}
-	defer cur.Close(context.Background())
-	for cur.Next(context.Background()) {
-		var result bson.M
-		err := cur.Decode(&result)
-		if err != nil {
-			panic(err)
-		}
-		// do something with result....
-		fmt.Println(cur.Current)
-	}
-	if err := cur.Err(); err != nil {
-		panic(err)
-	}
-}
+//----- G U I L D   M A N A G E M E N T -----
 
-// AddUser - insert new user into database in collection 'users'
-func (k *KDB) AddUser(user UserInfo) {
-	// Insert user into collection
-	_, err := userCollection.InsertOne(context.Background(), user)
-	if err != nil {
-		panic(err)
-	}
-}
+// GetGuild - Get the server information from the db
+func (k *KDB) GetGuild(s *discordgo.Session, id string) (server GuildInfo) {
 
-// QueryUser - search for user in database in collection 'users'
-func (k *KDB) QueryUser(field string, query string) (user UserInfo) {
-	//Search for user by the specified field
-	filter := bson.D{{field, query}}
+	filter := bson.D{{"gID", id}}
 	err := userCollection.FindOne(context.Background(), filter).Decode(&user)
 	if err != nil {
+		return k.CreateGuild(s, id)
+	}
+
+	return k.CreateGuild(s, id)
+}
+
+// CreateGuild - Create server from given ID
+func (k *KDB) CreateGuild(s *discordgo.Session, id string) (server GuildInfo) {
+
+	guild, err := s.Guild(id)
+	if err != nil {
 		panic(err)
 	}
+
+	// Guild not found - Create new
+	server.GID = id
+	server.Name = guild.Name
+	// Set emotes to default
+	server.Emotes.UPVOTE = "⬆"
+	server.Emotes.DOWNVOTE = "⬇"
+	// Set prefix to default
+	server.Config.Prefix = "k!"
+	// Set votes to default minimum
+	server.Config.MinVotes = 3
+
+	// Add the new server
+	objID, err := k.GuildColl.InsertOne(context.Background(), server)
+	if err != nil {
+		panic(err)
+	}
+
+	LogTxt(s, "INFO", fmt.Sprintf("Guild \"%s\" [%s] inserted into DB (MongoID#%S)",
+		server.Name, server.ID, objID.InsertedID))
+}
+
+//----- U S E R   M A N A G E M E N T -----
+
+// GetUser - Query database for user, creating a new one if none exists
+func (k *KDB) GetUser(s *discordgo.Session, id string) (user UserInfo) {
+	filter := bson.D{{"userID", id}}
+	err := userCollection.FindOne(context.Background(), filter).Decode(&user)
+	if err != nil {
+		return k.CreateUser(s, id)
+	}
+	return user
+}
+
+// CreateUser - create user with default values and return it
+func (k *KDB) CreateUser(s *discordgo.Session, id string) (user UserInfo) {
+	// Get user info from discord
+	discordUser, err := s.User(id)
+	if err != nil {
+		panic(err)
+	}
+
+	// Set unique values of user
+	user.UserID = id
+	user.Name = discordUser.Username
+	user.Discriminator = discordUser.Discriminator
+	// Set defaults
+	user.PlayAnthem = false
+	user.DoneDailies = false
+
+	// Insert user into collection
+	objID, err := userCollection.InsertOne(context.Background(), user)
+	if err != nil {
+		panic(err)
+	}
+	LogTxt(s, "INFO", fmt.Sprintf("User \"%s\" [%s] inserted into DB (MongoID#%S)",
+		user.Name, user.UserID, objID.InsertedID))
 
 	return
 }
+
+// // Query data
+// func (k *KDB) Query() {
+// 	cur, err := userCollection.Find(context.Background(), bson.D{})
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	defer cur.Close(context.Background())
+// 	for cur.Next(context.Background()) {
+// 		var result bson.M
+// 		err := cur.Decode(&result)
+// 		if err != nil {
+// 			panic(err)
+// 		}
+// 		// do something with result....
+// 		fmt.Println(cur.Current)
+// 	}
+// 	if err := cur.Err(); err != nil {
+// 		panic(err)
+// 	}
+// }

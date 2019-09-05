@@ -107,16 +107,16 @@ func LogMsg(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 //LogVoice - log voice events in the log channel
 func LogVoice(s *discordgo.Session, v *discordgo.VoiceStateUpdate) {
-	//Get KDB user data
-	KDBuser := kdb.GetUser(s, v.UserID)
-
-	//If user hasn't changed channels, do nothing (usually a mute or deafen)
-	if KDBuser.CurrentCID == v.ChannelID {
-		return
-	}
-
 	//If logs are able to be written to a channel
 	if LogValid(s) {
+
+		//Get KDB user data
+		KDBuser := kdb.GetUser(s, v.UserID)
+
+		//If user hasn't changed channels, do nothing (usually a mute or deafen)
+		if KDBuser.CurrentCID == v.ChannelID {
+			return
+		}
 
 		//Get guild name and ID
 		guild, err := s.Guild(v.GuildID)
@@ -167,4 +167,16 @@ func LogVoice(s *discordgo.Session, v *discordgo.VoiceStateUpdate) {
 	KDBuser.LastSeenCID = KDBuser.CurrentCID
 	KDBuser.CurrentCID = v.ChannelID
 	kdb.Write()
+}
+
+// LogTxt - log information/errors from functions
+func LogTxt(s *discordgo.Session, msgType string, msg string) {
+	if LogValid(s) {
+		fmtTime := time.Now().Format("Jan 2 3:04:05PM 2006")
+		cleanMsg := strings.Replace(msg, "`", "\\`", -1)
+		cleanMsg = strings.Replace(cleanMsg, "\n", "\n# ", -1)
+		fmtMsg := fmt.Sprintf("```ini\n[ %s ] - %s\n# %s\n```", fmtTime, msgType, cleanMsg)
+
+		s.ChannelMessageSend(botConfig.LogID, fmtMsg)
+	}
 }

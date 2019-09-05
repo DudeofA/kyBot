@@ -111,7 +111,6 @@ func Slots(s *discordgo.Session, m *discordgo.MessageCreate, data string) {
 
 	//Give winnings and write data back
 	gambler.Credits += winnings
-	kdb.Write()
 
 	//Display the slots
 	s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s %s %s", slots[slot1], slots[slot2], slots[slot3]))
@@ -129,8 +128,8 @@ func Slots(s *discordgo.Session, m *discordgo.MessageCreate, data string) {
 func HangmanGame(s *discordgo.Session, m *discordgo.MessageCreate, data string) {
 	var usage = "```\n----- HANGMAN -----\nhangman (start, channel, guess <word/phrase>, reprint, quit)\nReact with the letter to guess\n```"
 
-	gID := GetGuildByID(m.GuildID)
-	hmSession := &kdb.Servers[gID].HM
+	curGuild := kdb.GetGuild(s, m.GuildID)
+	hmSession := curGuild.HM
 
 	//Parse the data passed along with the command
 	var command string

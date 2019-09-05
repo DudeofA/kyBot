@@ -20,7 +20,7 @@ import (
 )
 
 func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string, data string) {
-	guildIndex := GetGuildByID(m.GuildID)
+	curGuild := kdb.GetGuild(s, m.GuildID)
 
 	switch command {
 
@@ -28,7 +28,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 	//Get amount of coins in players account
 	case "account", "acc":
 		user := kdb.GetUser(s, m.Author.ID)
-		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("💵 | You have a total of **%d** %scoins", user.Credits, kdb.Servers[guildIndex].Config.Coins))
+		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("💵 | You have a total of **%d** %scoins", user.Credits, user.Credits))
 		break
 
 	//----- A G E -----
@@ -51,7 +51,6 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 	case "config", "c":
 		if CheckAdmin(s, m) {
 			if strings.ToLower(data) == "reload" {
-				kdb.Update()
 				botConfig.Update()
 				s.ChannelMessageSend(m.ChannelID, "Updated KDB and botConfig")
 			} else if strings.HasPrefix(strings.ToLower(data), "edit") {
@@ -73,9 +72,8 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 			userData.Credits += botConfig.DailyAmt
 			//Indicate to user they have recived their dailies
 			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf(
-				"💵 | Daily %d coins received! Total %scoins: **%d**", botConfig.DailyAmt, kdb.Servers[guildIndex].Config.Coins, userData.Credits))
+				"💵 | Daily %d coins received! Total %scoins: **%d**", botConfig.DailyAmt, curGuild.Config.Coins, userData.Credits))
 			//Write data back out to the file
-			kdb.Write()
 		} else {
 			_, nextRuntime := gocron.NextRun()
 			timeUntil := time.Until(nextRuntime)
@@ -152,7 +150,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 	//----- K A R M A -----
 	//Displays the current amount of karma the bot has
 	case "karma":
-		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("☯ | Current Karma: %d", kdb.Servers[guildIndex].Karma))
+		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("☯ | Current Karma: %d", curGuild.Karma))
 		break
 
 	//----- P I N G -----
@@ -174,7 +172,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 				}
 			}()
 		} else {
-			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Command Syntax: %squote <quote content here>", kdb.Servers[guildIndex].Config.Prefix))
+			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Command Syntax: %squote <quote content here>", curGuild.Config.Prefix))
 		}
 		break
 
@@ -233,7 +231,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 			}
 			break
 		case "":
-			region := fmt.Sprintf("The server is currently in region: %s\nTo change it, use %svoiceserver <server name>\nOptions are: \n```\nus-east, us-central, us-south, us-west\n```", guild.Region, kdb.Servers[guildIndex].Config.Prefix)
+			region := fmt.Sprintf("The server is currently in region: %s\nTo change it, use %svoiceserver <server name>\nOptions are: \n```\nus-east, us-central, us-south, us-west\n```", guild.Region, curGuild.Config.Prefix)
 			s.ChannelMessageSend(m.ChannelID, region)
 			break
 
