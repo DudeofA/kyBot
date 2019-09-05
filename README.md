@@ -2,6 +2,21 @@
 v2.0.0
 =====================================
 
+Dependencies:
+make
+go
+github.com/bwmarrin/discordgo
+github.com/bwmarrin/dgvoice
+github.com/jasonlvhit/gocron
+go.mongodb.org/mongo-driver/mongo
+
+Installation steps:
+~~~
+make
+./bin/kylixor
+~~~
+Fill out conf.json file with necessary information
+
 Commands
 --------
 
