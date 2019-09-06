@@ -20,7 +20,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-//Stages of the hanging
+// Stages of the hanging
 var hmStages = []string{
 	"\n/---|\n|\n|\n|\n|\n",
 	"\n/---|\n|   o\n|\n|\n|\n",
@@ -34,88 +34,95 @@ var hmStages = []string{
 }
 var alphaBlocks = []string{"🇦", "🇧", "🇨", "🇩", "🇪", "🇫", "🇬", "🇭", "🇮", "🇯", "🇰", "🇱", "🇲", "🇳", "🇴", "🇵", "🇶", "🇷", "🇸", "🇹", "🇺", "🇻", "🇼", "🇽", "🇾", "🇿"}
 
-//Slots - gamble away your credits in a slot machine
+// Slots - gamble away your credits in a slot machine
 func Slots(s *discordgo.Session, m *discordgo.MessageCreate, data string) {
 	var winMultiplier = 10
 	var jackpotMultiplier = 100
 
-	//Gamble item string - Jackbot item MUST be at the end
+	// Gamble item string - Jackbot item MUST be at the end
 	var slots = []string{":lemon:", ":cherries:", ":eggplant:", ":peach:", ":strawberry:", ":moneybag:"}
 
-	//Explain rules
+	// Explain rules
 	if data == "" {
 		usage := "Slots:\n\tUsage: slots <amount to gamble> (amount must be multiple of 10)"
-		payouts := fmt.Sprintf("\n\tPayouts: \n\t\t2 of a kind - Nothing lost\n\t\t3 of a kind - %dx wager\n\t\t3 money bags - %dx wager", winMultiplier, jackpotMultiplier)
-		options := fmt.Sprintf("\n\tChances: \n\t\tThere are %d options, each of the 3 slots are fully random", len(slots))
+		payouts := fmt.Sprintf(
+			"\n\tPayouts: \n\t\t2 of a kind - Nothing lost\n\t\t3 of a kind - %dx wager\n\t\t3 money bags - %dx wager",
+			winMultiplier, jackpotMultiplier)
+		options := fmt.Sprintf(
+			"\n\tChances: \n\t\tThere are %d options, each of the 3 slots are fully random",
+			len(slots))
 
-		//Print terms
+		// Print terms
 		s.ChannelMessageSend(m.ChannelID, usage+payouts+options)
 		return
 	}
 
-	//Check wager is a valid number
+	// Check wager is a valid number
 	wager, err := strconv.Atoi(data)
 	if err != nil {
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Not a valid numerical wager: \"%s\"", data))
 		return
 	}
 
-	//Check wager is a multiple of 10
+	// Check wager is a multiple of 10
 	if wager%10 != 0 || wager < 10 {
 		s.ChannelMessageSend(m.ChannelID, "Wager must be a positive multiple of 10")
 		return
 	}
 
-	//Check gambler has enough in their account
+	// Check gambler has enough in their account
 	gambler := kdb.GetUser(s, m.Author.ID)
-	//Save credit balance for later - comparison
+	// Save credit balance for later - comparison
 	originalCredits := gambler.Credits
 	if originalCredits < wager {
-		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("You only have %d coins when your wager was %d", gambler.Credits, wager))
+		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf(
+			"You only have %d coins when your wager was %d",
+			gambler.Credits, wager))
 		return
 	}
 
-	//Take wager from user
+	// Take wager from user
 	gambler.Credits -= wager
 
-	//Roll the slots
+	// Roll the slots (**RANDOM**)
 	slot1 := rand.Intn(len(slots))
 	slot2 := rand.Intn(len(slots))
 	slot3 := rand.Intn(len(slots))
 
-	//-- Winnings --
+	// Winnings
 	var winnings int
 	var result string
 
-	//Check results
+	// Check results
 	if slot1 == slot2 && slot1 == slot3 {
-		//If all 3 are the same
+		// If all 3 are the same
 		if slot1 == len(slots)-1 {
-			//Jackpot
+			// Jackpot
 			winnings = wager*jackpotMultiplier + wager
 			result = "WOW JACKPOT - DING DING DING - YOU JUST WON BIG TIME"
 		} else {
-			//Normal winnings
+			// Normal winnings
 			winnings = wager*winMultiplier + wager
 			result = "YOU WON - CONGRATS - EZ MONEY"
 		}
 	} else if slot1 == slot2 || slot1 == slot3 || slot2 == slot3 {
-		//If 2 matched
+		// If 2 matched
 		winnings = wager
 		result = "You didn't lose anything...try again?"
 	} else {
-		//Womp womp
+		// Womp womp
 		winnings = 0
 		result = "How could this happen to me..."
 	}
 
-	//Give winnings and write data back
+	// Give winnings and write data back
 	gambler.Credits += winnings
+	kdb.UpdateUser(gambler)
 
-	//Display the slots
+	// Display the slots
 	s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s %s %s", slots[slot1], slots[slot2], slots[slot3]))
 
-	//Display balance and result message
+	// Display balance and result message
 	balanceNotice := fmt.Sprintf(":dollar: | You now have a total of **%d** coins", gambler.Credits)
 	if winnings != 0 && winnings != wager {
 		balanceNotice = fmt.Sprintf(":dollar: | Old coins balance: **%d** - You won **%d** coins!\n",
@@ -124,27 +131,26 @@ func Slots(s *discordgo.Session, m *discordgo.MessageCreate, data string) {
 	s.ChannelMessageSend(m.ChannelID, result+"\n"+balanceNotice)
 }
 
-//HangmanGame - ...its hangman, in Discord!
+// HangmanGame - ...its hangman, in Discord!
 func HangmanGame(s *discordgo.Session, m *discordgo.MessageCreate, data string) {
 	var usage = "```\n----- HANGMAN -----\nhangman (start, channel, guess <word/phrase>, reprint, quit)\nReact with the letter to guess\n```"
 
 	curGuild := kdb.GetGuild(s, m.GuildID)
-	hmSession := curGuild.HM
+	hmSession := kdb.GetHM(m.GuildID)
 
-	//Parse the data passed along with the command
+	// Parse the data passed along with the command
 	var command string
 	var argument string
 	dataArray := strings.SplitN(data, " ", 2)
 	if len(dataArray) > 0 {
 		command = strings.TrimSpace(dataArray[0])
 	}
-
 	if len(dataArray) > 1 {
 		argument = strings.TrimSpace(dataArray[1])
 	}
 
 	switch strings.TrimSpace(strings.ToLower(command)) {
-	//Usage
+	// Usage
 	case "":
 		s.ChannelMessageSend(m.ChannelID, usage)
 		if hmSession.GameState > 0 {
@@ -199,7 +205,8 @@ func HangmanGame(s *discordgo.Session, m *discordgo.MessageCreate, data string) 
 			return
 		}
 
-		kdb.Servers[gID].HM.Channel = hmChannel.ID
+		hmSession.Channel = hmChannel.ID
+		kdb.UpdateHM(hmSession)
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Changed game channel to %s", hmChannel.Mention()))
 		break
 
@@ -218,6 +225,7 @@ func HangmanGame(s *discordgo.Session, m *discordgo.MessageCreate, data string) 
 	case "reprint":
 		if hmSession.GameState > 0 {
 			hmSession.Message = ""
+			kdb.UpdateHM(hmSession)
 			hmSession.UpdateState(s, m.Author.ID)
 		}
 		break
@@ -232,13 +240,12 @@ func HangmanGame(s *discordgo.Session, m *discordgo.MessageCreate, data string) 
 		embed := GenerateHMLinkEmbed(m.GuildID, hmSession, "Game ended\n")
 		s.ChannelMessageSendEmbed(m.ChannelID, embed)
 		hmSession.GameState = len(hmStages)
+		kdb.UpdateHM(hmSession)
 		hmSession.UpdateState(s, m.Author.ID)
 
 		hmSession.ResetGame()
 		break
 	}
-
-	kdb.Write()
 }
 
 //GenerateWord - Generate random phrase/word for Hangman
@@ -276,7 +283,7 @@ func (hmSession *Hangman) GenerateWord() {
 }
 
 //GenerateHMLinkEmbed - generate a simple embed to link to the current game of Hangman
-func GenerateHMLinkEmbed(guildID string, hmSession *Hangman, note string) (embed *discordgo.MessageEmbed) {
+func GenerateHMLinkEmbed(guildID string, hmSession Hangman, note string) (embed *discordgo.MessageEmbed) {
 	link := "https://discordapp.com/channels/"
 	messageLink := link + guildID + "/" + hmSession.Channel + "/" + hmSession.Message
 	embedLink := fmt.Sprintf("%sClick [here](%s) to jump to the game", note, messageLink)
@@ -305,8 +312,10 @@ func (hmSession *Hangman) UpdateState(s *discordgo.Session, authorID string) {
 		hmWinnings := len(hmSession.Word) * 10
 		winner := kdb.GetUser(s, authorID)
 		gameMessage = fmt.Sprintf("Guessed correctly by %s\n", winner.Name)
-		s.ChannelMessageSend(hmSession.Channel, fmt.Sprintf("YOU GOT IT <@%s> - Enjoy the %d coins!\n", winner.UserID, hmWinnings))
+		s.ChannelMessageSend(hmSession.Channel, fmt.Sprintf("YOU GOT IT <@%s> - Enjoy the %d coins!\n",
+			winner.ID, hmWinnings))
 		winner.Credits += hmWinnings
+		kdb.UpdateUser(winner)
 
 		// Put the word in the underline
 		wordSplice := strings.Split(hmSession.Word, "")
@@ -389,8 +398,6 @@ func ReactionGuess(s *discordgo.Session, r *discordgo.MessageReactionAdd, hmSess
 	//Make the guess and update the board
 	hmSession.Guess(s, guess)
 	hmSession.UpdateState(s, r.UserID)
-
-	kdb.Write()
 }
 
 //Guess - Guess word or letter in the given hangman session

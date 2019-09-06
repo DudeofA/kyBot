@@ -32,9 +32,11 @@ type KDB struct {
 	Client *mongo.Client   // Database client connection
 
 	// Collections within database
-	UserColl     *mongo.Collection
-	GuildColl    *mongo.Collection
-	ReminderColl *mongo.Collection
+	UserColl     *mongo.Collection // Collection for user info
+	GuildColl    *mongo.Collection // Collection for guilds/server info
+	HangmanColl  *mongo.Collection // Collection for hangman games
+	QuoteColl    *mongo.Collection // Collection for all quotes
+	ReminderColl *mongo.Collection // Collection for all reminders
 }
 
 //----- S E R V E R   I N F O -----
@@ -43,11 +45,10 @@ type KDB struct {
 type GuildInfo struct {
 	Config GuildConfig `json:"config" bson:"serverConfig"` // Guild specific config
 	Emotes Emote       `json:"emotes" bson:"emotes"`       // String of customizable emotes
-	GID    string      `json:"gID" bson:"gID"`             // discord guild ID
-	HM     Hangman     `json:"hangman" bson:"hangman"`     // Holds hangman data
-	Karma  int         `json:"karma" bson:"karma"`         // Bot's karma - per server
-	Name   string      `json:"name" bson:"name"`           // Name of server
-	Quotes []Quote     `json:"quotes" bson:"quotes"`       // Array of quotes
+	ID     string      `json:"gID" bson:"gID"`             // discord guild ID
+	Karma  int         `json:"karma" bson:"karma"`         // Bot's karma - per guild
+	Name   string      `json:"name" bson:"name"`           // Name of guild
+	Region string      `json:"region" bson:"region"`       // Geolocation region of the guild
 }
 
 // GuildConfig - structure to hold variables specifically for that guild
@@ -66,6 +67,7 @@ type Emote struct {
 
 // Hangman - State of hangman game
 type Hangman struct {
+	GuildID   string   `json:"guildID" bson:"guildID"`     // Guild game is attached to
 	Channel   string   `json:"channel" bson:"channel"`     // ChannelID where game is played
 	GameState int      `json:"gameState" bson:"gameState"` // State of game, 1-7 until you lose
 	Guessed   []string `json:"guessed" bson:"guessed"`     // Characters/words that have been guessed
@@ -76,6 +78,7 @@ type Hangman struct {
 
 // Quote - Data about quotes and quotes themselves
 type Quote struct {
+	GuildID   string    `json:"guildID" bson:"guildID"`     // Guild quote is from
 	Quote     string    `json:"quote" bson:"quote"`         // Actual quoted text
 	Timestamp time.Time `json:"timestamp" bson:"timestamp"` // Timestamp when quote was recorded
 }
@@ -84,15 +87,16 @@ type Quote struct {
 
 // UserInfo - Hold all pertaining information for each user
 type UserInfo struct {
-	UserID        string `json:"userID" bson:"userID"`               // User ID
-	Name          string `json:"name" bson:"name"`                   // Username
-	Discriminator string `json:"discriminator" bson:"discriminator"` // Unique identifier
-	CurrentCID    string `json:"currentCID" bson:"currentCID"`       // Current channel ID
-	LastSeenCID   string `json:"lastSeenCID" bson:"lastSeenCID"`     // Last seen channel ID
-	PlayAnthem    bool   `json:"playAnthem" bson:"playAnthem"`       // True if anthem should play when user joins channel
-	Anthem        string `json:"anthem" bson:"anthem"`               // Anthem to play when joining a channel
-	Credits       int    `json:"credits" bson:"credits"`             // Credits gained from dailies
-	DoneDailies   bool   `json:"dailies" bson:"dailies"`             // True if dailies have been claimed today
+	ID            string   `json:"userID" bson:"userID"`               // User ID
+	Name          string   `json:"name" bson:"name"`                   // Username
+	Discriminator string   `json:"discriminator" bson:"discriminator"` // Unique identifier
+	Guilds        []string `json:"guilds" bson:"guilds"`               // List of Guild IDs user is a part of
+	CurrentCID    string   `json:"currentCID" bson:"currentCID"`       // Current channel ID
+	LastSeenCID   string   `json:"lastSeenCID" bson:"lastSeenCID"`     // Last seen channel ID
+	PlayAnthem    bool     `json:"playAnthem" bson:"playAnthem"`       // True if anthem should play when user joins channel
+	Anthem        string   `json:"anthem" bson:"anthem"`               // Anthem to play when joining a channel
+	Credits       int      `json:"credits" bson:"credits"`             // Credits gained from dailies
+	DoneDailies   bool     `json:"dailies" bson:"dailies"`             // True if dailies have been claimed today
 }
 
 // Reminders - holds reminders for the bot to tell the user about
@@ -104,39 +108,40 @@ type Reminders struct {
 
 //----- M O N G O D B   F U N C T I O N S -----
 
-// InitDB - attempt to make a connection to the Mongo database
-func InitDB() {
+// Init - attempt to make a connection to the Mongo database
+func (k *KDB) Init() {
 	// Client parameters
 	var err error
 	clientOptions := options.Client().ApplyURI(botConfig.DBConfig.URI)
-	client, err = mongo.NewClient(clientOptions)
+	kdb.Client, err = mongo.NewClient(clientOptions)
 	if err != nil {
 		fmt.Println("Error creating MongoDB client")
 		os.Exit(1)
 	}
 
 	// Connect to MongoDB
-	err = client.Connect(context.Background())
+	err = kdb.Client.Connect(context.Background())
 	if err != nil {
 		fmt.Println("Error connecting to the database")
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
 
-	db = client.Database(botConfig.DBConfig.DBName)
-	k.userCollection = db.Collection("users")
-	k.serverCollection = db.Collection("servers")
-	k.reminderCollection = db.Collection("reminders")
+	k.DB = k.Client.Database(botConfig.DBConfig.DBName)
+	k.GuildColl = k.DB.Collection("guilds")
+	k.HangmanColl = k.DB.Collection("hangmanGames")
+	k.QuoteColl = k.DB.Collection("quotes")
+	k.ReminderColl = k.DB.Collection("reminders")
+	k.UserColl = k.DB.Collection("users")
 	fmt.Println("Connected to MongoDB!")
 }
 
 //----- G U I L D   M A N A G E M E N T -----
 
 // GetGuild - Get the server information from the db
-func (k *KDB) GetGuild(s *discordgo.Session, id string) (server GuildInfo) {
-
+func (k *KDB) GetGuild(s *discordgo.Session, id string) (guild GuildInfo) {
 	filter := bson.D{{"gID", id}}
-	err := userCollection.FindOne(context.Background(), filter).Decode(&user)
+	err := k.GuildColl.FindOne(context.Background(), filter).Decode(&guild)
 	if err != nil {
 		return k.CreateGuild(s, id)
 	}
@@ -145,32 +150,40 @@ func (k *KDB) GetGuild(s *discordgo.Session, id string) (server GuildInfo) {
 }
 
 // CreateGuild - Create server from given ID
-func (k *KDB) CreateGuild(s *discordgo.Session, id string) (server GuildInfo) {
+func (k *KDB) CreateGuild(s *discordgo.Session, id string) (guild GuildInfo) {
 
-	guild, err := s.Guild(id)
+	discordGuild, err := s.Guild(id)
 	if err != nil {
 		panic(err)
 	}
 
 	// Guild not found - Create new
-	server.GID = id
-	server.Name = guild.Name
+	guild.ID = id
+	guild.Name = discordGuild.Name
+	guild.Region = discordGuild.Region
 	// Set emotes to default
-	server.Emotes.UPVOTE = "⬆"
-	server.Emotes.DOWNVOTE = "⬇"
+	guild.Emotes.UPVOTE = "⬆"
+	guild.Emotes.DOWNVOTE = "⬇"
 	// Set prefix to default
-	server.Config.Prefix = "k!"
+	guild.Config.Prefix = "k!"
 	// Set votes to default minimum
-	server.Config.MinVotes = 3
+	guild.Config.MinVotes = 3
 
-	// Add the new server
-	objID, err := k.GuildColl.InsertOne(context.Background(), server)
+	// Add the new guild
+	objID, err := k.GuildColl.InsertOne(context.Background(), guild)
 	if err != nil {
 		panic(err)
 	}
 
 	LogTxt(s, "INFO", fmt.Sprintf("Guild \"%s\" [%s] inserted into DB (MongoID#%S)",
-		server.Name, server.ID, objID.InsertedID))
+		guild.Name, guild.ID, objID.InsertedID))
+
+	return guild
+}
+
+// UpdateGuild - update guild in database based on argument
+func (k *KDB) UpdateGuild(guild GuildInfo) {
+	//
 }
 
 //----- U S E R   M A N A G E M E N T -----
@@ -178,7 +191,7 @@ func (k *KDB) CreateGuild(s *discordgo.Session, id string) (server GuildInfo) {
 // GetUser - Query database for user, creating a new one if none exists
 func (k *KDB) GetUser(s *discordgo.Session, id string) (user UserInfo) {
 	filter := bson.D{{"userID", id}}
-	err := userCollection.FindOne(context.Background(), filter).Decode(&user)
+	err := k.UserColl.FindOne(context.Background(), filter).Decode(&user)
 	if err != nil {
 		return k.CreateUser(s, id)
 	}
@@ -194,7 +207,7 @@ func (k *KDB) CreateUser(s *discordgo.Session, id string) (user UserInfo) {
 	}
 
 	// Set unique values of user
-	user.UserID = id
+	user.ID = id
 	user.Name = discordUser.Username
 	user.Discriminator = discordUser.Discriminator
 	// Set defaults
@@ -202,33 +215,45 @@ func (k *KDB) CreateUser(s *discordgo.Session, id string) (user UserInfo) {
 	user.DoneDailies = false
 
 	// Insert user into collection
-	objID, err := userCollection.InsertOne(context.Background(), user)
+	objID, err := kdb.UserColl.InsertOne(context.Background(), user)
 	if err != nil {
 		panic(err)
 	}
 	LogTxt(s, "INFO", fmt.Sprintf("User \"%s\" [%s] inserted into DB (MongoID#%S)",
-		user.Name, user.UserID, objID.InsertedID))
+		user.Name, user.ID, objID.InsertedID))
 
 	return
 }
 
-// // Query data
-// func (k *KDB) Query() {
-// 	cur, err := userCollection.Find(context.Background(), bson.D{})
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	defer cur.Close(context.Background())
-// 	for cur.Next(context.Background()) {
-// 		var result bson.M
-// 		err := cur.Decode(&result)
-// 		if err != nil {
-// 			panic(err)
-// 		}
-// 		// do something with result....
-// 		fmt.Println(cur.Current)
-// 	}
-// 	if err := cur.Err(); err != nil {
-// 		panic(err)
-// 	}
-// }
+// UpdateUser - update user in database based on user argument
+func (k *KDB) UpdateUser(user UserInfo) {
+	//
+}
+
+//----- H A N G M A N   M A N A G E M E N T -----
+
+// GetHM - get hangman session from hangman collection
+func (k *KDB) GetHM(guildID string) (hm Hangman) {
+	//
+
+	return hm
+}
+
+// CreateHM - create hangman session if none exists
+func (k *KDB) CreateHM(guildID string) (hm Hangman) {
+	//
+
+	return hm
+}
+
+// UpdateHM - update hangman game in the database
+func (k *KDB) UpdateHM(hm Hangman) {
+	//
+}
+
+//----- Q U O T E   M A N A G E M E N T -----
+
+// CreateQuote - create quote and insert it into the database
+func (k *KDB) CreateQuote(quote Quote) {
+	//
+}

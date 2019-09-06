@@ -120,7 +120,7 @@ func main() {
 	}
 
 	// Connect/Setup database
-	InitDB()
+	kdb.Init()
 
 	// Check for dictionary file
 	if runtime.GOOS == "windows" {
@@ -199,7 +199,7 @@ func main() {
 	fmt.Println("Closing discord websocket...")
 	ky.Close()
 	fmt.Println("Closing database connection...")
-	client.Disconnect(context.TODO())
+	kdb.Client.Disconnect(context.TODO())
 	fmt.Println("Done...ending process...goodbye...")
 	os.Exit(0)
 }
@@ -240,11 +240,12 @@ func MessageReactionAdd(s *discordgo.Session, r *discordgo.MessageReactionAdd) {
 		return
 	}
 
-	for i := range kdb.Servers {
-		if kdb.Servers[i].HM.Message == r.MessageID {
-			ReactionGuess(s, r, &kdb.Servers[i].HM)
-		}
-	}
+	//If reaction is on a message that is a hangman game, guess that reaction
+	// for i := range kdb.Servers {
+	// 	if kdb.Servers[i].HM.Message == r.MessageID {
+	// 		ReactionGuess(s, r, &kdb.Servers[i].HM)
+	// 	}
+	// }
 }
 
 // PresenceUpdate - Called when any user changes their status (online, away, playing a game, etc)
@@ -260,7 +261,7 @@ func VoiceStateUpdate(s *discordgo.Session, v *discordgo.VoiceStateUpdate) {
 // MessageCreate - Called whenever a message is sent to the discord
 func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	// Get Guild index to use later on
-	guildIndex := GetGuildByID(m.GuildID)
+	guild := kdb.GetGuild(s, m.GuildID)
 
 	// Return if the message was sent by a bot to avoid infinite loops
 	if m.Author.Bot || m.ChannelID == botConfig.LogID {
@@ -277,15 +278,15 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	// Good Karma
 	if strings.ToLower(m.Content) == "good bot" {
-		kdb.Servers[guildIndex].Karma++
-		kdb.Write()
+		guild.Karma++
+		kdb.UpdateGuild(guild)
 		s.MessageReactionAdd(m.ChannelID, m.ID, "😊")
 	}
 
 	// Bad Karma
 	if strings.ToLower(m.Content) == "bad bot" {
-		kdb.Servers[guildIndex].Karma--
-		kdb.Write()
+		guild.Karma--
+		kdb.UpdateGuild(guild)
 		s.MessageReactionAdd(m.ChannelID, m.ID, "😞")
 	}
 
@@ -297,9 +298,9 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	// If the message sent is a command with the set prefix
-	if strings.HasPrefix(m.Content, kdb.Servers[guildIndex].Config.Prefix) {
+	if strings.HasPrefix(m.Content, guild.Config.Prefix) {
 		// Trim the prefix to extract the command
-		input := strings.TrimPrefix(m.Content, kdb.Servers[guildIndex].Config.Prefix)
+		input := strings.TrimPrefix(m.Content, guild.Config.Prefix)
 		// Split command into the command and what comes after
 		inputPieces := strings.SplitN(input, " ", 2)
 		command := strings.ToLower(inputPieces[0])
@@ -383,11 +384,9 @@ func (c *BotConfig) Update() {
 
 // ResetDailies - Function to call once a day to reset dailies
 func ResetDailies() {
-	for i := range kdb.Users {
-		kdb.Users[i].DoneDailies = false
-	}
-
-	kdb.Write()
+	// for i := range kdb.Users {
+	// 	kdb.Users[i].DoneDailies = false
+	// }
 }
 
 // GetVersion - Get the version of the bot from the readme

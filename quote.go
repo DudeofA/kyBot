@@ -17,24 +17,21 @@ import (
 
 //QuoteAdd - takes quote and adds it to the quote array in the guild
 func QuoteAdd(s *discordgo.Session, m *discordgo.MessageCreate, data string) {
-	gIndex := GetGuildByID(m.GuildID) //Get guild Index
+	guild := kdb.GetGuild(s, m.GuildID) //Get guild Index
 
 	//Add quote to quote object
-	var quoteData = Quote{data, time.Now()}
+	var quoteData = Quote{m.GuildID, data, time.Now()}
 
 	//Append quote onto the guild's quote list
-	kdb.Servers[gIndex].Quotes = append(kdb.Servers[gIndex].Quotes, quoteData)
-
-	//Write back to kdb
-	kdb.Write()
+	kdb.CreateQuote(quoteData)
 }
 
 //QuoteGet - Returns the quote indexed at the argument or a random one if argument if -1
 func QuoteGet(m *discordgo.MessageCreate, index int) Quote {
 	//Get kdb guild index for current guild
-	gIndex := GetGuildByID(m.GuildID)
+	guild := kdb.GetGuild(s, m.GuildID)
 	//Save length of quote list (max for random generator)
-	quoteLen := len(kdb.Servers[gIndex].Quotes)
+	// quoteLen := len(kdb.Servers[gIndex].Quotes)
 
 	//If index is -1, return random quote
 	if index == -1 && quoteLen >= 0 {

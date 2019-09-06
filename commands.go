@@ -20,26 +20,27 @@ import (
 )
 
 func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string, data string) {
-	curGuild := kdb.GetGuild(s, m.GuildID)
+	// Get user and guild of message
+	msgGuild := kdb.GetGuild(s, m.GuildID)
+	msgUser := kdb.GetUser(s, m.Author.ID)
 
 	switch command {
 
 	//----- A C C O U N T -----
-	//Get amount of coins in players account
+	// Get amount of coins in players account
 	case "account", "acc":
-		user := kdb.GetUser(s, m.Author.ID)
-		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("💵 | You have a total of **%d** %scoins", user.Credits, user.Credits))
+		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("💵 | You have a total of **%d** %scoins", msgUser.Credits, msgUser.Credits))
 		break
 
 	//----- A G E -----
-	//Get the age of the (user, channel, guild) ID entered as the argument, or the message creator
+	// Get the age of the (user, channel, guild) ID entered as the argument, or the message creator
 	case "age":
 		var msg string
-		//If no arguments, return age of sender
+		// If no arguments, return age of sender
 		if data == "" {
 			msg = GetAge(m.Author.Mention())
 		} else {
-			//Attempt to get age of argument
+			// Attempt to get age of argument
 			msg = GetAge(data)
 		}
 
@@ -47,7 +48,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 		break
 
 	//----- C O N F I G -----
-	//Modify or reload config
+	// Modify or reload config
 	case "config", "c":
 		if CheckAdmin(s, m) {
 			if strings.ToLower(data) == "reload" {
@@ -61,20 +62,22 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 		}
 
 	//----- D A I L I E S -----
-	//Gets daily Coins
+	// Gets daily Coins
 	case "dailies", "day":
-		//Retrieve user data from memory
-		userData := kdb.GetUser(s, m.Author.ID)
-		//If the dailies have not been done
-		if !userData.DoneDailies {
-			//Mark dailies as done and add the appropriate amount
-			userData.DoneDailies = true
-			userData.Credits += botConfig.DailyAmt
-			//Indicate to user they have recived their dailies
+		// If the dailies have not been done
+		if !msgUser.DoneDailies {
+			// Mark dailies as done and add the appropriate amount
+			msgUser.DoneDailies = true
+			msgUser.Credits += botConfig.DailyAmt
+			kdb.UpdateUser(msgUser)
+			// Indicate to user they have recived their dailies
 			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf(
-				"💵 | Daily %d coins received! Total %scoins: **%d**", botConfig.DailyAmt, curGuild.Config.Coins, userData.Credits))
-			//Write data back out to the file
+				"💵 | Daily %d coins received! Total %scoins: **%d**",
+				botConfig.DailyAmt, msgGuild.Config.Coins, msgUser.Credits))
+			// Write data back out to the file
 		} else {
+			// Display time until dailies are available based on
+			// when the next cronjob will run
 			_, nextRuntime := gocron.NextRun()
 			timeUntil := time.Until(nextRuntime)
 			hour := timeUntil / time.Hour
@@ -102,39 +105,46 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 		break
 
 	//----- D A R L I N G -----
-	//Posts best girl gif
+	// Posts best girl gif
 	case "darling", "02":
-		embedMsg := &discordgo.MessageEmbed{Description: "Zehro Twu", Color: 0xfa00ff,
+		embedMsg := &discordgo.MessageEmbed{Description: "Zero Tuwu", Color: 0xfa00ff,
 			Image: &discordgo.MessageEmbedImage{URL: "https://cdn.discordapp.com/emojis/496406418962776065.gif"}}
 		s.ChannelMessageSendEmbed(m.ChannelID, embedMsg)
 		break
 
 	//----- G A M B L E -----
-	//Gamble away your coins
+	// Gamble away your coins
 	case "gamble", "slots":
 		Slots(s, m, data)
 		break
 
 	//----- H A N G M A N -----
-	//Play hangman
+	// Play hangman
 	case "hangman", "hm":
 		HangmanGame(s, m, data)
 		break
 
 	//----- H E L P -----
-	//Display the readme file
+	// Display the readme file
 	case "help", "h":
 		readme, err := ioutil.ReadFile(pwd + "/README.md")
 		if err != nil {
 			s.ChannelMessageSend(m.ChannelID, "Error openning README, contact bot admin for assistance")
+			break
 		}
 
-		//Print readme within a code blog to make the formatting work output
-		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("```"+string(readme)+"```"))
+		help := strings.SplitAfter(string(readme), "--------")
+		if len(help) < 2 {
+			s.ChannelMessageSend(m.ChannelID, "Misconfigured README, missing `--------` to separate commands")
+			break
+		}
+
+		// Print readme within a code blog to make the formatting work output
+		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("```"+help[1]+"```"))
 		break
 
 	//----- I P -----
-	//Displayed the external IP of the bot
+	// Displayed the external IP of the bot
 	case "ip":
 		if CheckAdmin(s, m) {
 			resp, err := http.Get("http://myexternalip.com/raw")
@@ -148,13 +158,13 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 		break
 
 	//----- K A R M A -----
-	//Displays the current amount of karma the bot has
+	// Displays the current amount of karma the bot has
 	case "karma":
-		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("☯ | Current Karma: %d", curGuild.Karma))
+		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("☯ | Current Karma: %d", msgGuild.Karma))
 		break
 
 	//----- P I N G -----
-	//Replies immediately with 'pong' then calculates the difference of the timestamps to get the ping
+	// Replies immediately with 'pong' then calculates the difference of the timestamps to get the ping
 	case "ping":
 		pongMessage, _ := s.ChannelMessageSend(m.ChannelID, "Pong!")
 		pingTime, _ := m.Timestamp.Parse()
@@ -163,7 +173,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 		break
 
 	//----- Q U O T E -----
-	//Begin a vote for a new quote to be added to the list
+	// Begin a vote for a new quote to be added to the list
 	case "quote", "q":
 		if data != "" {
 			go func() {
@@ -172,30 +182,31 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 				}
 			}()
 		} else {
-			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Command Syntax: %squote <quote content here>", curGuild.Config.Prefix))
+			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Command Syntax: %squote <quote content here>",
+				msgGuild.Config.Prefix))
 		}
 		break
 
 		//----- Q U O T E L I S T -----
-		//List specified quote
+		// List specified quote
 	case "quotelist", "ql":
 		i, err := strconv.Atoi(data)
 		if err != nil {
 			s.ChannelMessageSend(m.ChannelID, "Not a valid number (quotelist <quote index number>)")
 		} else {
-			//Print quote corresponding to the index number
+			// Print quote corresponding to the index number
 			QuotePrint(s, m, QuoteGet(m, i-1))
 		}
 		break
 
 	//----- Q U O T E R A N D -----
-	//Displays a random quote from the database
+	// Displays a random quote from the database
 	case "quoterandom", "qr":
 		QuotePrint(s, m, QuoteGet(m, -1))
 		break
 
 	//----- T E S T -----
-	//Runs the commands in a file because I have no idea what I'm doing
+	// testing
 	case "test":
 		if CheckAdmin(s, m) {
 			s.ChannelMessageSend(m.ChannelID, "Starting testing...")
@@ -205,20 +216,16 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 		break
 
 	//----- V E R S I O N -----
-	//Gets the current version from the readme file and prints it
+	// Gets the current version from the readme file and prints it
 	case "version", "v":
 		ver := GetVersion()
 		s.ChannelMessageSend(m.ChannelID, ver)
 		break
 
 	//----- V O I C E   S E R V E R -----
-	//Changes the voice server in case of server outage
+	// Changes the voice server in case of server outage
 	case "voiceserver", "vc":
 		//Get guild data
-		guild, err := s.Guild(m.GuildID)
-		if err != nil {
-			panic(err)
-		}
 
 		var gParam discordgo.GuildParams
 
@@ -231,7 +238,8 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 			}
 			break
 		case "":
-			region := fmt.Sprintf("The server is currently in region: %s\nTo change it, use %svoiceserver <server name>\nOptions are: \n```\nus-east, us-central, us-south, us-west\n```", guild.Region, curGuild.Config.Prefix)
+			region := fmt.Sprintf("The server is currently in region: _*%s*_\nTo change it, use %svoiceserver <server name>\nOptions are: \n```\nus-east, us-central, us-south, us-west\n```",
+				msgGuild.Region, msgGuild.Config.Prefix)
 			s.ChannelMessageSend(m.ChannelID, region)
 			break
 

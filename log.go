@@ -107,11 +107,11 @@ func LogMsg(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 //LogVoice - log voice events in the log channel
 func LogVoice(s *discordgo.Session, v *discordgo.VoiceStateUpdate) {
+	//Get KDB user data
+	KDBuser := kdb.GetUser(s, v.UserID)
+
 	//If logs are able to be written to a channel
 	if LogValid(s) {
-
-		//Get KDB user data
-		KDBuser := kdb.GetUser(s, v.UserID)
 
 		//If user hasn't changed channels, do nothing (usually a mute or deafen)
 		if KDBuser.CurrentCID == v.ChannelID {
@@ -166,7 +166,6 @@ func LogVoice(s *discordgo.Session, v *discordgo.VoiceStateUpdate) {
 	//Update KDB with voice channel info
 	KDBuser.LastSeenCID = KDBuser.CurrentCID
 	KDBuser.CurrentCID = v.ChannelID
-	kdb.Write()
 }
 
 // LogTxt - log information/errors from functions
