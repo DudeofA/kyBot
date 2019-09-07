@@ -10,6 +10,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"os"
 	"time"
 
@@ -223,7 +224,7 @@ func (k *KDB) InsertUser(s *discordgo.Session, id string) (user UserInfo) {
 	LogTxt(s, "INFO", fmt.Sprintf("User \"%s\" [%s] inserted into DB (MongoID#%S)",
 		user.Name, user.ID, objID.InsertedID))
 
-	return
+	return user
 }
 
 // UpdateUser - update user in database based on user argument
@@ -255,14 +256,35 @@ func (k *KDB) UpdateHM(hm Hangman) {
 //----- Q U O T E   M A N A G E M E N T -----
 
 // InsertQuote - create quote and insert it into the database
-func (k *KDB) InsertQuote(quote Quote) {
-	//
+func (k *KDB) InsertQuote(s *discordgo.Session, guildID string, quoteText string) (quote Quote) {
+
+	// Generate 3 letter identifier
+	var letterRunes = []rune("abcdefghijklmnopqrstuvwxyz")
+	b := make([]rune, 3)
+	for i := range b {
+		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+	}
+	identifier := string(b)
+
+	// Add quote to quote object
+	quote = Quote{guildID, identifier, quoteText, time.Now()}
+
+	// Add quote to quote collection
+	objID, err := kdb.QuoteColl.InsertOne(context.Background(), quote)
+	if err != nil {
+		panic(err)
+	}
+	LogTxt(s, "INFO", fmt.Sprintf("Quote \"%s\" [%s] inserted into DB (MongoID#%S)",
+		quote.Identifier, quote.Quote, objID.InsertedID))
+
+	return quote
 }
 
 // ReadQuote - try to get the vote from the database, returning empty quote if none found
 //	returns random quote with no argument
 func (k *KDB) ReadQuote(identifier string) (quote Quote) {
 	//
+	return quote
 }
 
 // UpdateQuote -

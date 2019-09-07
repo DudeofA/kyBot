@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -178,7 +177,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 		if data != "" {
 			go func() {
 				if startVote(s, m, fmt.Sprintf("0 %s", data)) == 0 {
-					QuoteAdd(s, m, data)
+					kdb.InsertQuote(s, m.GuildID, data)
 				}
 			}()
 		} else {
@@ -190,19 +189,14 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 		//----- Q U O T E L I S T -----
 		// List specified quote
 	case "quotelist", "ql":
-		i, err := strconv.Atoi(data)
-		if err != nil {
-			s.ChannelMessageSend(m.ChannelID, "Not a valid number (quotelist <quote index number>)")
-		} else {
-			// Print quote corresponding to the index number
-			QuotePrint(s, m, QuoteGet(s, m, i-1))
-		}
+		// Print quote corresponding to the index number
+		QuotePrint(s, m, QuoteGet(s, m, data))
 		break
 
 	//----- Q U O T E R A N D -----
 	// Displays a random quote from the database
 	case "quoterandom", "qr":
-		QuotePrint(s, m, QuoteGet(s, m, -1))
+		QuotePrint(s, m, QuoteGet(s, m, ""))
 		break
 
 	//----- T E S T -----

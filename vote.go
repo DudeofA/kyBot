@@ -36,7 +36,7 @@ func startVote(s *discordgo.Session, m *discordgo.MessageCreate, data string) in
 	case 0:
 		s.ChannelMessageSend(m.ChannelID, "Starting vote...cast your vote now!")
 		//Send and save the vote message to be modified later
-		voteMsg = QuotePrint(s, m, Quote{fmt.Sprint(text), time.Now()})
+		voteMsg = QuotePrint(s, m, text)
 		voteMsg.GuildID = m.GuildID
 		ReactionAdd(s, voteMsg, "UPVOTE")
 		ReactionAdd(s, voteMsg, "DOWNVOTE")
