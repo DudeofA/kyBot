@@ -126,7 +126,7 @@ func main() {
 	if runtime.GOOS == "windows" {
 		_, err = os.Stat(filepath.FromSlash(pwd + "/dict/words.txt"))
 		if err != nil {
-			fmt.Println("No dictionary file supplied, please add words.txt to the data folder, full of words to use for hangman")
+			fmt.Println("No dictionary file supplied, please add words.txt to the dict folder, full of words to use for hangman")
 			return
 		}
 	} else {

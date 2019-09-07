@@ -135,7 +135,6 @@ func Slots(s *discordgo.Session, m *discordgo.MessageCreate, data string) {
 func HangmanGame(s *discordgo.Session, m *discordgo.MessageCreate, data string) {
 	var usage = "```\n----- HANGMAN -----\nhangman (start, channel, guess <word/phrase>, reprint, quit)\nReact with the letter to guess\n```"
 
-	curGuild := kdb.ReadGuild(s, m.GuildID)
 	hmSession := kdb.ReadHM(m.GuildID)
 
 	// Parse the data passed along with the command

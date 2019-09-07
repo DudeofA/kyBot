@@ -28,7 +28,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 	//----- A C C O U N T -----
 	// Get amount of coins in players account
 	case "account", "acc":
-		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("💵 | You have a total of **%d** %scoins", msgUser.Credits, msgUser.Credits))
+		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("💵 | You have a total of **%d** %scoins", msgUser.Credits, msgGuild.Config.Coins))
 		break
 
 	//----- A G E -----
@@ -189,14 +189,14 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 		//----- Q U O T E L I S T -----
 		// List specified quote
 	case "quotelist", "ql":
-		// Print quote corresponding to the index number
-		QuotePrint(s, m, QuoteGet(s, m, data))
+		// Print quote corresponding to the identifier
+		QuotePrint(s, m, kdb.ReadQuote(data))
 		break
 
 	//----- Q U O T E R A N D -----
 	// Displays a random quote from the database
 	case "quoterandom", "qr":
-		QuotePrint(s, m, QuoteGet(s, m, ""))
+		QuotePrint(s, m, kdb.ReadQuote(""))
 		break
 
 	//----- T E S T -----

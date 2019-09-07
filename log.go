@@ -179,3 +179,9 @@ func LogTxt(s *discordgo.Session, msgType string, msg string) {
 		s.ChannelMessageSend(botConfig.LogID, fmtMsg)
 	}
 }
+
+// LogDB - log database manipulation
+func LogDB(s *discordgo.Session, itemType, name, id, action string, objID interface{}) {
+	fmtLog := fmt.Sprintf("%s \"%s\" [%s] %s into DB [%s]", itemType, name, id, action, objID)
+	LogTxt(s, "DATABASE", fmtLog)
+}

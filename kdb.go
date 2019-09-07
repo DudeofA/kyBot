@@ -62,8 +62,8 @@ type GuildConfig struct {
 
 // Emote - customizable emotes for reactions the bot adds
 type Emote struct {
-	UPVOTE   string `json:"upvote" bson:"upvote"`     // Upvote emotes
-	DOWNVOTE string `json:"downvote" bson:"downvote"` // Downvote emotes
+	Upvote   string `json:"upvote" bson:"upvote"`     // Upvote emotes
+	Downvote string `json:"downvote" bson:"downvote"` // Downvote emotes
 }
 
 // Hangman - State of hangman game
@@ -89,16 +89,15 @@ type Quote struct {
 
 // UserInfo - Hold all pertaining information for each user
 type UserInfo struct {
-	ID            string   `json:"userID" bson:"userID"`               // User ID
-	Name          string   `json:"name" bson:"name"`                   // Username
-	Discriminator string   `json:"discriminator" bson:"discriminator"` // Unique identifier (#4712)
-	Guilds        []string `json:"guilds" bson:"guilds"`               // List of Guild IDs user is a part of
-	CurrentCID    string   `json:"currentCID" bson:"currentCID"`       // Current channel ID
-	LastSeenCID   string   `json:"lastSeenCID" bson:"lastSeenCID"`     // Last seen channel ID
-	Anthem        string   `json:"anthem" bson:"anthem"`               // Anthem to play when joining a channel
-	Credits       int      `json:"credits" bson:"credits"`             // Credits gained from dailies
-	PlayAnthem    bool     `json:"playAnthem" bson:"playAnthem"`       // True if anthem should play when user joins channel
-	DoneDailies   bool     `json:"dailies" bson:"dailies"`             // True if dailies have been claimed today
+	ID            string `json:"userID" bson:"userID"`               // User ID
+	Name          string `json:"name" bson:"name"`                   // Username
+	Discriminator string `json:"discriminator" bson:"discriminator"` // Unique identifier (#4712)
+	CurrentCID    string `json:"currentCID" bson:"currentCID"`       // Current channel ID
+	LastSeenCID   string `json:"lastSeenCID" bson:"lastSeenCID"`     // Last seen channel ID
+	Anthem        string `json:"anthem" bson:"anthem"`               // Anthem to play when joining a channel
+	Credits       int    `json:"credits" bson:"credits"`             // Credits gained from dailies
+	PlayAnthem    bool   `json:"playAnthem" bson:"playAnthem"`       // True if anthem should play when user joins channel
+	DoneDailies   bool   `json:"dailies" bson:"dailies"`             // True if dailies have been claimed today
 }
 
 // Reminders - holds reminders for the bot to tell the user about
@@ -148,7 +147,7 @@ func (k *KDB) ReadGuild(s *discordgo.Session, id string) (guild GuildInfo) {
 		return k.InsertGuild(s, id)
 	}
 
-	return k.InsertGuild(s, id)
+	return guild
 }
 
 // InsertGuild - Create server from given ID
@@ -164,8 +163,8 @@ func (k *KDB) InsertGuild(s *discordgo.Session, id string) (guild GuildInfo) {
 	guild.Name = discordGuild.Name
 	guild.Region = discordGuild.Region
 	// Set emotes to default
-	guild.Emotes.UPVOTE = "⬆"
-	guild.Emotes.DOWNVOTE = "⬇"
+	guild.Emotes.Upvote = "⬆"
+	guild.Emotes.Downvote = "⬇"
 	// Set prefix to default
 	guild.Config.Prefix = "k!"
 	// Set votes to default minimum
@@ -177,8 +176,7 @@ func (k *KDB) InsertGuild(s *discordgo.Session, id string) (guild GuildInfo) {
 		panic(err)
 	}
 
-	LogTxt(s, "INFO", fmt.Sprintf("Guild \"%s\" [%s] inserted into DB (MongoID#%S)",
-		guild.Name, guild.ID, objID.InsertedID))
+	LogDB(s, "Guild", guild.Name, guild.ID, "inserted", objID.InsertedID)
 
 	return guild
 }
@@ -221,8 +219,8 @@ func (k *KDB) InsertUser(s *discordgo.Session, id string) (user UserInfo) {
 	if err != nil {
 		panic(err)
 	}
-	LogTxt(s, "INFO", fmt.Sprintf("User \"%s\" [%s] inserted into DB (MongoID#%S)",
-		user.Name, user.ID, objID.InsertedID))
+
+	LogDB(s, "User", user.Name, user.ID, "inserted", objID.InsertedID)
 
 	return user
 }
@@ -274,7 +272,7 @@ func (k *KDB) InsertQuote(s *discordgo.Session, guildID string, quoteText string
 	if err != nil {
 		panic(err)
 	}
-	LogTxt(s, "INFO", fmt.Sprintf("Quote \"%s\" [%s] inserted into DB (MongoID#%S)",
+	LogTxt(s, "INFO", fmt.Sprintf("Quote \"%s\" [%s] inserted into DB [%s]",
 		quote.Identifier, quote.Quote, objID.InsertedID))
 
 	return quote
