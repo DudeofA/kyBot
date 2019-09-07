@@ -71,7 +71,7 @@ func Slots(s *discordgo.Session, m *discordgo.MessageCreate, data string) {
 	}
 
 	// Check gambler has enough in their account
-	gambler := kdb.GetUser(s, m.Author.ID)
+	gambler := kdb.ReadUser(s, m.Author.ID)
 	// Save credit balance for later - comparison
 	originalCredits := gambler.Credits
 	if originalCredits < wager {
@@ -135,8 +135,8 @@ func Slots(s *discordgo.Session, m *discordgo.MessageCreate, data string) {
 func HangmanGame(s *discordgo.Session, m *discordgo.MessageCreate, data string) {
 	var usage = "```\n----- HANGMAN -----\nhangman (start, channel, guess <word/phrase>, reprint, quit)\nReact with the letter to guess\n```"
 
-	curGuild := kdb.GetGuild(s, m.GuildID)
-	hmSession := kdb.GetHM(m.GuildID)
+	curGuild := kdb.ReadGuild(s, m.GuildID)
+	hmSession := kdb.ReadHM(m.GuildID)
 
 	// Parse the data passed along with the command
 	var command string
@@ -310,7 +310,7 @@ func (hmSession *Hangman) UpdateState(s *discordgo.Session, authorID string) {
 	var gameMessage string
 	if hmSession.GameState < 0 {
 		hmWinnings := len(hmSession.Word) * 10
-		winner := kdb.GetUser(s, authorID)
+		winner := kdb.ReadUser(s, authorID)
 		gameMessage = fmt.Sprintf("Guessed correctly by %s\n", winner.Name)
 		s.ChannelMessageSend(hmSession.Channel, fmt.Sprintf("YOU GOT IT <@%s> - Enjoy the %d coins!\n",
 			winner.ID, hmWinnings))

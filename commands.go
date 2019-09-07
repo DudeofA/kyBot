@@ -21,8 +21,8 @@ import (
 
 func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string, data string) {
 	// Get user and guild of message
-	msgGuild := kdb.GetGuild(s, m.GuildID)
-	msgUser := kdb.GetUser(s, m.Author.ID)
+	msgGuild := kdb.ReadGuild(s, m.GuildID)
+	msgUser := kdb.ReadUser(s, m.Author.ID)
 
 	switch command {
 
@@ -195,14 +195,14 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 			s.ChannelMessageSend(m.ChannelID, "Not a valid number (quotelist <quote index number>)")
 		} else {
 			// Print quote corresponding to the index number
-			QuotePrint(s, m, QuoteGet(m, i-1))
+			QuotePrint(s, m, QuoteGet(s, m, i-1))
 		}
 		break
 
 	//----- Q U O T E R A N D -----
 	// Displays a random quote from the database
 	case "quoterandom", "qr":
-		QuotePrint(s, m, QuoteGet(m, -1))
+		QuotePrint(s, m, QuoteGet(s, m, -1))
 		break
 
 	//----- T E S T -----

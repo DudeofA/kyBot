@@ -78,9 +78,10 @@ type Hangman struct {
 
 // Quote - Data about quotes and quotes themselves
 type Quote struct {
-	GuildID   string    `json:"guildID" bson:"guildID"`     // Guild quote is from
-	Quote     string    `json:"quote" bson:"quote"`         // Actual quoted text
-	Timestamp time.Time `json:"timestamp" bson:"timestamp"` // Timestamp when quote was recorded
+	GuildID    string    `json:"guildID" bson:"guildID"`       // Guild quote is from
+	Identifier string    `json:"identifier" bson:"identifier"` // Word to identify quote
+	Quote      string    `json:"quote" bson:"quote"`           // Actual quoted text
+	Timestamp  time.Time `json:"timestamp" bson:"timestamp"`   // Timestamp when quote was recorded
 }
 
 //----- U S E R   S T A T S -----
@@ -89,13 +90,13 @@ type Quote struct {
 type UserInfo struct {
 	ID            string   `json:"userID" bson:"userID"`               // User ID
 	Name          string   `json:"name" bson:"name"`                   // Username
-	Discriminator string   `json:"discriminator" bson:"discriminator"` // Unique identifier
+	Discriminator string   `json:"discriminator" bson:"discriminator"` // Unique identifier (#4712)
 	Guilds        []string `json:"guilds" bson:"guilds"`               // List of Guild IDs user is a part of
 	CurrentCID    string   `json:"currentCID" bson:"currentCID"`       // Current channel ID
 	LastSeenCID   string   `json:"lastSeenCID" bson:"lastSeenCID"`     // Last seen channel ID
-	PlayAnthem    bool     `json:"playAnthem" bson:"playAnthem"`       // True if anthem should play when user joins channel
 	Anthem        string   `json:"anthem" bson:"anthem"`               // Anthem to play when joining a channel
 	Credits       int      `json:"credits" bson:"credits"`             // Credits gained from dailies
+	PlayAnthem    bool     `json:"playAnthem" bson:"playAnthem"`       // True if anthem should play when user joins channel
 	DoneDailies   bool     `json:"dailies" bson:"dailies"`             // True if dailies have been claimed today
 }
 
@@ -138,19 +139,19 @@ func (k *KDB) Init() {
 
 //----- G U I L D   M A N A G E M E N T -----
 
-// GetGuild - Get the server information from the db
-func (k *KDB) GetGuild(s *discordgo.Session, id string) (guild GuildInfo) {
+// ReadGuild - Get the server information from the db
+func (k *KDB) ReadGuild(s *discordgo.Session, id string) (guild GuildInfo) {
 	filter := bson.D{{"gID", id}}
 	err := k.GuildColl.FindOne(context.Background(), filter).Decode(&guild)
 	if err != nil {
-		return k.CreateGuild(s, id)
+		return k.InsertGuild(s, id)
 	}
 
-	return k.CreateGuild(s, id)
+	return k.InsertGuild(s, id)
 }
 
-// CreateGuild - Create server from given ID
-func (k *KDB) CreateGuild(s *discordgo.Session, id string) (guild GuildInfo) {
+// InsertGuild - Create server from given ID
+func (k *KDB) InsertGuild(s *discordgo.Session, id string) (guild GuildInfo) {
 
 	discordGuild, err := s.Guild(id)
 	if err != nil {
@@ -188,18 +189,18 @@ func (k *KDB) UpdateGuild(guild GuildInfo) {
 
 //----- U S E R   M A N A G E M E N T -----
 
-// GetUser - Query database for user, creating a new one if none exists
-func (k *KDB) GetUser(s *discordgo.Session, id string) (user UserInfo) {
+// ReadUser - Query database for user, creating a new one if none exists
+func (k *KDB) ReadUser(s *discordgo.Session, id string) (user UserInfo) {
 	filter := bson.D{{"userID", id}}
 	err := k.UserColl.FindOne(context.Background(), filter).Decode(&user)
 	if err != nil {
-		return k.CreateUser(s, id)
+		return k.InsertUser(s, id)
 	}
 	return user
 }
 
-// CreateUser - create user with default values and return it
-func (k *KDB) CreateUser(s *discordgo.Session, id string) (user UserInfo) {
+// InsertUser - create user with default values and return it
+func (k *KDB) InsertUser(s *discordgo.Session, id string) (user UserInfo) {
 	// Get user info from discord
 	discordUser, err := s.User(id)
 	if err != nil {
@@ -232,15 +233,15 @@ func (k *KDB) UpdateUser(user UserInfo) {
 
 //----- H A N G M A N   M A N A G E M E N T -----
 
-// GetHM - get hangman session from hangman collection
-func (k *KDB) GetHM(guildID string) (hm Hangman) {
+// ReadHM - get hangman session from hangman collection
+func (k *KDB) ReadHM(guildID string) (hm Hangman) {
 	//
 
 	return hm
 }
 
-// CreateHM - create hangman session if none exists
-func (k *KDB) CreateHM(guildID string) (hm Hangman) {
+// InsertHM - create hangman session if none exists
+func (k *KDB) InsertHM(guildID string) (hm Hangman) {
 	//
 
 	return hm
@@ -253,7 +254,18 @@ func (k *KDB) UpdateHM(hm Hangman) {
 
 //----- Q U O T E   M A N A G E M E N T -----
 
-// CreateQuote - create quote and insert it into the database
-func (k *KDB) CreateQuote(quote Quote) {
+// InsertQuote - create quote and insert it into the database
+func (k *KDB) InsertQuote(quote Quote) {
+	//
+}
+
+// ReadQuote - try to get the vote from the database, returning empty quote if none found
+//	returns random quote with no argument
+func (k *KDB) ReadQuote(identifier string) (quote Quote) {
+	//
+}
+
+// UpdateQuote -
+func (k *KDB) UpdateQuote(identifier string, newID string) {
 	//
 }

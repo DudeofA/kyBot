@@ -261,7 +261,7 @@ func VoiceStateUpdate(s *discordgo.Session, v *discordgo.VoiceStateUpdate) {
 // MessageCreate - Called whenever a message is sent to the discord
 func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	// Get Guild index to use later on
-	guild := kdb.GetGuild(s, m.GuildID)
+	guild := kdb.ReadGuild(s, m.GuildID)
 
 	// Return if the message was sent by a bot to avoid infinite loops
 	if m.Author.Bot || m.ChannelID == botConfig.LogID {

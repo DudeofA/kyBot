@@ -102,13 +102,13 @@ func LogMsg(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	//Update KDB
-	kdb.GetUser(s, m.Author.ID)
+	kdb.ReadUser(s, m.Author.ID)
 }
 
 //LogVoice - log voice events in the log channel
 func LogVoice(s *discordgo.Session, v *discordgo.VoiceStateUpdate) {
 	//Get KDB user data
-	KDBuser := kdb.GetUser(s, v.UserID)
+	KDBuser := kdb.ReadUser(s, v.UserID)
 
 	//If logs are able to be written to a channel
 	if LogValid(s) {

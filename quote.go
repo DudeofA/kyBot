@@ -8,6 +8,7 @@ kylixor.com
 package main
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"time"
@@ -15,47 +16,46 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-//QuoteAdd - takes quote and adds it to the quote array in the guild
+// QuoteAdd - takes quote and adds it to the quote array in the guild
 func QuoteAdd(s *discordgo.Session, m *discordgo.MessageCreate, data string) {
-	guild := kdb.GetGuild(s, m.GuildID) //Get guild Index
+	guild := kdb.ReadGuild(s, m.GuildID) //Get guild Index
 
-	//Add quote to quote object
-	var quoteData = Quote{m.GuildID, data, time.Now()}
+	var letterRunes = []rune("abcdefghijklmnopqrstuvwxyz")
 
-	//Append quote onto the guild's quote list
-	kdb.CreateQuote(quoteData)
+	// Generate 3 letter identifier
+	b := make([]rune, 3)
+	for i := range b {
+		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+	}
+	identifier := string(b)
+
+	// Add quote to quote object
+	var quoteData = Quote{m.GuildID, identifier, data, time.Now()}
+
+	// Append quote onto the guild's quote list
+	kdb.InsertQuote(quoteData)
 }
 
-//QuoteGet - Returns the quote indexed at the argument or a random one if argument if -1
-func QuoteGet(m *discordgo.MessageCreate, index int) Quote {
-	//Get kdb guild index for current guild
-	guild := kdb.GetGuild(s, m.GuildID)
-	//Save length of quote list (max for random generator)
-	// quoteLen := len(kdb.Servers[gIndex].Quotes)
-
-	//If index is -1, return random quote
-	if index == -1 && quoteLen >= 0 {
-		index = rand.Intn(quoteLen)
+// QuoteGet - Returns the quote indexed at the argument or a random one if argument if -1
+func QuoteGet(s *discordgo.Session, m *discordgo.MessageCreate, identifier string) Quote {
+	// Get kdb guild index for current guild
+	guild := kdb.ReadGuild(s, m.GuildID)
+	// Save length of quote list (max for random generator)
+	quoteLen64, err := kdb.QuoteColl.EstimatedDocumentCount(context.Background())
+	if err != nil {
+		panic(err)
 	}
+	quoteLen := int(quoteLen64)
 
-	//Return the quote as long as it is valid
-	if index < quoteLen && index >= 0 {
-		//Get original quote
-		rawQuote := kdb.Servers[gIndex].Quotes[index]
-		//Add index of quote to be displayed
-		rawQuote.Quote = fmt.Sprintf("[%d]# %s", index+1, rawQuote.Quote)
-		return rawQuote
-	}
-
-	//Return empty quote if fail
-	return Quote{"Doesn't seem to be a quote here...", time.Time{}}
+	// If idenifier is blank, return a random quote
+	return kdb.ReadQuote("")
 }
 
-//QuotePrint - Prints the quote with nice colors
+// QuotePrint - Prints the quote with nice colors
 func QuotePrint(s *discordgo.Session, m *discordgo.MessageCreate, q Quote) *discordgo.Message {
-	//Format quote with colors using the CSS formatting
+	// Format quote with colors using the CSS formatting
 	fmtQuote := fmt.Sprintf("```ini\n[ %s ]\n%s\n```", q.Timestamp.Format("Jan 2 3:04:05PM 2006"), q.Quote)
-	//Return the sent message for vote monitoring
+	// Return the sent message for vote monitoring
 	msg, _ := s.ChannelMessageSend(m.ChannelID, fmtQuote)
 	return msg
 }
