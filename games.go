@@ -117,7 +117,7 @@ func Slots(s *discordgo.Session, m *discordgo.MessageCreate, data string) {
 
 	// Give winnings and write data back
 	gambler.Credits += winnings
-	kdb.UpdateUser(gambler)
+	kdb.UpdateUser(s, gambler)
 
 	// Display the slots
 	s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s %s %s", slots[slot1], slots[slot2], slots[slot3]))
@@ -135,8 +135,6 @@ func Slots(s *discordgo.Session, m *discordgo.MessageCreate, data string) {
 func HangmanGame(s *discordgo.Session, m *discordgo.MessageCreate, data string) {
 	var usage = "```\n----- HANGMAN -----\nhangman (start, channel, guess <word/phrase>, reprint, quit)\nReact with the letter to guess\n```"
 
-	hmSession := kdb.ReadHM(m.GuildID)
-
 	// Parse the data passed along with the command
 	var command string
 	var argument string
@@ -147,6 +145,8 @@ func HangmanGame(s *discordgo.Session, m *discordgo.MessageCreate, data string) 
 	if len(dataArray) > 1 {
 		argument = strings.TrimSpace(dataArray[1])
 	}
+
+	hmSession := kdb.ReadHM(s, m.GuildID)
 
 	switch strings.TrimSpace(strings.ToLower(command)) {
 	// Usage
@@ -178,7 +178,6 @@ func HangmanGame(s *discordgo.Session, m *discordgo.MessageCreate, data string) 
 
 		//Generate word and board
 		hmSession.GenerateWord()
-
 		hmSession.UpdateState(s, m.Author.ID)
 		break
 
@@ -205,26 +204,25 @@ func HangmanGame(s *discordgo.Session, m *discordgo.MessageCreate, data string) 
 		}
 
 		hmSession.Channel = hmChannel.ID
-		kdb.UpdateHM(hmSession)
+		kdb.UpdateHM(s, hmSession)
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Changed game channel to %s", hmChannel.Mention()))
 		break
 
-	//Guess final word/phrase
+	// Can guess a word or letter
 	case "guess":
-		hmSession.Guess(s, argument)
-
+		// Try to delete message to keep game clean
 		err := s.ChannelMessageDelete(m.ChannelID, m.ID)
 		if err != nil {
-			panic(err)
+			LogTxt(s, "INFO", "Bot does not have permission to delete messages, hangman may become messy")
 		}
 
+		hmSession.Guess(s, argument)
 		hmSession.UpdateState(s, m.Author.ID)
 		break
 
 	case "reprint":
 		if hmSession.GameState > 0 {
 			hmSession.Message = ""
-			kdb.UpdateHM(hmSession)
 			hmSession.UpdateState(s, m.Author.ID)
 		}
 		break
@@ -235,25 +233,25 @@ func HangmanGame(s *discordgo.Session, m *discordgo.MessageCreate, data string) 
 			return
 		}
 
-		//Edit game
+		// Clean up and end game
 		embed := GenerateHMLinkEmbed(m.GuildID, hmSession, "Game ended\n")
 		s.ChannelMessageSendEmbed(m.ChannelID, embed)
 		hmSession.GameState = len(hmStages)
-		kdb.UpdateHM(hmSession)
 		hmSession.UpdateState(s, m.Author.ID)
 
 		hmSession.ResetGame()
+		kdb.UpdateHM(s, hmSession)
 		break
 	}
 }
 
-//GenerateWord - Generate random phrase/word for Hangman
+// GenerateWord - Generate random phrase/word for Hangman
 func (hmSession *Hangman) GenerateWord() {
-	//Open ENTIRE dictionary in unix
+	// Open ENTIRE dictionary in unix
 	var err error
 	file, err := os.Open(filepath.FromSlash("/usr/share/dict/words"))
 
-	//for fithy Windows users
+	// For fithy Windows users
 	if err != nil {
 		file, err = os.Open(filepath.FromSlash(pwd + "/data/words.txt"))
 		if err != nil {
@@ -262,18 +260,18 @@ func (hmSession *Hangman) GenerateWord() {
 		}
 	}
 
-	//Read file into array
+	// Read file into array
 	bytes, err := ioutil.ReadAll(file)
 	if err != nil {
 		panic(err)
 	}
 	allWords := strings.Split(string(bytes), "\n")
 
-	//Generate a random phrase of the specified length
+	// Generate a random phrase of the specified length
 	word := allWords[rand.Intn(len(allWords))]
+	// Remove 's
 	word = strings.Replace(word, "'s", "", -1)
 
-	//Remove 's
 	hmSession.Word = word
 
 	for i := 0; i < len(hmSession.Word); i++ {
@@ -281,7 +279,7 @@ func (hmSession *Hangman) GenerateWord() {
 	}
 }
 
-//GenerateHMLinkEmbed - generate a simple embed to link to the current game of Hangman
+// GenerateHMLinkEmbed - generate a simple embed to link to the current game of Hangman
 func GenerateHMLinkEmbed(guildID string, hmSession Hangman, note string) (embed *discordgo.MessageEmbed) {
 	link := "https://discordapp.com/channels/"
 	messageLink := link + guildID + "/" + hmSession.Channel + "/" + hmSession.Message
@@ -294,7 +292,7 @@ func GenerateHMLinkEmbed(guildID string, hmSession Hangman, note string) (embed 
 }
 
 //UpdateState - prints the current state of the hangman game
-func (hmSession *Hangman) UpdateState(s *discordgo.Session, authorID string) {
+func (hmSession Hangman) UpdateState(s *discordgo.Session, authorID string) {
 
 	//Append guesses into one big string
 	guesses := "Guesses: "
@@ -314,7 +312,7 @@ func (hmSession *Hangman) UpdateState(s *discordgo.Session, authorID string) {
 		s.ChannelMessageSend(hmSession.Channel, fmt.Sprintf("YOU GOT IT <@%s> - Enjoy the %d coins!\n",
 			winner.ID, hmWinnings))
 		winner.Credits += hmWinnings
-		kdb.UpdateUser(winner)
+		kdb.UpdateUser(s, winner)
 
 		// Put the word in the underline
 		wordSplice := strings.Split(hmSession.Word, "")
@@ -364,6 +362,8 @@ func (hmSession *Hangman) UpdateState(s *discordgo.Session, authorID string) {
 
 		hmSession.ResetGame()
 	}
+
+	kdb.UpdateHM(s, hmSession)
 }
 
 //ResetGame - resets game stats back to defaults

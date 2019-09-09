@@ -199,7 +199,7 @@ func main() {
 	fmt.Println("Closing discord websocket...")
 	ky.Close()
 	fmt.Println("Closing database connection...")
-	kdb.Client.Disconnect(context.TODO())
+	mdbClient.Disconnect(context.TODO())
 	fmt.Println("Done...ending process...goodbye...")
 	os.Exit(0)
 }
@@ -279,14 +279,14 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	// Good Karma
 	if strings.ToLower(m.Content) == "good bot" {
 		guild.Karma++
-		kdb.UpdateGuild(guild)
+		kdb.UpdateGuild(s, guild)
 		s.MessageReactionAdd(m.ChannelID, m.ID, "😊")
 	}
 
 	// Bad Karma
 	if strings.ToLower(m.Content) == "bad bot" {
 		guild.Karma--
-		kdb.UpdateGuild(guild)
+		kdb.UpdateGuild(s, guild)
 		s.MessageReactionAdd(m.ChannelID, m.ID, "😞")
 	}
 
@@ -504,4 +504,16 @@ func GetAge(rawID string) string {
 
 	return fmt.Sprintf("%s was created on %s. They are %s%s%s%d hours old.",
 		rawID, t.Format("Jan 2 3:04:05PM 2006"), tYears, tDays, and, int(tAlive.Hours()))
+}
+
+// QuotePrint - Prints the quote with nice colors
+func QuotePrint(s *discordgo.Session, m *discordgo.MessageCreate, q Quote) *discordgo.Message {
+	// Format quote with colors using the CSS formatting
+	fmtQuote := fmt.Sprintf("```ini\n[ %s ] - [ %s ]\n%s\n```", q.Timestamp.Format("Jan 2 3:04:05PM 2006"), q.Identifier, q.Quote)
+	// Return the sent message for vote monitoring
+	msg, err := s.ChannelMessageSend(m.ChannelID, fmtQuote)
+	if err != nil {
+		panic(err)
+	}
+	return msg
 }

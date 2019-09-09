@@ -18,7 +18,7 @@ update: ## Updates dependencies
 	go get -u "go.mongodb.org/mongo-driver/mongo"
 
 clean: ## Removes compiled Kylixor binaries.
-	rm -f bin/kylixor
+	rm bin/kylixor
 
 install: ## Copies kylixor binary to /usr/local/bin for easy execution and restarts the service
 	systemctl restart kylixor

@@ -68,12 +68,11 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 			// Mark dailies as done and add the appropriate amount
 			msgUser.DoneDailies = true
 			msgUser.Credits += botConfig.DailyAmt
-			kdb.UpdateUser(msgUser)
+			kdb.UpdateUser(s, msgUser)
 			// Indicate to user they have recived their dailies
 			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf(
 				"💵 | Daily %d coins received! Total %scoins: **%d**",
 				botConfig.DailyAmt, msgGuild.Config.Coins, msgUser.Credits))
-			// Write data back out to the file
 		} else {
 			// Display time until dailies are available based on
 			// when the next cronjob will run
@@ -132,7 +131,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 			break
 		}
 
-		help := strings.SplitAfter(string(readme), "--------")
+		help := strings.SplitAfter(string(readme), ":")
 		if len(help) < 2 {
 			s.ChannelMessageSend(m.ChannelID, "Misconfigured README, missing `--------` to separate commands")
 			break
@@ -177,7 +176,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 		if data != "" {
 			go func() {
 				if startVote(s, m, fmt.Sprintf("0 %s", data)) == 0 {
-					kdb.InsertQuote(s, m.GuildID, data)
+					kdb.CreateQuote(s, m.GuildID, data)
 				}
 			}()
 		} else {
@@ -190,13 +189,15 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 		// List specified quote
 	case "quotelist", "ql":
 		// Print quote corresponding to the identifier
-		QuotePrint(s, m, kdb.ReadQuote(data))
+		quote := kdb.ReadQuote(m.GuildID, data)
+		QuotePrint(s, m, quote)
 		break
 
 	//----- Q U O T E R A N D -----
 	// Displays a random quote from the database
 	case "quoterandom", "qr":
-		QuotePrint(s, m, kdb.ReadQuote(""))
+		quote := kdb.ReadQuote(m.GuildID, "")
+		QuotePrint(s, m, quote)
 		break
 
 	//----- T E S T -----
@@ -230,6 +231,8 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 			if err != nil {
 				s.ChannelMessageSend(m.ChannelID, err.Error())
 			}
+			msgGuild.Region = data
+			kdb.UpdateGuild(s, msgGuild)
 			break
 		case "":
 			region := fmt.Sprintf("The server is currently in region: _*%s*_\nTo change it, use %svoiceserver <server name>\nOptions are: \n```\nus-east, us-central, us-south, us-west\n```",

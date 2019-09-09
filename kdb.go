@@ -21,17 +21,14 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-//----- M A S T E R   D A T A B A S E
-// Kylixor """"Database""""
-var kdb KDB
+//----- M O N G O   C O N N E C T I O N -----
+var mdbClient *mongo.Client
 
 //----- K D B   S T R U C T U R E -----
+var kdb KDB
 
 // KDB - Structure for holding pointers to all necessary data
 type KDB struct {
-	DB     *mongo.Database // Mongo database pointer
-	Client *mongo.Client   // Database client connection
-
 	// Collections within database
 	UserColl     *mongo.Collection // Collection for user info
 	GuildColl    *mongo.Collection // Collection for guilds/server info
@@ -111,54 +108,46 @@ type Reminders struct {
 
 // Init - attempt to make a connection to the Mongo database
 func (k *KDB) Init() {
-	// Client parameters
+	fmt.Println("Connecting to MongoDB...")
+	// Create client using URI provided
 	var err error
 	clientOptions := options.Client().ApplyURI(botConfig.DBConfig.URI)
-	kdb.Client, err = mongo.NewClient(clientOptions)
+	mdbClient, err = mongo.NewClient(clientOptions)
 	if err != nil {
 		fmt.Println("Error creating MongoDB client")
+		fmt.Println(err.Error())
 		os.Exit(1)
 	}
 
 	// Connect to MongoDB
-	err = kdb.Client.Connect(context.Background())
+	err = mdbClient.Connect(context.Background())
 	if err != nil {
 		fmt.Println("Error connecting to the database")
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
 
-	k.DB = k.Client.Database(botConfig.DBConfig.DBName)
-	k.GuildColl = k.DB.Collection("guilds")
-	k.HangmanColl = k.DB.Collection("hangmanGames")
-	k.QuoteColl = k.DB.Collection("quotes")
-	k.ReminderColl = k.DB.Collection("reminders")
-	k.UserColl = k.DB.Collection("users")
+	// Define collections
+	mdb := mdbClient.Database(botConfig.DBConfig.DBName)
+	k.GuildColl = mdb.Collection("guilds")
+	k.HangmanColl = mdb.Collection("hangmanGames")
+	k.QuoteColl = mdb.Collection("quotes")
+	k.ReminderColl = mdb.Collection("reminders")
+	k.UserColl = mdb.Collection("users")
 	fmt.Println("Connected to MongoDB!")
 }
 
 //----- G U I L D   M A N A G E M E N T -----
 
-// ReadGuild - Get the server information from the db
-func (k *KDB) ReadGuild(s *discordgo.Session, id string) (guild GuildInfo) {
-	filter := bson.D{{"gID", id}}
-	err := k.GuildColl.FindOne(context.Background(), filter).Decode(&guild)
-	if err != nil {
-		return k.InsertGuild(s, id)
-	}
-
-	return guild
-}
-
-// InsertGuild - Create server from given ID
-func (k *KDB) InsertGuild(s *discordgo.Session, id string) (guild GuildInfo) {
-
+// CreateGuild - Create server from given ID
+func (k *KDB) CreateGuild(s *discordgo.Session, id string) (guild GuildInfo) {
+	// Get guild info from Discord
 	discordGuild, err := s.Guild(id)
 	if err != nil {
+		LogTxt(s, "FATAL", "Invalid guild ID passed to CreateGuild")
 		panic(err)
 	}
 
-	// Guild not found - Create new
 	guild.ID = id
 	guild.Name = discordGuild.Name
 	guild.Region = discordGuild.Region
@@ -170,43 +159,58 @@ func (k *KDB) InsertGuild(s *discordgo.Session, id string) (guild GuildInfo) {
 	// Set votes to default minimum
 	guild.Config.MinVotes = 3
 
-	// Add the new guild
+	// Add the new guild to the guild collection
 	objID, err := k.GuildColl.InsertOne(context.Background(), guild)
 	if err != nil {
 		panic(err)
 	}
 
-	LogDB(s, "Guild", guild.Name, guild.ID, "inserted", objID.InsertedID)
+	LogDB(s, "Guild", guild.Name, guild.ID, "created", objID.InsertedID)
+
+	return guild
+}
+
+// ReadGuild - Get the server information from the db
+func (k *KDB) ReadGuild(s *discordgo.Session, id string) (guild GuildInfo) {
+
+	filter := bson.D{{"gID", id}}
+	err := k.GuildColl.FindOne(context.Background(), filter).Decode(&guild)
+	if err != nil {
+		// MUST PUT REAL ERROR HANDLING HERE
+		LogTxt(s, "WARN", fmt.Sprintf("Error reading user: %s", err.Error()))
+		return k.CreateGuild(s, id)
+	}
 
 	return guild
 }
 
 // UpdateGuild - update guild in database based on argument
-func (k *KDB) UpdateGuild(guild GuildInfo) {
-	//
+func (k *KDB) UpdateGuild(s *discordgo.Session, guild GuildInfo) {
+	filter := bson.D{{"guildID", guild.ID}}
+	result, err := k.HangmanColl.UpdateOne(context.Background(), filter, guild)
+	if err != nil {
+		panic(err)
+	}
+
+	if result.ModifiedCount != 1 {
+		LogTxt(s, "ERR", "Guild was not modified")
+	}
+
+	LogDB(s, "Guild", guild.Name, guild.ID, "updated", result.UpsertedID)
+
 }
 
 //----- U S E R   M A N A G E M E N T -----
 
-// ReadUser - Query database for user, creating a new one if none exists
-func (k *KDB) ReadUser(s *discordgo.Session, id string) (user UserInfo) {
-	filter := bson.D{{"userID", id}}
-	err := k.UserColl.FindOne(context.Background(), filter).Decode(&user)
-	if err != nil {
-		return k.InsertUser(s, id)
-	}
-	return user
-}
+// CreateUser - create user with default values and return it
+func (k *KDB) CreateUser(s *discordgo.Session, id string) (user UserInfo) {
 
-// InsertUser - create user with default values and return it
-func (k *KDB) InsertUser(s *discordgo.Session, id string) (user UserInfo) {
 	// Get user info from discord
 	discordUser, err := s.User(id)
 	if err != nil {
 		panic(err)
 	}
 
-	// Set unique values of user
 	user.ID = id
 	user.Name = discordUser.Username
 	user.Discriminator = discordUser.Discriminator
@@ -220,41 +224,96 @@ func (k *KDB) InsertUser(s *discordgo.Session, id string) (user UserInfo) {
 		panic(err)
 	}
 
-	LogDB(s, "User", user.Name, user.ID, "inserted", objID.InsertedID)
+	LogDB(s, "User", user.Name, user.ID, "created", objID.InsertedID)
 
 	return user
 }
 
+// ReadUser - Query database for user, creating a new one if none exists
+func (k *KDB) ReadUser(s *discordgo.Session, userID string) (user UserInfo) {
+
+	// Search by discord user ID
+	filter := bson.D{{"userID", userID}}
+	err := k.UserColl.FindOne(context.Background(), filter).Decode(&user)
+	if err.Error() == "mongo: no documents in result" {
+		return k.CreateUser(s, userID)
+	} else if err != nil {
+		panic(err)
+	}
+	return user
+}
+
 // UpdateUser - update user in database based on user argument
-func (k *KDB) UpdateUser(user UserInfo) {
-	//
+func (k *KDB) UpdateUser(s *discordgo.Session, user UserInfo) {
+	filter := bson.D{{"userID", user.ID}}
+	result, err := k.HangmanColl.UpdateOne(context.Background(), filter, user)
+	if err != nil {
+		panic(err)
+	}
+
+	if result.ModifiedCount != 1 {
+		LogTxt(s, "ERR", "User was not modified")
+	}
+
+	LogDB(s, "User", user.Name, user.ID, "updated", result.UpsertedID)
+
 }
 
 //----- H A N G M A N   M A N A G E M E N T -----
 
-// ReadHM - get hangman session from hangman collection
-func (k *KDB) ReadHM(guildID string) (hm Hangman) {
-	//
+// CreateHM - insert the hangman game into the hangman collection
+func (k *KDB) CreateHM(s *discordgo.Session, guildID string) (hm Hangman) {
+
+	hm.GuildID = guildID
+	hm.ResetGame()
+
+	// Insert hangman game into collection
+	objID, err := kdb.HangmanColl.InsertOne(context.Background(), hm)
+	if err != nil {
+		panic(err)
+	}
+
+	LogDB(s, "Hangman Game", hm.Word, hm.GuildID, "created", objID.InsertedID)
 
 	return hm
 }
 
-// InsertHM - create hangman session if none exists
-func (k *KDB) InsertHM(guildID string) (hm Hangman) {
-	//
+// ReadHM - get hangman session from hangman collection
+func (k *KDB) ReadHM(s *discordgo.Session, guildID string) (hm Hangman) {
+
+	// Search by discord guild ID
+	filter := bson.D{{"guildID", guildID}}
+	err := k.HangmanColl.FindOne(context.Background(), filter).Decode(&hm)
+	if err.Error() == "mongo: no documents in result" {
+		return k.CreateHM(s, guildID)
+	} else if err != nil {
+		panic(err)
+	}
 
 	return hm
 }
 
 // UpdateHM - update hangman game in the database
-func (k *KDB) UpdateHM(hm Hangman) {
-	//
+func (k *KDB) UpdateHM(s *discordgo.Session, hm Hangman) {
+	filter := bson.D{{"guildID", hm.GuildID}}
+	result, err := k.HangmanColl.UpdateOne(context.Background(), filter, hm)
+
+	if err != nil {
+		panic(err)
+	}
+
+	if result.ModifiedCount != 1 {
+		LogTxt(s, "ERR", "Hangman game was not modified")
+	}
+
+	LogDB(s, "Hangman", hm.Word, hm.GuildID, "updated", result.UpsertedID)
+
 }
 
 //----- Q U O T E   M A N A G E M E N T -----
 
-// InsertQuote - create quote and insert it into the database
-func (k *KDB) InsertQuote(s *discordgo.Session, guildID string, quoteText string) (quote Quote) {
+// CreateQuote - create quote and insert it into the database
+func (k *KDB) CreateQuote(s *discordgo.Session, guildID string, quoteText string) (quote Quote) {
 
 	// Generate 3 letter identifier
 	var letterRunes = []rune("abcdefghijklmnopqrstuvwxyz")
@@ -272,16 +331,22 @@ func (k *KDB) InsertQuote(s *discordgo.Session, guildID string, quoteText string
 	if err != nil {
 		panic(err)
 	}
-	LogTxt(s, "INFO", fmt.Sprintf("Quote \"%s\" [%s] inserted into DB [%s]",
-		quote.Identifier, quote.Quote, objID.InsertedID))
+
+	LogDB(s, "Quote", quote.Identifier, quote.GuildID, "inserted", objID.InsertedID)
 
 	return quote
 }
 
 // ReadQuote - try to get the vote from the database, returning empty quote if none found
 //	returns random quote with no argument
-func (k *KDB) ReadQuote(identifier string) (quote Quote) {
-	//
+func (k *KDB) ReadQuote(guildID, identifier string) (quote Quote) {
+
+	// Search by discord guild ID & identifier
+	filter := bson.D{{"guildID", guildID}, {"identifier", identifier}}
+	err := k.QuoteColl.FindOne(context.Background(), filter).Decode(&quote)
+	if err != nil {
+		panic(err)
+	}
 	return quote
 }
 

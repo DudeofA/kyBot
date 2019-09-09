@@ -22,6 +22,8 @@ Fill out conf.json file with necessary information
 Commands
 --------
 
+Begin help command here:
+
 | Command     | Alias | Description
 | ----------- | ----- | -----------
 | account     | acc   | Displays how many coins the user has
