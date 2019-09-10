@@ -108,34 +108,25 @@ func LogMsg(s *discordgo.Session, m *discordgo.MessageCreate) {
 //LogVoice - log voice events in the log channel
 func LogVoice(s *discordgo.Session, v *discordgo.VoiceStateUpdate) {
 	//Get KDB user data
-	KDBuser := kdb.ReadUser(s, v.UserID)
+	user := kdb.ReadUser(s, v.UserID)
 
 	//If logs are able to be written to a channel
 	if LogValid(s) {
 
 		//If user hasn't changed channels, do nothing (usually a mute or deafen)
-		if KDBuser.CurrentCID == v.ChannelID {
+		if user.CurrentCID == v.ChannelID {
 			return
 		}
 
 		//Get guild name and ID
-		guild, err := s.Guild(v.GuildID)
-		if err != nil {
-			panic(err)
-		}
-
-		//Get user name and ID
-		user, err := s.User(v.UserID)
-		if err != nil {
-			panic(err)
-		}
+		guild := kdb.ReadGuild(s, v.GuildID)
 
 		//Get the event that occured - LeftChannel, JoinedChannel
 		var event string
 		var channelName string
 		//If update is a leave voice channel event
 		if v.ChannelID == "" {
-			oldChannel, err := s.Channel(KDBuser.CurrentCID)
+			oldChannel, err := s.Channel(user.CurrentCID)
 			if err != nil {
 				oldChannel.Name = "N/A"
 			}
@@ -156,7 +147,7 @@ func LogVoice(s *discordgo.Session, v *discordgo.VoiceStateUpdate) {
 			time.Now(),
 			guild.Name,
 			channelName,
-			user.Username+"#"+user.Discriminator,
+			user.Name+"#"+user.Discriminator,
 			"",
 			event)
 	} else {
@@ -164,8 +155,9 @@ func LogVoice(s *discordgo.Session, v *discordgo.VoiceStateUpdate) {
 	}
 
 	//Update KDB with voice channel info
-	KDBuser.LastSeenCID = KDBuser.CurrentCID
-	KDBuser.CurrentCID = v.ChannelID
+	user.LastSeenCID = user.CurrentCID
+	user.CurrentCID = v.ChannelID
+	kdb.UpdateUser(s, user)
 }
 
 // LogTxt - log information/errors from functions

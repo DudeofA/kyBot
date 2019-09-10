@@ -297,7 +297,6 @@ func (k *KDB) ReadHM(s *discordgo.Session, guildID string) (hm Hangman) {
 func (k *KDB) UpdateHM(s *discordgo.Session, hm Hangman) {
 	filter := bson.D{{"guildID", hm.GuildID}}
 	result, err := k.HangmanColl.UpdateOne(context.Background(), filter, hm)
-
 	if err != nil {
 		panic(err)
 	}
@@ -351,6 +350,17 @@ func (k *KDB) ReadQuote(guildID, identifier string) (quote Quote) {
 }
 
 // UpdateQuote -
-func (k *KDB) UpdateQuote(identifier string, newID string) {
-	//
+func (k *KDB) UpdateQuote(s *discordgo.Session, quote Quote) {
+	filter := bson.D{{"guildID", quote.GuildID}, {"identifier", quote.Identifier}}
+	result, err := k.HangmanColl.UpdateOne(context.Background(), filter, quote)
+	if err != nil {
+		panic(err)
+	}
+
+	if result.ModifiedCount != 1 {
+		LogTxt(s, "ERR", "Quote was not modified")
+	}
+
+	LogDB(s, "Quote", quote.Identifier, quote.GuildID, "updated", result.UpsertedID)
+
 }
