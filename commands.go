@@ -132,13 +132,13 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 		}
 
 		help := strings.SplitAfter(string(readme), ":")
-		if len(help) < 2 {
+		if len(help) < 4 {
 			s.ChannelMessageSend(m.ChannelID, "Misconfigured README, missing `--------` to separate commands")
 			break
 		}
 
 		// Print readme within a code blog to make the formatting work output
-		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("```"+help[1]+"```"))
+		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("```"+help[3]+"```"))
 		break
 
 	//----- I P -----

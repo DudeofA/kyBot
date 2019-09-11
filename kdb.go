@@ -176,9 +176,10 @@ func (k *KDB) ReadGuild(s *discordgo.Session, id string) (guild GuildInfo) {
 	filter := bson.D{{"gID", id}}
 	err := k.GuildColl.FindOne(context.Background(), filter).Decode(&guild)
 	if err != nil {
-		// MUST PUT REAL ERROR HANDLING HERE
-		LogTxt(s, "WARN", fmt.Sprintf("Error reading user: %s", err.Error()))
-		return k.CreateGuild(s, id)
+		if err.Error() == "mongo: no documents in result" {
+			return k.CreateGuild(s, id)
+		}
+		panic(err)
 	}
 
 	return guild
@@ -235,11 +236,13 @@ func (k *KDB) ReadUser(s *discordgo.Session, userID string) (user UserInfo) {
 	// Search by discord user ID
 	filter := bson.D{{"userID", userID}}
 	err := k.UserColl.FindOne(context.Background(), filter).Decode(&user)
-	if err.Error() == "mongo: no documents in result" {
-		return k.CreateUser(s, userID)
-	} else if err != nil {
+	if err != nil {
+		if err.Error() == "mongo: no documents in result" {
+			return k.CreateUser(s, userID)
+		}
 		panic(err)
 	}
+
 	return user
 }
 
@@ -284,9 +287,10 @@ func (k *KDB) ReadHM(s *discordgo.Session, guildID string) (hm Hangman) {
 	// Search by discord guild ID
 	filter := bson.D{{"guildID", guildID}}
 	err := k.HangmanColl.FindOne(context.Background(), filter).Decode(&hm)
-	if err.Error() == "mongo: no documents in result" {
-		return k.CreateHM(s, guildID)
-	} else if err != nil {
+	if err != nil {
+		if err.Error() == "mongo: no documents in result" {
+			return k.CreateHM(s, guildID)
+		}
 		panic(err)
 	}
 
@@ -344,8 +348,12 @@ func (k *KDB) ReadQuote(guildID, identifier string) (quote Quote) {
 	filter := bson.D{{"guildID", guildID}, {"identifier", identifier}}
 	err := k.QuoteColl.FindOne(context.Background(), filter).Decode(&quote)
 	if err != nil {
+		if err.Error() == "mongo: no documents in result" {
+			return quote
+		}
 		panic(err)
 	}
+
 	return quote
 }
 
