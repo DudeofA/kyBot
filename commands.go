@@ -68,7 +68,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 			// Mark dailies as done and add the appropriate amount
 			msgUser.DoneDailies = true
 			msgUser.Credits += botConfig.DailyAmt
-			kdb.UpdateUser(s, msgUser)
+			msgUser.Update(s)
 			// Indicate to user they have recived their dailies
 			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf(
 				"💵 | Daily %d coins received! Total %scoins: **%d**",
@@ -232,7 +232,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 				s.ChannelMessageSend(m.ChannelID, err.Error())
 			}
 			msgGuild.Region = data
-			kdb.UpdateGuild(s, msgGuild)
+			msgGuild.Update(s)
 			break
 		case "":
 			region := fmt.Sprintf("The server is currently in region: _*%s*_\nTo change it, use %svoiceserver <server name>\nOptions are: \n```\nus-east, us-central, us-south, us-west\n```",

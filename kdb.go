@@ -185,19 +185,18 @@ func (k *KDB) ReadGuild(s *discordgo.Session, id string) (guild GuildInfo) {
 	return guild
 }
 
-// UpdateGuild - update guild in database based on argument
-func (k *KDB) UpdateGuild(s *discordgo.Session, guild GuildInfo) {
+// Update [Guild] - update guild in database based on argument
+func (guild *GuildInfo) Update(s *discordgo.Session) {
 	filter := bson.D{{"guildID", guild.ID}}
-	result, err := k.HangmanColl.UpdateOne(context.Background(), filter, guild)
-	if err != nil {
-		panic(err)
-	}
-
-	if result.ModifiedCount != 1 {
+	result := kdb.HangmanColl.FindOneAndReplace(context.Background(), filter, guild)
+	if result.Err() != nil {
 		LogTxt(s, "ERR", "Guild was not modified")
+		panic(result.Err())
 	}
 
-	LogDB(s, "Guild", guild.Name, guild.ID, "updated", result.UpsertedID)
+	result.Decode(guild)
+
+	LogDB(s, "Guild", guild.Name, guild.ID, "updated", result.Decode(guild))
 
 }
 
@@ -246,10 +245,10 @@ func (k *KDB) ReadUser(s *discordgo.Session, userID string) (user UserInfo) {
 	return user
 }
 
-// UpdateUser - update user in database based on user argument
-func (k *KDB) UpdateUser(s *discordgo.Session, user UserInfo) {
+// Update [User] - update user in database based on user argument
+func (user *UserInfo) Update(s *discordgo.Session) {
 	filter := bson.D{{"userID", user.ID}}
-	result, err := k.HangmanColl.UpdateOne(context.Background(), filter, user)
+	result, err := kdb.HangmanColl.UpdateOne(context.Background(), filter, user)
 	if err != nil {
 		panic(err)
 	}
@@ -297,10 +296,10 @@ func (k *KDB) ReadHM(s *discordgo.Session, guildID string) (hm Hangman) {
 	return hm
 }
 
-// UpdateHM - update hangman game in the database
-func (k *KDB) UpdateHM(s *discordgo.Session, hm Hangman) {
+// Update [HM] - update hangman game in the database
+func (hm *Hangman) Update(s *discordgo.Session) {
 	filter := bson.D{{"guildID", hm.GuildID}}
-	result, err := k.HangmanColl.UpdateOne(context.Background(), filter, hm)
+	result, err := kdb.HangmanColl.UpdateOne(context.Background(), filter, hm)
 	if err != nil {
 		panic(err)
 	}
@@ -357,10 +356,10 @@ func (k *KDB) ReadQuote(guildID, identifier string) (quote Quote) {
 	return quote
 }
 
-// UpdateQuote -
-func (k *KDB) UpdateQuote(s *discordgo.Session, quote Quote) {
+// Update [User] - update user in database
+func (quote *Quote) Update(s *discordgo.Session) {
 	filter := bson.D{{"guildID", quote.GuildID}, {"identifier", quote.Identifier}}
-	result, err := k.HangmanColl.UpdateOne(context.Background(), filter, quote)
+	result, err := kdb.HangmanColl.UpdateOne(context.Background(), filter, quote)
 	if err != nil {
 		panic(err)
 	}

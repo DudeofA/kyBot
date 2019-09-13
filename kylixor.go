@@ -279,14 +279,14 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	// Good Karma
 	if strings.ToLower(m.Content) == "good bot" {
 		guild.Karma++
-		kdb.UpdateGuild(s, guild)
+		guild.Update(s)
 		s.MessageReactionAdd(m.ChannelID, m.ID, "😊")
 	}
 
 	// Bad Karma
 	if strings.ToLower(m.Content) == "bad bot" {
 		guild.Karma--
-		kdb.UpdateGuild(s, guild)
+		guild.Update(s)
 		s.MessageReactionAdd(m.ChannelID, m.ID, "😞")
 	}
 

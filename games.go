@@ -117,7 +117,7 @@ func Slots(s *discordgo.Session, m *discordgo.MessageCreate, data string) {
 
 	// Give winnings and write data back
 	gambler.Credits += winnings
-	kdb.UpdateUser(s, gambler)
+	gambler.Update(s)
 
 	// Display the slots
 	s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s %s %s", slots[slot1], slots[slot2], slots[slot3]))
@@ -204,7 +204,7 @@ func HangmanGame(s *discordgo.Session, m *discordgo.MessageCreate, data string) 
 		}
 
 		hmSession.Channel = hmChannel.ID
-		kdb.UpdateHM(s, hmSession)
+		hmSession.Update(s)
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Changed game channel to %s", hmChannel.Mention()))
 		break
 
@@ -240,7 +240,7 @@ func HangmanGame(s *discordgo.Session, m *discordgo.MessageCreate, data string) 
 		hmSession.UpdateState(s, m.Author.ID)
 
 		hmSession.ResetGame()
-		kdb.UpdateHM(s, hmSession)
+		hmSession.Update(s)
 		break
 	}
 }
@@ -312,7 +312,7 @@ func (hmSession Hangman) UpdateState(s *discordgo.Session, authorID string) {
 		s.ChannelMessageSend(hmSession.Channel, fmt.Sprintf("YOU GOT IT <@%s> - Enjoy the %d coins!\n",
 			winner.ID, hmWinnings))
 		winner.Credits += hmWinnings
-		kdb.UpdateUser(s, winner)
+		winner.Update(s)
 
 		// Put the word in the underline
 		wordSplice := strings.Split(hmSession.Word, "")
@@ -363,7 +363,7 @@ func (hmSession Hangman) UpdateState(s *discordgo.Session, authorID string) {
 		hmSession.ResetGame()
 	}
 
-	kdb.UpdateHM(s, hmSession)
+	hmSession.Update(s)
 }
 
 //ResetGame - resets game stats back to defaults

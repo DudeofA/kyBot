@@ -157,7 +157,7 @@ func LogVoice(s *discordgo.Session, v *discordgo.VoiceStateUpdate) {
 	//Update KDB with voice channel info
 	user.LastSeenCID = user.CurrentCID
 	user.CurrentCID = v.ChannelID
-	kdb.UpdateUser(s, user)
+	user.Update(s)
 }
 
 // LogTxt - log information/errors from functions
