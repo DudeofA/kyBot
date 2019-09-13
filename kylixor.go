@@ -73,7 +73,7 @@ func main() {
 	rand.Seed(time.Now().UTC().UnixNano())
 
 	// Read in config file if exists
-	if _, err = os.Stat(filepath.FromSlash(pwd + "/data/conf.json")); os.IsNotExist(err) {
+	if _, err = os.Stat(filepath.FromSlash(pwd + "/conf.json")); os.IsNotExist(err) {
 		fmt.Println("\nCannot find conf.json, creating new...")
 		InitBotConfFile()
 		fmt.Println("\nPlease fill in the config.json file located in the data folder.")

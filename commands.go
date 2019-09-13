@@ -205,7 +205,8 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 	case "test":
 		if CheckAdmin(s, m) {
 			s.ChannelMessageSend(m.ChannelID, "Starting testing...")
-
+			kdb.ReadUser(s, "144220178853396480")
+			LogTxt(s, "INFO", "Read AnJew from db")
 			s.ChannelMessageSend(m.ChannelID, "Testing finshed.")
 		}
 		break

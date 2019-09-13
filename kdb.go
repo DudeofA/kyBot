@@ -91,9 +91,7 @@ type UserInfo struct {
 	Discriminator string `json:"discriminator" bson:"discriminator"` // Unique identifier (#4712)
 	CurrentCID    string `json:"currentCID" bson:"currentCID"`       // Current channel ID
 	LastSeenCID   string `json:"lastSeenCID" bson:"lastSeenCID"`     // Last seen channel ID
-	Anthem        string `json:"anthem" bson:"anthem"`               // Anthem to play when joining a channel
 	Credits       int    `json:"credits" bson:"credits"`             // Credits gained from dailies
-	PlayAnthem    bool   `json:"playAnthem" bson:"playAnthem"`       // True if anthem should play when user joins channel
 	DoneDailies   bool   `json:"dailies" bson:"dailies"`             // True if dailies have been claimed today
 }
 
@@ -194,9 +192,7 @@ func (guild *GuildInfo) Update(s *discordgo.Session) {
 		panic(result.Err())
 	}
 
-	result.Decode(guild)
-
-	LogDB(s, "Guild", guild.Name, guild.ID, "updated", result.Decode(guild))
+	LogDB(s, "Guild", guild.Name, guild.ID, "updated", "N/A")
 
 }
 
@@ -215,7 +211,6 @@ func (k *KDB) CreateUser(s *discordgo.Session, id string) (user UserInfo) {
 	user.Name = discordUser.Username
 	user.Discriminator = discordUser.Discriminator
 	// Set defaults
-	user.PlayAnthem = false
 	user.DoneDailies = false
 
 	// Insert user into collection
@@ -247,17 +242,16 @@ func (k *KDB) ReadUser(s *discordgo.Session, userID string) (user UserInfo) {
 
 // Update [User] - update user in database based on user argument
 func (user *UserInfo) Update(s *discordgo.Session) {
+
+	// Search by discord user ID
 	filter := bson.D{{"userID", user.ID}}
-	result, err := kdb.HangmanColl.UpdateOne(context.Background(), filter, user)
-	if err != nil {
-		panic(err)
-	}
-
-	if result.ModifiedCount != 1 {
+	result := kdb.UserColl.FindOneAndReplace(context.Background(), filter, user, {upsert: true})
+	if result.Err() != nil {
 		LogTxt(s, "ERR", "User was not modified")
+		panic(result.Err())
 	}
 
-	LogDB(s, "User", user.Name, user.ID, "updated", result.UpsertedID)
+	LogDB(s, "User", user.Name, user.ID, "updated", "N/A")
 
 }
 
@@ -299,16 +293,13 @@ func (k *KDB) ReadHM(s *discordgo.Session, guildID string) (hm Hangman) {
 // Update [HM] - update hangman game in the database
 func (hm *Hangman) Update(s *discordgo.Session) {
 	filter := bson.D{{"guildID", hm.GuildID}}
-	result, err := kdb.HangmanColl.UpdateOne(context.Background(), filter, hm)
-	if err != nil {
-		panic(err)
-	}
-
-	if result.ModifiedCount != 1 {
+	result := kdb.HangmanColl.FindOneAndReplace(context.Background(), filter, hm)
+	if result.Err() != nil {
 		LogTxt(s, "ERR", "Hangman game was not modified")
+		panic(result.Err())
 	}
 
-	LogDB(s, "Hangman", hm.Word, hm.GuildID, "updated", result.UpsertedID)
+	LogDB(s, "Hangman", hm.Word, hm.GuildID, "updated", "N/A")
 
 }
 
@@ -356,18 +347,15 @@ func (k *KDB) ReadQuote(guildID, identifier string) (quote Quote) {
 	return quote
 }
 
-// Update [User] - update user in database
+// Update [Quote] - update quote in database
 func (quote *Quote) Update(s *discordgo.Session) {
 	filter := bson.D{{"guildID", quote.GuildID}, {"identifier", quote.Identifier}}
-	result, err := kdb.HangmanColl.UpdateOne(context.Background(), filter, quote)
-	if err != nil {
-		panic(err)
-	}
-
-	if result.ModifiedCount != 1 {
+	result := kdb.HangmanColl.FindOneAndReplace(context.Background(), filter, quote)
+	if result.Err() != nil {
 		LogTxt(s, "ERR", "Quote was not modified")
+		panic(result.Err())
 	}
 
-	LogDB(s, "Quote", quote.Identifier, quote.GuildID, "updated", result.UpsertedID)
+	LogDB(s, "Quote", quote.Identifier, quote.GuildID, "updated", "N/A")
 
 }

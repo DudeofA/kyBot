@@ -1,4 +1,3 @@
-data/
 bin/
-*.bat
-*.exe
+
+conf.json
