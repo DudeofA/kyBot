@@ -328,7 +328,7 @@ func InitBotConfFile() {
 	_ = os.Mkdir("data", 0755)
 
 	// Open file
-	jsonFile, err := os.Create(filepath.FromSlash(pwd + "/data/conf.json"))
+	jsonFile, err := os.Create(filepath.FromSlash(pwd + "/conf.json"))
 	if err != nil {
 		panic(err)
 	}
@@ -343,7 +343,7 @@ func InitBotConfFile() {
 
 // ReadBotConfig - Read in config file into Config structure
 func (c *BotConfig) Read() {
-	file, _ := os.Open(filepath.FromSlash(pwd + "/data/conf.json"))
+	file, _ := os.Open(filepath.FromSlash(pwd + "/conf.json"))
 	decoder := json.NewDecoder(file)
 	err := decoder.Decode(&c)
 	if err != nil {
@@ -360,7 +360,7 @@ func (c *BotConfig) Write() {
 		panic(err)
 	}
 	// Open file
-	jsonFile, err := os.Create(filepath.FromSlash(pwd + "/data/conf.json"))
+	jsonFile, err := os.Create(filepath.FromSlash(pwd + "/conf.json"))
 	if err != nil {
 		panic(err)
 	}
@@ -407,7 +407,7 @@ func GetVersion() (ver string) {
 
 	// Second line of the readme will always be the version number
 	if len(textlines) < 2 {
-		panic("Version needs to be in the second line of the README in format: <v#.#.#")
+		return "Version needs to be in the second line of the README in format: <v#.#.#")
 	} else {
 		ver = textlines[1]
 	}

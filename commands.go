@@ -234,6 +234,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 			}
 			msgGuild.Region = data
 			msgGuild.Update(s)
+			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Voice server changed to: *%s*", data))
 			break
 		case "":
 			region := fmt.Sprintf("The server is currently in region: _*%s*_\nTo change it, use %svoiceserver <server name>\nOptions are: \n```\nus-east, us-central, us-south, us-west\n```",

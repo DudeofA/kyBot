@@ -43,7 +43,7 @@ type KDB struct {
 type GuildInfo struct {
 	Config GuildConfig `json:"config" bson:"serverConfig"` // Guild specific config
 	Emotes Emote       `json:"emotes" bson:"emotes"`       // String of customizable emotes
-	ID     string      `json:"gID" bson:"gID"`             // discord guild ID
+	ID     string      `json:"guildID" bson:"guildID"`     // discord guild ID
 	Karma  int         `json:"karma" bson:"karma"`         // Bot's karma - per guild
 	Name   string      `json:"name" bson:"name"`           // Name of guild
 	Region string      `json:"region" bson:"region"`       // Geolocation region of the guild
@@ -171,7 +171,7 @@ func (k *KDB) CreateGuild(s *discordgo.Session, id string) (guild GuildInfo) {
 // ReadGuild - Get the server information from the db
 func (k *KDB) ReadGuild(s *discordgo.Session, id string) (guild GuildInfo) {
 
-	filter := bson.D{{"gID", id}}
+	filter := bson.D{{"guildID", id}}
 	err := k.GuildColl.FindOne(context.Background(), filter).Decode(&guild)
 	if err != nil {
 		if err.Error() == "mongo: no documents in result" {
@@ -186,9 +186,15 @@ func (k *KDB) ReadGuild(s *discordgo.Session, id string) (guild GuildInfo) {
 // Update [Guild] - update guild in database based on argument
 func (guild *GuildInfo) Update(s *discordgo.Session) {
 	filter := bson.D{{"guildID", guild.ID}}
-	result := kdb.HangmanColl.FindOneAndReplace(context.Background(), filter, guild)
+	replace := options.FindOneAndReplace()
+	replace.SetUpsert(true)
+	result := kdb.HangmanColl.FindOneAndReplace(context.Background(), filter, guild, replace)
 	if result.Err() != nil {
-		LogTxt(s, "ERR", "Guild was not modified")
+		if result.Err().Error() == "mongo: no documents in result" {
+			kdb.CreateGuild(s, guild.ID)
+			return
+		}
+		LogTxt(s, "ERR", fmt.Sprintf("Guild was not modified - %s", filter))
 		panic(result.Err())
 	}
 
@@ -245,7 +251,9 @@ func (user *UserInfo) Update(s *discordgo.Session) {
 
 	// Search by discord user ID
 	filter := bson.D{{"userID", user.ID}}
-	result := kdb.UserColl.FindOneAndReplace(context.Background(), filter, user, {upsert: true})
+	replace := options.FindOneAndReplace()
+	replace.SetUpsert(true)
+	result := kdb.UserColl.FindOneAndReplace(context.Background(), filter, user, replace)
 	if result.Err() != nil {
 		LogTxt(s, "ERR", "User was not modified")
 		panic(result.Err())
@@ -293,7 +301,9 @@ func (k *KDB) ReadHM(s *discordgo.Session, guildID string) (hm Hangman) {
 // Update [HM] - update hangman game in the database
 func (hm *Hangman) Update(s *discordgo.Session) {
 	filter := bson.D{{"guildID", hm.GuildID}}
-	result := kdb.HangmanColl.FindOneAndReplace(context.Background(), filter, hm)
+	replace := options.FindOneAndReplace()
+	replace.SetUpsert(true)
+	result := kdb.HangmanColl.FindOneAndReplace(context.Background(), filter, hm, replace)
 	if result.Err() != nil {
 		LogTxt(s, "ERR", "Hangman game was not modified")
 		panic(result.Err())
@@ -350,7 +360,9 @@ func (k *KDB) ReadQuote(guildID, identifier string) (quote Quote) {
 // Update [Quote] - update quote in database
 func (quote *Quote) Update(s *discordgo.Session) {
 	filter := bson.D{{"guildID", quote.GuildID}, {"identifier", quote.Identifier}}
-	result := kdb.HangmanColl.FindOneAndReplace(context.Background(), filter, quote)
+	replace := options.FindOneAndReplace()
+	replace.SetUpsert(true)
+	result := kdb.HangmanColl.FindOneAndReplace(context.Background(), filter, quote, replace)
 	if result.Err() != nil {
 		LogTxt(s, "ERR", "Quote was not modified")
 		panic(result.Err())
