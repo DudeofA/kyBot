@@ -70,20 +70,19 @@ func startVote(s *discordgo.Session, m *discordgo.MessageCreate, data string) in
 
 //ReactionAdd - add a reaction to the passed-in message
 func ReactionAdd(s *discordgo.Session, m *discordgo.Message, reaction string) {
-	guild := kdb.ReadGuild(s, m.GuildID)
 
 	switch reaction {
 	case "UPVOTE":
-		err := s.MessageReactionAdd(m.ChannelID, m.ID, guild.Emotes.Upvote)
+		err := s.MessageReactionAdd(m.ChannelID, m.ID, "⬆️")
 		if err != nil {
-			s.ChannelMessageSend(m.ChannelID, "Unable to use upvote emote, check emote config")
+			s.ChannelMessageSend(m.ChannelID, "Unable to use upvote emote")
 		}
 		break
 
 	case "DOWNVOTE":
-		err := s.MessageReactionAdd(m.ChannelID, m.ID, guild.Emotes.Downvote)
+		err := s.MessageReactionAdd(m.ChannelID, m.ID, "⬇️")
 		if err != nil {
-			s.ChannelMessageSend(m.ChannelID, "Unable to use downvote emote, check emote config")
+			s.ChannelMessageSend(m.ChannelID, "Unable to use downvote emote")
 		}
 		break
 	default:
@@ -94,28 +93,28 @@ func ReactionAdd(s *discordgo.Session, m *discordgo.Message, reaction string) {
 
 //WaitForVotes - wait for enough votes to pass the vote or timeout and fail
 func WaitForVotes(s *discordgo.Session, m *discordgo.Message, options int) (result int) {
-	guild := kdb.ReadGuild(s, m.GuildID)
+	minVotes := 1
 
 	voteAlive := true
 	for voteAlive {
 		//One options = upvote vs downvote
 		if options == 0 {
 			//Get each reaction
-			upReact, err := s.MessageReactions(m.ChannelID, m.ID, guild.Emotes.Upvote, 10)
+			upReact, err := s.MessageReactions(m.ChannelID, m.ID, "⬆️", 10)
 			if err != nil {
-				s.ChannelMessageSend(m.ChannelID, "Unable to use upvote emote, check config")
+				s.ChannelMessageSend(m.ChannelID, "Unable to check upvote emote")
 			}
-			downReact, err := s.MessageReactions(m.ChannelID, m.ID, guild.Emotes.Downvote, 10)
+			downReact, err := s.MessageReactions(m.ChannelID, m.ID, "⬇️", 10)
 			if err != nil {
-				s.ChannelMessageSend(m.ChannelID, "Unable to use downvote emote, check config")
+				s.ChannelMessageSend(m.ChannelID, "Unable to check downvote emote")
 			}
 
 			//If there are enough upvote, approve vote
-			if len(upReact) > guild.Config.MinVotes {
+			if len(upReact) > minVotes {
 				return 0
 			}
 			//If there are enough downvotes, fail vote
-			if len(downReact) > guild.Config.MinVotes {
+			if len(downReact) > minVotes {
 				return -1
 			}
 

@@ -19,16 +19,15 @@ import (
 )
 
 func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string, data string) {
-	// Get user and guild of message
-	msgGuild := kdb.ReadGuild(s, m.GuildID)
-	msgUser := kdb.ReadUser(s, m.Author.ID)
 
 	switch command {
 
 	//----- A C C O U N T -----
 	// Get amount of coins in players account
 	case "account", "acc":
-		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("💵 | You have a total of **%d** %scoins", msgUser.Credits, msgGuild.Config.Coins))
+		msgUser := k.kdb.ReadUser(s, m.Author.ID)
+		msgGuild := k.kdb.ReadGuild(s, m.GuildID)
+		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("💵 | You have a total of **%d** %scoins", msgUser.Credits, msgGuild.Currency))
 		break
 
 	//----- A G E -----
@@ -51,7 +50,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 	case "config", "c":
 		if CheckAdmin(s, m) {
 			if strings.ToLower(data) == "reload" {
-				botConfig.Update()
+				k.botConfig.Update()
 				s.ChannelMessageSend(m.ChannelID, "Updated KDB and botConfig")
 			} else if strings.HasPrefix(strings.ToLower(data), "edit") {
 				//EditConfig(s, m)
@@ -63,16 +62,18 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 	//----- D A I L I E S -----
 	// Gets daily Coins
 	case "dailies", "day":
+		msgUser := k.kdb.ReadUser(s, m.Author.ID)
+		msgGuild := k.kdb.ReadGuild(s, m.GuildID)
 		// If the dailies have not been done
 		if !msgUser.DoneDailies {
 			// Mark dailies as done and add the appropriate amount
-			msgUser.DoneDailies = true
-			msgUser.Credits += botConfig.DailyAmt
-			msgUser.Update(s)
+			msgUser.UpdateDailies(s, true)
+			msgUser.Credits += k.botConfig.DailyAmt
+			msgUser.Update()
 			// Indicate to user they have recived their dailies
 			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf(
 				"💵 | Daily %d coins received! Total %scoins: **%d**",
-				botConfig.DailyAmt, msgGuild.Config.Coins, msgUser.Credits))
+				k.botConfig.DailyAmt, msgGuild.Currency, msgUser.Credits))
 		} else {
 			// Display time until dailies are available based on
 			// when the next cronjob will run
@@ -125,7 +126,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 	//----- H E L P -----
 	// Display the readme file
 	case "help", "h":
-		readme, err := ioutil.ReadFile(pwd + "/README.md")
+		readme, err := ioutil.ReadFile(k.state.pwd + "/README.md")
 		if err != nil {
 			s.ChannelMessageSend(m.ChannelID, "Error openning README, contact bot admin for assistance")
 			break
@@ -158,6 +159,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 	//----- K A R M A -----
 	// Displays the current amount of karma the bot has
 	case "karma":
+		msgGuild := k.kdb.ReadGuild(s, m.GuildID)
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("☯ | Current Karma: %d", msgGuild.Karma))
 		break
 
@@ -176,37 +178,46 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 		if data != "" {
 			go func() {
 				if startVote(s, m, fmt.Sprintf("0 %s", data)) == 0 {
-					kdb.CreateQuote(s, m.GuildID, data)
+					k.kdb.CreateQuote(s, m.GuildID, data)
 				}
 			}()
 		} else {
 			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Command Syntax: %squote <quote content here>",
-				msgGuild.Config.Prefix))
+				k.botConfig.Prefix))
 		}
 		break
 
-		//----- Q U O T E L I S T -----
-		// List specified quote
+	//----- Q U O T E L I S T -----
+	// List specified quote
 	case "quotelist", "ql":
 		// Print quote corresponding to the identifier
-		quote := kdb.ReadQuote(m.GuildID, data)
+		quote := k.kdb.ReadQuote(s, m.GuildID, data)
+		if quote.Identifier == "" {
+			s.ChannelMessageSend(m.ChannelID, "No quotes found :(")
+			break
+		}
 		QuotePrint(s, m, quote)
 		break
 
 	//----- Q U O T E R A N D -----
 	// Displays a random quote from the database
 	case "quoterandom", "qr":
-		quote := kdb.ReadQuote(m.GuildID, "")
+		quote := k.kdb.ReadQuote(s, m.GuildID, "")
+		if quote.Identifier == "" {
+			s.ChannelMessageSend(m.ChannelID, "No quotes found :(")
+			break
+		}
 		QuotePrint(s, m, quote)
 		break
 
-	//----- T E S T -----
+	//----- T E S T [ADMIN] -----
 	// testing
 	case "test":
 		if CheckAdmin(s, m) {
 			s.ChannelMessageSend(m.ChannelID, "Starting testing...")
-			kdb.ReadUser(s, "144220178853396480")
-			LogTxt(s, "INFO", "Read AnJew from db")
+
+			ResetDailies(s)
+
 			s.ChannelMessageSend(m.ChannelID, "Testing finshed.")
 		}
 		break
@@ -222,6 +233,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 	// Changes the voice server in case of server outage
 	case "voiceserver", "vc":
 		//Get guild data
+		msgGuild := k.kdb.ReadGuild(s, m.GuildID)
 
 		var gParam discordgo.GuildParams
 
@@ -233,12 +245,12 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 				s.ChannelMessageSend(m.ChannelID, err.Error())
 			}
 			msgGuild.Region = data
-			msgGuild.Update(s)
+			// msgGuild.Update(s)
 			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Voice server changed to: *%s*", data))
 			break
 		case "":
 			region := fmt.Sprintf("The server is currently in region: _*%s*_\nTo change it, use %svoiceserver <server name>\nOptions are: \n```\nus-east, us-central, us-south, us-west\n```",
-				msgGuild.Region, msgGuild.Config.Prefix)
+				msgGuild.Region, k.botConfig.Prefix)
 			s.ChannelMessageSend(m.ChannelID, region)
 			break
 

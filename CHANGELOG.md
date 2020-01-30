@@ -1,6 +1,10 @@
 # Changlog
 All notable changes will be documented in this file.
 
+## [3.0.0] - 11/20/19
+### Major Change
+- Dropped MongoDB because it was confusing, moving to MySQL
+
 ## [2.0.0] - 8/30/19
 ### Added
 - MongoDB as backend database instead of JSON file
