@@ -53,7 +53,6 @@ func (kdb *KDB) CreateHM(s *discordgo.Session, guildID string) (hm Hangman) {
 	guessed := strings.Join(hm.Guessed, ",")
 	wordState := strings.Join(hm.WordState, "")
 	hm.GuildID = guildID
-	hm.ResetGame()
 
 	// Insert game into database
 	_, err := k.db.Exec("INSERT INTO hangman (guildID, channelID, messageID, word, gameState, wordState, guessed) VALUES(?,?,?,?,?,?,?)",
@@ -62,6 +61,7 @@ func (kdb *KDB) CreateHM(s *discordgo.Session, guildID string) (hm Hangman) {
 		panic(err)
 	}
 
+	hm.ResetGame()
 	LogDB("Hangman Game", hm.Word, hm.GuildID, "created")
 
 	return hm
