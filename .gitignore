@@ -4,3 +4,9 @@ conf.json
 
 __debug_bin
 .vscode/
+
+go/
+.bash_history
+.cache/
+.config/
+.viminfo
