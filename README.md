@@ -1,9 +1,24 @@
 **Kylixor Multi-Purpose Discord Bot**
-v1.2.8
+v3.0.0
 =====================================
+
+Dependencies:
+~~~
+make
+go
+~~~
+
+Installation steps:
+~~~
+make
+./bin/kylixor
+Fill out conf.json file with necessary information
+~~~
 
 Commands
 --------
+
+Begin help command here:
 
 | Command     | Alias | Description
 | ----------- | ----- | -----------

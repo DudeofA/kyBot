@@ -1,16 +1,24 @@
 all: clean kylixor
 
+compile: ## Just builds
+	go build -o bin/kylixor *.go
+
 kylixor: ## Default action. Builds Kylixor.
-	@go get "github.com/bwmarrin/discordgo"
-	@go get "github.com/bwmarrin/dgvoice"
-	@go get "github.com/jasonlvhit/gocron"
-	@go build -o bin/kylixor *.go
+	go get -u -v "github.com/bwmarrin/discordgo"
+	go get -u -v "github.com/bwmarrin/dgvoice"
+	go get -u -v "github.com/jasonlvhit/gocron"
+	go get -u -v "github.com/go-sql-driver/mysql"
+	
+	go build -o bin/kylixor *.go
 
 clean: ## Removes compiled Kylixor binaries.
-	@rm -f kylixor
+	rm -f bin/kylixor
 
-install: ## Copies kylixor binary to /usr/local/bin for easy execution and restarts the service
-	@systemctl restart kylixor
+test: compile ## Test run the bot
+	./bin/kylixor
+
+windows:
+	env GOOS="windows" GOARCH="amd64" go build -o bin/kylixor.exe
 
 help: ## Shows this helptext.
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
+	grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'

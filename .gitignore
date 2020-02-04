@@ -1,4 +1,6 @@
-data/
 bin/
-*.bat
-*.exe
+*.log
+conf.json
+
+__debug_bin
+.vscode/
