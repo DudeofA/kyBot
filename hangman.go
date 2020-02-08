@@ -178,8 +178,6 @@ func HangmanGame(s *discordgo.Session, m *discordgo.MessageCreate, data string) 
 		}
 
 		hm.ChannelID = hmChannel.ID
-		hm.PrintState(s)
-		hm.Update()
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Changed game channel to %s", hmChannel.Mention()))
 		break
 

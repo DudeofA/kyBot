@@ -1,5 +1,11 @@
-# Changlog
+# Changelog
 All notable changes will be documented in this file.
+
+## [3.0.1] - 2/8/20
+### Fix
+- Fixed game starting when changing hangman channel
+- Fixed quotelist working as intended
+- Changed scheduler to hopefully fix dailies
 
 ## [3.0.0] - 11/20/19
 ### Major Change

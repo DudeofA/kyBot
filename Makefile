@@ -6,7 +6,7 @@ compile: ## Just builds
 kylixor: ## Default action. Builds Kylixor.
 	go get -u -v "github.com/bwmarrin/discordgo"
 	go get -u -v "github.com/bwmarrin/dgvoice"
-	go get -u -v "github.com/jasonlvhit/gocron"
+	go get -u -v "github.com/robfig/cron"
 	go get -u -v "github.com/go-sql-driver/mysql"
 	
 	go build -o bin/kylixor *.go

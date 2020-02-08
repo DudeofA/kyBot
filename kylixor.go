@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/jasonlvhit/gocron"
+	"github.com/robfig/cron"
 )
 
 // ----- GLOBAL VARIABLES -----
@@ -272,15 +272,9 @@ func Ready(s *discordgo.Session, event *discordgo.Ready) {
 	}
 
 	// Start cronjobs
-	location, err := time.LoadLocation("America/New_York")
-	if err != nil {
-		panic(err)
-	}
-	gocron.ChangeLoc(location)
-	go func() {
-		gocron.Every(1).Day().At(k.botConfig.ResetTime).Do(ResetDailies) //Reset dailies task
-		<-gocron.Start()                                                 //Start waiting for the cronjob
-	}()
+	c := cron.New()
+	c.AddFunc("0 20 * * *", func() { ResetDailies(s) })
+	c.Start()
 
 	// Set status once at start, then ticker takes over every hour
 	SetStatus(s)

@@ -1,5 +1,5 @@
 **Kylixor Multi-Purpose Discord Bot**
-v3.0.0
+v3.0.1
 =====================================
 
 Dependencies:
@@ -32,7 +32,7 @@ Begin help command here:
 | karma       | karma | Displays the current level of karma for the bot
 | ping        | ping  | Send a ping to the bot to measure latency
 | quote       | q     | Starts a vote to save a memorable quote
-| quotelist   | ql    | Lists the specified quote (i.e. quotelist 4)
+| quotelist   | ql    | Lists the specified quote (i.e. quotelist <identifier>)
 | quoterandom | qr    | Print a random quote from the database
 | version     | v     | Gets bot's current version
 | voiceserver | vs    | Change the voice server region

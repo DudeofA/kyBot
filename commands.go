@@ -192,9 +192,9 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 	case "quotelist", "ql":
 		// Print quote corresponding to the identifier
 		quote := k.kdb.ReadQuote(s, m.GuildID, data)
-		if quote.Identifier == "" {
-			s.ChannelMessageSend(m.ChannelID, "No quotes found :(")
-			break
+		if data == "" || quote.Identifier == "" {
+			QuoteListIDs(s, m.ChannelID)
+			return
 		}
 		QuotePrint(s, m, quote)
 		break
