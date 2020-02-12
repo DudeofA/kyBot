@@ -31,6 +31,7 @@ import (
 //K - Kylixor bot
 type K struct {
 	botConfig BotConfig         // Bot's global configuration
+	cron      *cron.Cron        // Cronjob for dailies timer
 	db        *sql.DB           // Raw database connection bundle
 	kdb       KDB               // Server/User database
 	logfile   *os.File          // Log file handle
@@ -272,9 +273,9 @@ func Ready(s *discordgo.Session, event *discordgo.Ready) {
 	}
 
 	// Start cronjobs
-	c := cron.New()
-	c.AddFunc("0 20 * * *", func() { ResetDailies(s) })
-	c.Start()
+	k.cron = cron.New()
+	k.cron.AddFunc("0 20 * * *", func() { ResetDailies(s) })
+	k.cron.Start()
 
 	// Set status once at start, then ticker takes over every hour
 	SetStatus(s)
@@ -443,25 +444,6 @@ func (bc *BotConfig) Update() {
 }
 
 //----- M I S C .   F U N C T I O N S -----
-
-// ResetDailies - Function to call once a day to reset dailies
-func ResetDailies(s *discordgo.Session) {
-
-	rows, err := k.db.Query("SELECT userID FROM users WHERE dailies > 0")
-	if err != nil {
-		panic(err)
-	}
-
-	for rows.Next() {
-		var user UserInfo
-		if err := rows.Scan(&user.ID); err != nil {
-			panic(err)
-		}
-
-		user = k.kdb.ReadUser(s, user.ID)
-		user.UpdateDailies(s, false)
-	}
-}
 
 // GetVersion - Get the version of the bot from the readme
 func GetVersion() (ver string) {

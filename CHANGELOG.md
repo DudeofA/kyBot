@@ -1,6 +1,12 @@
 # Changelog
 All notable changes will be documented in this file.
 
+## [3.0.2] - 2/8/20
+### Fix
+- Countdown until dailies are up
+### Add
+- Compensation admin function
+
 ## [3.0.1] - 2/8/20
 ### Fix
 - Fixed game starting when changing hangman channel

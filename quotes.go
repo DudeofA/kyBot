@@ -1,10 +1,93 @@
 package main
 
 import (
+	"database/sql"
+	"math/rand"
 	"strings"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 )
+
+//----- Q U O T E   M A N A G E M E N T -----
+
+// CreateQuote - create quote and insert it into the database
+func (kdb *KDB) CreateQuote(s *discordgo.Session, guildID string, quoteText string) (quote Quote) {
+
+	// Generate 3 letter identifier
+	var letterRunes = []rune("abcdefghijklmnopqrstuvwxyz")
+	b := make([]rune, 3)
+	for i := range b {
+		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+	}
+	identifier := string(b)
+
+	// Add quote to quote object
+	quote = Quote{guildID, identifier, quoteText, time.Now()}
+
+	// Add quote to quote collection
+	_, err := k.db.Exec("INSERT INTO quotes (identifier, guildID, quote, timestamp) VALUES(?,?,?,?)",
+		quote.Identifier, quote.GuildID, quote.Quote, quote.Timestamp.Format("2006-01-02 15:04:05"))
+	if err != nil {
+		panic(err)
+	}
+
+	LogDB("Quote", quote.Identifier, quote.GuildID, "inserted into")
+
+	return quote
+}
+
+// ReadQuote - try to get the vote from the database, returning empty quote if none found
+//	returns random quote with no argument
+func (kdb *KDB) ReadQuote(s *discordgo.Session, guildID, identifier string) (quote Quote) {
+	var tempTime string
+
+	if identifier == "" {
+		rand := k.db.QueryRow("SELECT identifier, guildID, quote, timestamp FROM quotes ORDER BY RAND()")
+		err := rand.Scan(&quote.Identifier, &quote.GuildID, &quote.Quote, &tempTime)
+		switch err {
+		case sql.ErrNoRows:
+			LogDB("Quote", quote.Identifier, quote.GuildID, "not found in")
+			return Quote{}
+		case nil:
+			LogDB("Quote", quote.Identifier, quote.GuildID, "read from")
+			quote.Timestamp, err = time.Parse("2006-01-02 15:04:05", tempTime)
+			if err != nil {
+				panic(err)
+			}
+			return quote
+		default:
+			panic(err)
+		}
+	}
+
+	// Search by discord guild ID & identifier
+	row := k.db.QueryRow("SELECT identifier, guildID, quote, timestamp FROM quotes WHERE guildID=(?) AND identifier=(?)", guildID, identifier)
+	err := row.Scan(&quote.Identifier, &quote.GuildID, &quote.Quote, &tempTime)
+	switch err {
+	case sql.ErrNoRows:
+		LogDB("Quote", quote.Identifier, quote.GuildID, "not found")
+		return Quote{}
+	case nil:
+		LogDB("Quote", quote.Identifier, quote.GuildID, "read from")
+		quote.Timestamp, err = time.Parse("2006-01-02 15:04:05", tempTime)
+		if err != nil {
+			panic(err)
+		}
+		return quote
+	default:
+		panic(err)
+	}
+}
+
+// Update [Quote] - update quote in database
+func (quote *Quote) Update(s *discordgo.Session) {
+
+	LogDB("Quote", quote.Identifier, quote.GuildID, "updated in")
+
+	//TODO
+
+}
 
 // QuoteListIDs - List all possible quote IDs
 func QuoteListIDs(s *discordgo.Session, cID string) {

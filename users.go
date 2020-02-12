@@ -68,6 +68,18 @@ func (user *UserInfo) Update() {
 	}
 }
 
+// UpdateCredits - Changes the credits a user has, returning false if not enough
+func (user *UserInfo) UpdateCredits(s *discordgo.Session, amt int) (success bool) {
+	if user.Credits+amt > 0 {
+		_, err := k.db.Exec("UPDATE users SET credits = ? WHERE userID = ?", user.Credits+amt, user.ID)
+		if err != nil {
+			panic(err)
+		}
+		return true
+	}
+	return false
+}
+
 // UpdateDailies [User] - update user dailies
 func (user *UserInfo) UpdateDailies(s *discordgo.Session, arg bool) {
 	user.DoneDailies = arg
@@ -79,5 +91,42 @@ func (user *UserInfo) UpdateDailies(s *discordgo.Session, arg bool) {
 	if err != nil {
 		k.Log("FATAL", "Error updating user: "+user.Name)
 		panic(err)
+	}
+}
+
+// ResetDailies - Function to call once a day to reset dailies
+func ResetDailies(s *discordgo.Session) {
+
+	rows, err := k.db.Query("SELECT userID FROM users WHERE dailies > 0")
+	if err != nil {
+		panic(err)
+	}
+
+	for rows.Next() {
+		var user UserInfo
+		if err := rows.Scan(&user.ID); err != nil {
+			panic(err)
+		}
+
+		user = k.kdb.ReadUser(s, user.ID)
+		user.UpdateDailies(s, false)
+	}
+}
+
+// CompDailies - Gives everyone 2x daily amount who have coins to compensate for downtime
+func CompDailies(s *discordgo.Session) {
+	rows, err := k.db.Query("SELECT userID, credits FROM users WHERE credits > 0")
+	if err != nil {
+		panic(err)
+	}
+
+	for rows.Next() {
+		var user UserInfo
+		if err := rows.Scan(&user.ID, &user.Credits); err != nil {
+			panic(err)
+		}
+
+		user = k.kdb.ReadUser(s, user.ID)
+		user.UpdateCredits(s, 2*k.botConfig.DailyAmt)
 	}
 }

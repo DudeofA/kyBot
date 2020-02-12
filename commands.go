@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/jasonlvhit/gocron"
 )
 
 func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string, data string) {
@@ -44,6 +43,14 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 
 		s.ChannelMessageSend(m.ChannelID, msg)
 		break
+
+	//----- C O M P E N S A T I O N -----
+	// Give 200 coins to everyone who has coins
+	case "compensation", "comp":
+		if CheckAdmin(s, m) {
+			CompDailies(s)
+			s.ChannelMessageSend(m.ChannelID, "Users compensated")
+		}
 
 	//----- C O N F I G -----
 	// Modify or reload config
@@ -77,7 +84,10 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 		} else {
 			// Display time until dailies are available based on
 			// when the next cronjob will run
-			_, nextRuntime := gocron.NextRun()
+
+			// _, nextRuntime := gocron.NextRun()
+			jobs := k.cron.Entries()
+			nextRuntime := jobs[0].Next
 			timeUntil := time.Until(nextRuntime)
 			hour := timeUntil / time.Hour
 			timeUntil -= hour * time.Hour
