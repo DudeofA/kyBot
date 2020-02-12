@@ -50,7 +50,7 @@ func startVote(s *discordgo.Session, m *discordgo.MessageCreate, data string) in
 	s.ChannelMessageDelete(m.ChannelID, m.ID)
 
 	//Pend on the votes until they pass or timeout
-	result := WaitForVotes(s, voteMsg, optionNum)
+	result := WaitForVotes(s, voteMsg, m.Author, optionNum)
 
 	switch result {
 	case -1:
@@ -92,8 +92,7 @@ func ReactionAdd(s *discordgo.Session, m *discordgo.Message, reaction string) {
 }
 
 //WaitForVotes - wait for enough votes to pass the vote or timeout and fail
-func WaitForVotes(s *discordgo.Session, m *discordgo.Message, options int) (result int) {
-	minVotes := 1
+func WaitForVotes(s *discordgo.Session, m *discordgo.Message, author *discordgo.User, options int) (result int) {
 
 	voteAlive := true
 	for voteAlive {
@@ -110,12 +109,18 @@ func WaitForVotes(s *discordgo.Session, m *discordgo.Message, options int) (resu
 			}
 
 			//If there are enough upvote, approve vote
-			if len(upReact) > minVotes {
+			if len(upReact) > k.botConfig.MinVotes {
 				return 0
 			}
 			//If there are enough downvotes, fail vote
-			if len(downReact) > minVotes {
+			if len(downReact) > k.botConfig.MinVotes-1 {
 				return -1
+			}
+			// If original user downvotes, fail vote
+			for _, a := range downReact {
+				if a.ID == author.ID {
+					return -1
+				}
 			}
 
 			//Otherwise 1-9 options

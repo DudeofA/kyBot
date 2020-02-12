@@ -47,6 +47,7 @@ type BotConfig struct {
 	DailyAmt  int    `json:"dailyAmt"`  // Amount of dailies to be collected daily
 	DBName    string `json:"dbName"`    // Name of database where data is kept
 	DBURI     string `json:"dbURI"`     // URI of database to connect to (localhost or hosted)
+	MinVotes  int    `json:"minVotes"`  // Minimum votes to pass a vote
 	Prefix    string `json:"prefix"`    // Prefix the bot will respond to
 	ResetTime string `json:"resetTime"` // Time when dailies reset i.e. 19:00
 	Status    string `json:"status"`    // Status of the bot (Playing <v1.0>)
@@ -105,6 +106,9 @@ func main() {
 		}
 		if k.botConfig.DailyAmt == 0 {
 			k.botConfig.DailyAmt = 100
+		}
+		if k.botConfig.MinVotes == 0 {
+			k.botConfig.MinVotes = 3
 		}
 		if k.botConfig.Prefix == "" {
 			k.botConfig.Prefix = "k!"

@@ -1,6 +1,12 @@
 # Changelog
 All notable changes will be documented in this file.
 
+## [3.0.3] - 2/11/20
+### Fix
+- Minimum votes needed changed to 3
+### Add
+- Downvoting own vote end the vote
+
 ## [3.0.2] - 2/8/20
 ### Fix
 - Countdown until dailies are up

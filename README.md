@@ -1,5 +1,5 @@
 **Kylixor Multi-Purpose Discord Bot**
-v3.0.2
+v3.0.3
 =====================================
 
 Dependencies:
