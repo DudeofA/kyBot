@@ -2,6 +2,8 @@
 v3.0.3
 =====================================
 
+[![CodeFactor](https://www.codefactor.io/repository/github/dudeofa/kylixor/badge)](https://www.codefactor.io/repository/github/dudeofa/kylixor)
+
 Dependencies:
 ~~~
 make
