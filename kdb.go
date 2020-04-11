@@ -9,7 +9,6 @@ package main
 
 import (
 	"database/sql"
-	"fmt"
 	"strconv"
 	"time"
 
@@ -40,6 +39,17 @@ type Quote struct {
 	Timestamp  time.Time `json:"timestamp"`  // Timestamp when quote was recorded
 }
 
+// Hangman - State of hangman game
+type Hangman struct {
+	GuildID   string   `json:"guildID"`   // Guild game is attached to
+	ChannelID string   `json:"channelID"` // ChannelID where game is played
+	GameState int      `json:"gameState"` // State of game, 1-7 until you lose
+	Guessed   []string `json:"guessed"`   // Characters/words that have been guessed
+	MessageID string   `json:"messageID"` // MessageID of current hangman game
+	Word      string   `json:"word"`      // Word/phrase for the game
+	WordState []string `json:"hmState"`   // State of game's word
+}
+
 //----- U S E R   S T A T S -----
 
 // UserInfo - Hold all pertaining information for each user
@@ -58,6 +68,18 @@ type Reminders struct {
 	UserID     string    `json:"userID"`     // User that saved the reminder
 	RemindTime time.Time `json:"remindTime"` // Time to remind user
 	RemindMsg  string    `json:"remindMsg"`  // Message to be reminded of
+}
+
+// Vote - hold stats for votes
+type Vote struct {
+	MessageID string    `json:"messageID"` // MessageID of vote
+	GuildID   string    `json:"guildID"`   // Guild vote is in
+	Options   int       `json:"options"`   // How many options the vote has
+	Quote     bool      `json:"quote"`     // Is vote a quote application
+	VoteText  string    `json:"voteText"`  // All the options for the vote in one string
+	Result    int       `json:"result"`    // Numeric result of vote (negative is in progress, zero is no for single option vote, numbers are voting options)
+	StartTime time.Time `json:"startTime"` // Time vote was started
+	EndTime   time.Time `json:"endTime"`   // Time vote was ended, by default it is same as startTime
 }
 
 //----- D B   F U N C T I O N S -----
@@ -117,6 +139,30 @@ func (kdb *KDB) Init() {
 		panic(err)
 	}
 
+	// Create vote table
+	k.Log("KDB", "Creating votes table")
+	_, err = k.db.Exec(`CREATE TABLE IF NOT EXISTS votes (
+		messageID VARCHAR(32) PRIMARY KEY NOT NULL,
+		guildID VARCHAR(32) NOT NULL,
+		options INT NOT NULL,
+		quote BOOL NOT NULL DEFAULT FALSE,
+		voteText TEXT NOT NULL,
+		result INT NOT NULL DEFAULT 0,
+		startTime DATETIME NOT NULL,
+		endTime DATETIME NOT NULL)`)
+	if err != nil {
+		panic(err)
+	}
+
+	// Create watch table
+	k.Log("KDB", "Creating watch table")
+	_, err = k.db.Exec(`CREATE TABLE IF NOT EXISTS watch (
+		messageID VARCHAR(32) PRIMARY KEY NOT NULL,
+		type VARCHAR(32) NOT NULL)`)
+	if err != nil {
+		panic(err)
+	}
+
 	// Create state table
 	k.Log("KDB", "Creating state table and updating version")
 	_, err = k.db.Exec(`CREATE TABLE IF NOT EXISTS state (
@@ -125,8 +171,7 @@ func (kdb *KDB) Init() {
 		panic(err)
 	}
 
-	_, err = k.db.Exec(fmt.Sprintf("INSERT INTO state (version) VALUES ('%s')",
-		k.botConfig.Version))
+	_, err = k.db.Exec("INSERT INTO state (version) VALUES (?)", k.botConfig.Version)
 	if err != nil {
 		panic(err)
 	}
@@ -169,14 +214,14 @@ func (kdb *KDB) ReadGuild(s *discordgo.Session, guildID string) (guild GuildInfo
 	// 	}
 	// }
 
-	row := k.db.QueryRow("SELECT guildID, name, region, karma, currency FROM guilds WHERE guildID=(?)", guildID)
+	row := k.db.QueryRow("SELECT guildID, name, region, karma, currency FROM guilds WHERE guildID = ?", guildID)
 	err := row.Scan(&guild.ID, &guild.Name, &guild.Region, &guild.Karma, &guild.Currency)
 	switch err {
 	case sql.ErrNoRows:
 		k.Log("KDB", "Guild not found in DB, creating new...")
 		return k.kdb.CreateGuild(s, guildID)
 	case nil:
-		LogDB("Guild", guild.Name, guild.ID, "read from")
+		// LogDB("Guild", guild.Name, guild.ID, "read from")
 		return guild
 	default:
 		panic(err)
@@ -211,8 +256,112 @@ func (guild GuildInfo) UpdateKarma(s *discordgo.Session, delta int) {
 	LogDB("KARMA", guild.Name, guild.ID, "changed by "+strconv.Itoa(delta))
 
 	guild.Karma += delta
-	_, err := k.db.Exec("UPDATE guilds SET karma = karma+? WHERE guildID=?", delta, guild.ID)
+	_, err := k.db.Exec("UPDATE guilds SET karma = karma+? WHERE guildID = ?", delta, guild.ID)
 	if err != nil {
+		panic(err)
+	}
+}
+
+//----- W A T C H   M A N A G E M E N T -----
+
+// CreateWatch - Start monitoring a message for reactions
+func (kdb *KDB) CreateWatch(messageID string, watchType string) {
+	_, err := k.db.Exec("INSERT INTO watch (messageID, type) VALUES (?,?)", messageID, watchType)
+	if err != nil {
+		panic(err)
+	}
+}
+
+// ReadWatch - Checks watch table for the messageID passed as argument
+func (kdb *KDB) ReadWatch(messageID string) (inTable bool, watchType string) {
+	row := k.db.QueryRow("SELECT type FROM watch WHERE messageID = ?", messageID)
+	err := row.Scan(&watchType)
+	if err == sql.ErrNoRows {
+		return false, ""
+	} else if err == nil {
+		return true, watchType
+	} else {
+		panic(err)
+	}
+}
+
+// DeleteWatch - Remove watch from watch table based on passed messageID
+func (kdb *KDB) DeleteWatch(messageID string) {
+	_, err := k.db.Exec("DELETE FROM WATCH WHERE messageID=?", messageID)
+	if err == sql.ErrNoRows {
+		k.Log("HANGMAN", "Unable to delete watch table entry, not found")
+	} else if err != nil {
+		panic(err)
+	}
+}
+
+//----- V O T E   M A N A G E M E N T -----
+
+// CreateVote - Create a vote and store it in the votes table
+func (kdb *KDB) CreateVote(messageID string, guildID string, options int, quote bool, voteText string) (vote Vote) {
+
+	vote.MessageID = messageID
+	vote.GuildID = guildID
+	vote.Options = options
+	vote.Quote = quote
+	vote.VoteText = voteText
+	vote.Result = -1
+	vote.StartTime = time.Now()
+	vote.EndTime = time.Now()
+	startTime := vote.StartTime.Format("2006-01-02 15:04:05")
+	endTime := vote.EndTime.Format("2006-01-02 15:04:05")
+
+	_, err := k.db.Exec("INSERT INTO votes (messageID, guildID, options, quote, voteText, result, startTime, endTime) VALUES (?,?,?,?,?,?,?,?)",
+		vote.MessageID, vote.GuildID, vote.Options, vote.Quote, vote.VoteText, vote.Result, startTime, endTime)
+	if err != nil {
+		panic(err)
+	}
+
+	LogDB("VOTE", guildID, messageID, "created in")
+	return vote
+}
+
+// ReadVote - Return the vote structure from the database if it exists
+func (kdb *KDB) ReadVote(messageID string) (vote Vote) {
+	var startTime, endTime string
+	row := k.db.QueryRow("SELECT messageID, guildID, options, voteText, result, startTime, endTime FROM votes WHERE messageID = ?", messageID)
+	err := row.Scan(&vote.MessageID, &vote.GuildID, &vote.Options, &vote.VoteText, &vote.Result, &startTime, &endTime)
+	if err == sql.ErrNoRows {
+		return Vote{}
+	} else if err == nil {
+		vote.StartTime, err = time.Parse("2006-01-02 15:04:05", startTime)
+		if err != nil {
+			panic(err)
+		}
+		vote.EndTime, err = time.Parse("2006-01-02 15:04:05", endTime)
+		if err != nil {
+			panic(err)
+		}
+		LogDB("VOTE", vote.GuildID, vote.MessageID, "read from")
+		return vote
+	} else {
+		panic(err)
+	}
+}
+
+// UpdateVote - Update the results of a vote
+func (vote *Vote) UpdateVote() {
+	// Update the guild to the database
+	_, err := k.db.Exec("UPDATE votes SET result = ? WHERE messageID = ?", vote.Result, vote.MessageID)
+	if err != nil {
+		k.Log("FATAL", "Error updating vote result: "+vote.MessageID)
+		panic(err)
+	}
+}
+
+// EndVote - Put the current time in for the end of the vote
+func (vote *Vote) EndVote() {
+	vote.EndTime = time.Now()
+	endTime := vote.EndTime.Format("2006-01-02 15:04:05")
+
+	_, err := k.db.Exec("UPDATE votes SET endTime = ? WHERE messageID = ?", endTime, vote.MessageID)
+	if err != nil {
+		k.Log("FATAL", "Error ending vote: "+vote.MessageID)
 		panic(err)
 	}
 }

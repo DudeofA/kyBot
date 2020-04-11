@@ -19,17 +19,6 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-// Hangman - State of hangman game
-type Hangman struct {
-	GuildID   string   `json:"guildID"`   // Guild game is attached to
-	ChannelID string   `json:"channel"`   // ChannelID where game is played
-	GameState int      `json:"gameState"` // State of game, 1-7 until you lose
-	Guessed   []string `json:"guessed"`   // Characters/words that have been guessed
-	MessageID string   `json:"message"`   // MessageID of current hangman game
-	Word      string   `json:"word"`      // Word/phrase for the game
-	WordState []string `json:"hmState"`   // State of game's word
-}
-
 // Stages of the hanging
 var hmStages = []string{
 	"\n/---|\n|\n|\n|\n|\n",
@@ -53,6 +42,9 @@ func (kdb *KDB) CreateHM(s *discordgo.Session, guildID string) (hm Hangman) {
 	guessed := strings.Join(hm.Guessed, ",")
 	wordState := strings.Join(hm.WordState, "")
 	hm.GuildID = guildID
+	hm.GameState = 0
+	hm.MessageID = ""
+	hm.Word = ""
 
 	// Insert game into database
 	_, err := k.db.Exec("INSERT INTO hangman (guildID, channelID, messageID, word, gameState, wordState, guessed) VALUES(?,?,?,?,?,?,?)",
@@ -61,8 +53,7 @@ func (kdb *KDB) CreateHM(s *discordgo.Session, guildID string) (hm Hangman) {
 		panic(err)
 	}
 
-	hm.ResetGame()
-	LogDB("Hangman Game", hm.Word, hm.GuildID, "created")
+	LogDB("Hangman", hm.Word, hm.GuildID, "inserted into")
 
 	return hm
 }
@@ -146,16 +137,19 @@ func HangmanGame(s *discordgo.Session, m *discordgo.MessageCreate, data string) 
 			// Start the game
 			hm.GameState = 1
 
-			//Generate word and board
+			// Generate word and board
 			hm.GenerateWord()
 			hm.PrintState(s)
+
 		} else {
+			// Remove old watch before create a new one
+			k.kdb.DeleteWatch(hm.MessageID)
 			hm.MessageID = ""
 			hm.PrintState(s)
 		}
 		break
 
-	//Move game to another channel
+	// Move game to another channel
 	case "channel":
 		chanID := strings.TrimPrefix(argument, "<#")
 		chanID = strings.TrimSuffix(chanID, ">")
@@ -165,13 +159,13 @@ func HangmanGame(s *discordgo.Session, m *discordgo.MessageCreate, data string) 
 			return
 		}
 
-		//Get permision of bot
+		// Get permision of bot
 		gamePerm, err := s.State.UserChannelPermissions(k.state.self.ID, hmChannel.ID)
 		if err != nil {
 			panic(err)
 		}
 
-		//If bot cannot type here, abort
+		// If bot cannot type here, abort
 		if (gamePerm&0x40 != 0x40) || (gamePerm&0x800 != 0x800) {
 			s.ChannelMessageSend(m.ChannelID, "Bot cannot send messages/add reactions to this channel")
 			return
@@ -207,19 +201,19 @@ func HangmanGame(s *discordgo.Session, m *discordgo.MessageCreate, data string) 
 	}
 }
 
-//Guess - Guess word or letter in the given hangman session
+// Guess - Guess word or letter in the given hangman session
 func (hm *Hangman) Guess(s *discordgo.Session, authorID string, guess string) {
-	//If no game is running, do nothing and return
+	// If no game is running, do nothing and return
 	if hm.GameState == 0 {
 		return
 	}
 
-	//Cleanup the guess
+	// Clean up the guess
 	guess = strings.TrimSpace(strings.ToLower(guess))
 
-	//Check if guess is a word, then check if it is a letter, else return
+	// Check if guess is a word, then check if it is a letter, else return
 	if len(guess) > 1 {
-		//Guess is a word
+		// Guess is a word
 		if guess == strings.ToLower(hm.Word) {
 			hm.WinGame(s, authorID)
 			return
@@ -249,7 +243,7 @@ func (hm *Hangman) Guess(s *discordgo.Session, authorID string, guess string) {
 				lowerWord = lowerWord[:index] + "#" + lowerWord[index+1:]
 			}
 
-			//If there are no underlines, game is won
+			// If there are no underlines, game is won
 			wordState := strings.Join(hm.WordState, "")
 			if !strings.Contains(wordState, "_") {
 				hm.WinGame(s, authorID)
@@ -263,7 +257,7 @@ func (hm *Hangman) Guess(s *discordgo.Session, authorID string, guess string) {
 		}
 
 	} else {
-		return //Invalid guess
+		return // Invalid guess
 	}
 
 	hm.GameState++
@@ -272,10 +266,10 @@ func (hm *Hangman) Guess(s *discordgo.Session, authorID string, guess string) {
 	hm.CheckState(s)
 }
 
-//ReactionGuess - processes letter guesses on hangman using reactions
+// ReactionGuess - processes letter guesses on hangman using reactions
 func (hm *Hangman) ReactionGuess(s *discordgo.Session, r *discordgo.MessageReactionAdd) {
 
-	//Get the letter to guess
+	// Get the letter to guess
 	var guess string
 	for i := range alphaBlocks {
 		if r.Emoji.Name == alphaBlocks[i] {
@@ -283,28 +277,28 @@ func (hm *Hangman) ReactionGuess(s *discordgo.Session, r *discordgo.MessageReact
 		}
 	}
 
-	//Check that it hasn't been guessed yet
+	// Check that it hasn't been guessed yet
 	for _, prevGuess := range hm.Guessed {
 		if strings.ToLower(guess) == prevGuess {
 			return
 		}
 	}
 
-	//Make the guess and update the board
+	// Make the guess and update the board
 	hm.Guess(s, r.UserID, guess)
 }
 
-//PrintState - prints the current state of the hangman game
+// PrintState - prints the current state of the hangman game
 func (hm Hangman) PrintState(s *discordgo.Session) {
 
-	//Append guesses into one big string
+	// Append guesses into one big string
 	guesses := "Wrong guesses:"
 	if len(hm.Guessed) > 0 {
 		guesses = "Wrong guesses: " + strings.Join(hm.Guessed, ", ")
 	}
 	guesses += "\n"
 
-	//Assemble and print the game and determine stage to draw
+	// Assemble and print the game and determine stage to draw
 	var stage string
 	var gameMessage string
 	if hm.GameState < 0 {
@@ -312,8 +306,8 @@ func (hm Hangman) PrintState(s *discordgo.Session) {
 
 		// Put the word in the underline
 		hm.WordState = strings.Split(hm.Word, "")
-
 		stage = hmStages[len(hm.Guessed)]
+
 	} else if hm.GameState == len(hmStages) {
 		gameMessage = fmt.Sprintf("GAME OVER - Try again next time...Word was \"%s\"\n", hm.Word)
 		stage = hmStages[len(hmStages)-1]
@@ -322,18 +316,20 @@ func (hm Hangman) PrintState(s *discordgo.Session) {
 		stage = hmStages[len(hm.Guessed)]
 	}
 
-	//Write out the current word status
+	// Write out the current word status
 	wordPrint := strings.Join(hm.WordState, " ") + "\n"
 
-	//Assemble the master string of the game status
+	// Assemble the master string of the game status
 	game := "```\n" + gameMessage + guesses + wordPrint + stage + "\n```"
 
-	//If the game is just starting
+	// If the game is just starting
 	if hm.MessageID == "" {
 		hmGame, _ := s.ChannelMessageSend(hm.ChannelID, game)
 		hm.MessageID = hmGame.ID
+
+		k.kdb.CreateWatch(hm.MessageID, "hangman")
 	} else {
-		//Otherwise just edit the existing
+		// Otherwise just edit the existing
 		_, err := s.ChannelMessageEdit(hm.ChannelID, hm.MessageID, game)
 		if err != nil {
 			s.ChannelMessageSend(hm.ChannelID, "Game message is missing :c, please quit and restart the game")
@@ -341,6 +337,49 @@ func (hm Hangman) PrintState(s *discordgo.Session) {
 	}
 
 	hm.Update()
+}
+
+//ResetGame - resets game stats back to defaults
+func (hm *Hangman) ResetGame() {
+	// Delete entry from watch table
+	k.kdb.DeleteWatch(hm.MessageID)
+
+	hm.GameState = 0
+	hm.Guessed = nil
+	hm.MessageID = ""
+	hm.Word = ""
+	hm.WordState = nil
+	hm.Update()
+}
+
+// WinGame - win the game and award the credits to the user
+func (hm *Hangman) WinGame(s *discordgo.Session, authorID string) {
+	hm.GameState = -1
+	hmWinnings := len(hm.Word) * 10
+	winner := k.kdb.ReadUser(s, authorID)
+	s.ChannelMessageSend(hm.ChannelID, fmt.Sprintf("YOU GOT IT <@%s> - Enjoy the %d coins!\n",
+		winner.ID, hmWinnings))
+	winner.Credits += hmWinnings
+	winner.UpdateCredits(s, hmWinnings)
+
+	// Print the final result of the game
+	hm.PrintState(s)
+	hm.ResetGame()
+}
+
+// CheckState - check for a won or lost game
+func (hm *Hangman) CheckState(s *discordgo.Session) {
+	if hm.GameState < 0 || hm.GameState == len(hmStages) {
+		guildName := "N/A"
+		channel, err := s.Channel(hm.ChannelID)
+		if err == nil {
+			guild, _ := s.Guild(channel.GuildID)
+			guildName = guild.Name
+		}
+		k.Log("HANGMAN", fmt.Sprintf("%s - %s - %s - %s", guildName, hm.ChannelID, "", "Hangman game reseting..."))
+
+		hm.ResetGame()
+	}
 }
 
 // GenerateWord - Generate random phrase/word for Hangman
@@ -387,44 +426,4 @@ func GenerateHMLinkEmbed(guildID string, hm Hangman, note string) (embed *discor
 		Description: embedLink,
 	}
 	return embed
-}
-
-//ResetGame - resets game stats back to defaults
-func (hm *Hangman) ResetGame() {
-	hm.GameState = 0
-	hm.Guessed = nil
-	hm.MessageID = ""
-	hm.Word = ""
-	hm.WordState = nil
-	hm.Update()
-}
-
-// WinGame - win the game and award the credits to the user
-func (hm *Hangman) WinGame(s *discordgo.Session, authorID string) {
-	hm.GameState = -1
-	hmWinnings := len(hm.Word) * 10
-	winner := k.kdb.ReadUser(s, authorID)
-	s.ChannelMessageSend(hm.ChannelID, fmt.Sprintf("YOU GOT IT <@%s> - Enjoy the %d coins!\n",
-		winner.ID, hmWinnings))
-	winner.Credits += hmWinnings
-	winner.Update()
-
-	// Print the final result of the game
-	hm.PrintState(s)
-	hm.ResetGame()
-}
-
-// CheckState - check for a won or lost game
-func (hm *Hangman) CheckState(s *discordgo.Session) {
-	if hm.GameState < 0 || hm.GameState == len(hmStages) {
-		guildName := "N/A"
-		channel, err := s.Channel(hm.ChannelID)
-		if err == nil {
-			guild, _ := s.Guild(channel.GuildID)
-			guildName = guild.Name
-		}
-		k.Log("HANGMAN", fmt.Sprintf("%s - %s - %s - %s", guildName, hm.ChannelID, "", "Hangman game reseting..."))
-
-		hm.ResetGame()
-	}
 }

@@ -77,7 +77,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 			msgUser.UpdateDailies(s, true)
 			msgUser.Credits += k.botConfig.DailyAmt
 			msgUser.Update()
-			// Indicate to user they have recived their dailies
+			// Indicate to user they have received their dailies
 			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf(
 				"💵 | Daily %d coins received! Total %scoins: **%d**",
 				k.botConfig.DailyAmt, msgGuild.Currency, msgUser.Credits))
@@ -186,11 +186,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 	// Begin a vote for a new quote to be added to the list
 	case "quote", "q":
 		if data != "" {
-			go func() {
-				if startVote(s, m, fmt.Sprintf("0 %s", data)) == 0 {
-					k.kdb.CreateQuote(s, m.GuildID, data)
-				}
-			}()
+			StartVote(s, m, data, true)
 		} else {
 			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Command Syntax: %squote <quote content here>",
 				k.botConfig.Prefix))
@@ -226,8 +222,6 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 		if CheckAdmin(s, m) {
 			s.ChannelMessageSend(m.ChannelID, "Starting testing...")
 
-			ResetDailies(s)
-
 			s.ChannelMessageSend(m.ChannelID, "Testing finshed.")
 		}
 		break
@@ -241,7 +235,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 
 	//----- V O I C E   S E R V E R -----
 	// Changes the voice server in case of server outage
-	case "voiceserver", "vc":
+	case "voiceserver", "vs":
 		//Get guild data
 		msgGuild := k.kdb.ReadGuild(s, m.GuildID)
 
@@ -267,6 +261,11 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 		default:
 			s.ChannelMessageSend(m.ChannelID, "Invalid voice server region")
 		}
+
+	//----- V O T E -----
+	// Starts a vote depending on the numbers of options
+	case "vote", "poll":
+		StartVote(s, m, data, false)
 
 	default:
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Unknown command \"%s\"", command))

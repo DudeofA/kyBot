@@ -1,6 +1,14 @@
 # Changelog
 All notable changes will be documented in this file.
 
+## [3.0.4] - 2/24/20
+### Add
+- New watch table for monitoring messages (i.e. hangman, votes)
+- Added vote command
+- Made quote command use vote command
+### Fix
+- Improved vote functionality to use watch table
+
 ## [3.0.3] - 2/11/20
 ### Fix
 - Minimum votes needed changed to 3

@@ -1,3 +1,10 @@
+/* 	users.go
+_________________________________
+Holds all user functions for Kylixor Discord Bot
+Andrew Langhill
+kylixor.com
+*/
+
 package main
 
 import (

@@ -1,5 +1,5 @@
 **Kylixor Multi-Purpose Discord Bot**
-v3.0.3
+v3.0.4
 =====================================
 
 Dependencies:
@@ -36,6 +36,7 @@ Begin help command here:
 | quoterandom  | qr    | Print a random quote from the database
 | version      | v     | Gets bot's current version
 | voiceserver  | vs    | Change the voice server region
+| vote         | poll  | Start a vote/poll using "|" as a separator, i.e. !vote red | yellow)     
  
 | Admin CMD    | Alias | Description
 | -----------  | ----- | -----------

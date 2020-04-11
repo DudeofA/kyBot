@@ -30,13 +30,13 @@ import (
 
 //K - Kylixor bot
 type K struct {
-	botConfig BotConfig         // Bot's global configuration
-	cron      *cron.Cron        // Cronjob for dailies timer
-	db        *sql.DB           // Raw database connection bundle
-	kdb       KDB               // Server/User database
-	logfile   *os.File          // Log file handle
-	session   discordgo.Session // Session info
-	state     BotState          // Volitile state of bot
+	botConfig BotConfig          // Bot's global configuration
+	cron      *cron.Cron         // Cronjob for dailies timer
+	db        *sql.DB            // Raw database connection bundle
+	kdb       KDB                // Server/User database
+	logfile   *os.File           // Log file handle
+	session   *discordgo.Session // Session info
+	state     BotState           // Volitile state of bot
 }
 
 //BotConfig - Global bot config
@@ -146,7 +146,7 @@ func main() {
 	// Connect to MySQL server
 	k.db, err = sql.Open("mysql", k.botConfig.DBURI+"/"+k.botConfig.DBName)
 	if err != nil {
-		k.Log("FATAL", "Failed get database connection setup")
+		k.Log("FATAL", "Failed to get database connection set up")
 		panic(err)
 	}
 	defer k.db.Close()
@@ -162,20 +162,29 @@ func main() {
 	}
 
 	// Create database if not found
-	var version string
-	result := k.db.QueryRow("SELECT version FROM state")
-	err = result.Scan(&version)
+	var row string
+	result := k.db.QueryRow("SHOW TABLES LIKE 'state'")
+	err = result.Scan(&row)
 	switch err {
 	case sql.ErrNoRows:
 		k.Log("WARN", "No state table found, creating new...")
 		k.kdb.Init()
 	case nil:
+		var version string
+		result := k.db.QueryRow("SELECT version FROM state")
+		err = result.Scan(&version)
+		if err != nil {
+			panic(err)
+		}
 		k.Log("INFO", "Found database version: "+version)
+		localVer := GetVersion()
+		if version != localVer {
+			k.Log("WARN", "Database version (\""+version+"\") does not equal README version (\""+localVer+"\"), initializing KDB...")
+			k.kdb.Init()
+		}
 		break
 	default:
-		// Sorry not sorry
-		k.kdb.Init()
-		// panic(err)
+		panic(err)
 	}
 
 	k.Log("KDB", fmt.Sprintf("Connected to MySQL - %s", k.botConfig.DBName))
@@ -184,13 +193,15 @@ func main() {
 	if runtime.GOOS == "windows" {
 		_, err = os.Stat(filepath.FromSlash(k.state.pwd + "/dict/words.txt"))
 		if err != nil {
-			fmt.Println("No dictionary file supplied, please add words.txt to the dict folder, full of words to use for hangman")
+			k.Log("FATAL", "No dictionary file supplied, please add words.txt to the dict folder, full of words to use for hangman")
+			fmt.Println("No dictionary file supplied, please add words.txt to the directory.")
 			return
 		}
 	} else {
 		_, err = os.Stat(filepath.FromSlash("/usr/share/dict/words"))
 		if err != nil {
-			fmt.Println("Error accessing dictionary at /usr/share/dict/words")
+			k.Log("FATAL", "Error accessing dictionary at /usr/share/dict/words")
+			fmt.Println("Error accesssing dictionary at /usr/share/dict/words.  Try installing the wamerican package.")
 			return
 		}
 	}
@@ -198,11 +209,14 @@ func main() {
 	// Create a new Discord session using the provided bot token.
 	ky, err := discordgo.New("Bot " + k.botConfig.APIKey)
 	if err != nil {
-		fmt.Println("Error creating Discord session")
+		k.Log("FATAL", "Error creating Discord session")
 		panic(err)
 	}
 
-	//Use the state to cache messages
+	// Keep session globally accessable
+	k.session = ky
+
+	// Use the state to cache messages
 	ky.State.MaxMessageCount = 100
 
 	// Register ready for the ready event
@@ -220,7 +234,7 @@ func main() {
 	// Register MessageAddReaction to check for reactions (for hangman)
 	ky.AddHandler(MessageReactionAdd)
 
-	//BootLogo
+	// BootLogo
 	if k.botConfig.BootLogo != "" {
 		fmt.Println(k.botConfig.BootLogo)
 	}
@@ -233,11 +247,11 @@ func main() {
 	}
 	k.Log("STARTUP", "Successfully opened Discord bot session!")
 
-	//Create channels to watch for kill signals
+	// Create channels to watch for kill signals
 	botChan := make(chan os.Signal, 1)
 	done := make(chan bool, 1)
 
-	//Bot will end on any of the following signals
+	// Bot will end on any of the following signals
 	signal.Notify(botChan, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 
 	go func() {
@@ -258,7 +272,7 @@ func main() {
 	k.Log("SHUTDOWN", "Closing discord websocket...")
 	ky.Close()
 	k.Log("SHUTDOWN", "Closing database connection...")
-	//Disconnect
+	k.db.Close()
 	k.logfile.Close()
 	fmt.Println("\nKylixor Bot is now stopped")
 	os.Exit(0)
@@ -267,11 +281,10 @@ func main() {
 // Ready - This function will be called (due to AddHandler above) when the bot receives
 // the "ready" event from Discord.
 func Ready(s *discordgo.Session, event *discordgo.Ready) {
-	// Set the playing status.
 	k.state.self = event.User
 
 	servers := s.State.Guilds
-	k.Log("STARTUP", fmt.Sprintf("Kylixor discord bot has started on %d servers", len(servers)))
+	k.Log("STARTUP", fmt.Sprintf("Kylixor Discord bot has started on %d servers", len(servers)))
 	for _, server := range servers {
 		k.kdb.UpdateGuild(s, server.ID)
 	}
@@ -293,30 +306,29 @@ func Ready(s *discordgo.Session, event *discordgo.Ready) {
 
 	k.Log("STARTUP", "Bot has started...listening for input")
 
-	fmt.Println("\nKylixor discord bot is now running.  Press CTRL-C to exit.")
+	fmt.Println("\nKylixor Discord bot is now running.  Press CTRL-C to exit.")
 }
 
-// MessageReactionAdd - Called whenever a message is sent to the discord
+// MessageReactionAdd - Called whenever a reaction is added to a message
 func MessageReactionAdd(s *discordgo.Session, r *discordgo.MessageReactionAdd) {
 	if r.UserID == k.state.self.ID {
 		return
 	}
 
-	rows, err := k.db.Query("SELECT messageID,guildID FROM hangman WHERE messageID IS NOT NULL")
-	if err != nil {
-		panic(err)
-	}
+	found, msgType := k.kdb.ReadWatch(r.MessageID)
+	if found {
+		switch msgType {
 
-	for rows.Next() {
-		var tempHM Hangman
-		if err := rows.Scan(&tempHM.MessageID, &tempHM.GuildID); err != nil {
-			panic(err)
-		}
-
-		if r.MessageID == tempHM.MessageID {
-			hm := k.kdb.ReadHM(s, tempHM.GuildID)
+		case "hangman":
+			// Guess by reaction letter
+			hm := k.kdb.ReadHM(s, r.GuildID)
 			hm.ReactionGuess(s, r)
-			break
+
+		case "vote":
+			vote := k.kdb.ReadVote(r.MessageID)
+			vote.HandleVote(s, r)
+		default:
+			return
 		}
 	}
 }
@@ -528,7 +540,7 @@ func CreationTime(ID string) (t time.Time, err error) {
 	return
 }
 
-// GetAge - Take in a string that should be a discord snowflake ID, then calulate, format, and return the age
+// GetAge - Take in a string that should be a discord snowflake ID, then calculate, format, and return the age
 func GetAge(rawID string) string {
 
 	id := rawID

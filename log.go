@@ -1,4 +1,4 @@
-/* 	log.go
+/*	log.go
 _________________________________
 Log/debug code for Kylixor Discord Bot
 Andrew Langhill
@@ -77,7 +77,7 @@ func LogVoice(s *discordgo.Session, v *discordgo.VoiceStateUpdate) {
 	//Get guild name and ID
 	guild := k.kdb.ReadGuild(s, v.GuildID)
 
-	//Get the event that occured - LeftChannel, JoinedChannel
+	//Get the event that occurred - LeftChannel, JoinedChannel
 	var event string
 	var channelName string
 	//If update is a leave voice channel event
