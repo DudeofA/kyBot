@@ -2,6 +2,8 @@
 v3.0.4
 =====================================
 
+[![CodeFactor](https://www.codefactor.io/repository/github/dudeofa/kylixor/badge)](https://www.codefactor.io/repository/github/dudeofa/kylixor)  [![Go report](http://goreportcard.com/badge/dudeofa/kylixor)](http://goreportcard.com/report/dudeofa/kylixor)
+
 Dependencies:
 ~~~
 make
