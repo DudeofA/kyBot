@@ -10,6 +10,7 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -135,5 +136,49 @@ func CompDailies(s *discordgo.Session) {
 
 		user = k.kdb.ReadUser(s, user.ID)
 		user.UpdateCredits(s, 2*k.botConfig.DailyAmt)
+	}
+}
+
+// CollectDailies - Attempt to collect dailies
+func (user *UserInfo) CollectDailies(s *discordgo.Session, m *discordgo.MessageCreate, msgGuild GuildInfo) {
+	// If the dailies have not been done
+	if !user.DoneDailies {
+		// Mark dailies as done and add the appropriate amount
+		user.UpdateDailies(s, true)
+		user.Credits += k.botConfig.DailyAmt
+		user.Update()
+		// Indicate to user they have received their dailies
+		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf(
+			"💵 | Daily %d coins received! Total %scoins: **%d**",
+			k.botConfig.DailyAmt, msgGuild.Currency, user.Credits))
+	} else {
+		// Display time until dailies are available based on
+		// when the next cronjob will run
+
+		// _, nextRuntime := gocron.NextRun()
+		jobs := k.cron.Entries()
+		nextRuntime := jobs[0].Next
+		timeUntil := time.Until(nextRuntime)
+		hour := timeUntil / time.Hour
+		timeUntil -= hour * time.Hour
+		min := timeUntil / time.Minute
+		timeUntil -= min * time.Minute
+		sec := timeUntil / time.Second
+
+		hourStr := "s"
+		minStr := "s"
+		secStr := "s"
+		if hour == 1 {
+			hourStr = ""
+		}
+		if min == 1 {
+			minStr = ""
+		}
+		if sec == 1 {
+			secStr = ""
+		}
+		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf(
+			"💵 | You have already collected today's dailies.\nDailies reset in %d hour%s, %d minute%s and %d second%s.",
+			hour, hourStr, min, minStr, sec, secStr))
 	}
 }

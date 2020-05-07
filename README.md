@@ -1,5 +1,4 @@
 **Kylixor Multi-Purpose Discord Bot**
-v3.0.4
 =====================================
 
 [![CodeFactor](https://www.codefactor.io/repository/github/dudeofa/kylixor/badge)](https://www.codefactor.io/repository/github/dudeofa/kylixor)  [![Go report](http://goreportcard.com/badge/dudeofa/kylixor)](http://goreportcard.com/report/dudeofa/kylixor)
@@ -32,6 +31,7 @@ Begin help command here:
 | help         | h     | Print out this file
 | gamble       | slots | Gambles the given credits
 | karma        | karma | Displays the current level of karma for the bot
+| minecraft    | mc    | Displays status of currently configured Minecraft servers
 | ping         | ping  | Send a ping to the bot to measure latency
 | quote        | q     | Starts a vote to save a memorable quote
 | quotelist    | ql    | Lists the specified quote (i.e. quotelist <identifier>)

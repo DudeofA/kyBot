@@ -16,6 +16,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -464,35 +465,34 @@ func (bc *BotConfig) Update() {
 // GetVersion - Get the version of the bot from the readme
 func GetVersion() (ver string) {
 	// Open the file and grab it line by line into textlines
-	readme, err := os.Open(filepath.FromSlash(k.state.pwd + "/README.md"))
+	changelog, err := os.Open(filepath.FromSlash(k.state.pwd + "/CHANGELOG.md"))
 	if err != nil {
 		panic(err)
 	}
+	defer changelog.Close()
 
-	scanner := bufio.NewScanner(readme)
+	scanner := bufio.NewScanner(changelog)
 	scanner.Split(bufio.ScanLines)
-	var textlines []string
 
 	for scanner.Scan() {
-		textlines = append(textlines, scanner.Text())
+		// Find version number between 2 square brackets
+		re := regexp.MustCompile(`\[([^\[\]]*)\]`)
+		if re.MatchString(scanner.Text()) {
+			versionSplice := re.FindAllString(scanner.Text(), 1)
+			ver = versionSplice[0]
+			ver = strings.Trim(ver, "[")
+			ver = strings.Trim(ver, "]")
+			k.botConfig.Version = ver
+			return ver
+		}
+
 	}
-
-	// Second line of the readme will always be the version number
-	if len(textlines) < 2 {
-		return "Version needs to be in the second line of the README in format: v#.#.#"
-	}
-
-	ver = textlines[1]
-
-	// Close file, save version number, and return version number
-	readme.Close()
-	k.botConfig.Version = ver
-	return ver
+	return "ERR"
 }
 
 // SetStatus - sets the status of the bot to the version and the default help commands
 func SetStatus(s *discordgo.Session) {
-	s.UpdateStatus(0, fmt.Sprintf("%shelp - %s", k.botConfig.Prefix, k.botConfig.Version))
+	s.UpdateStatus(0, fmt.Sprintf("%shelp - v%s", k.botConfig.Prefix, k.botConfig.Version))
 }
 
 // CheckAdmin - returns true if user is admin, otherwise posts that permission is denied
@@ -578,12 +578,12 @@ func GetAge(rawID string) string {
 		rawID, t.Format("Jan 2 3:04:05PM 2006"), tYears, tDays, and, int(tAlive.Hours()))
 }
 
-// QuotePrint - Prints the quote with nice colors
-func QuotePrint(s *discordgo.Session, m *discordgo.MessageCreate, q Quote) *discordgo.Message {
+// Print (quote) - Prints the quote with nice colors
+func (quote *Quote) Print(s *discordgo.Session, cID string) *discordgo.Message {
 	// Format quote with colors using the CSS formatting
-	fmtQuote := fmt.Sprintf("```ini\n[ %s ] - [ %s ]\n%s\n```", q.Timestamp.Format("Jan 2 3:04:05PM 2006"), q.Identifier, q.Quote)
+	fmtQuote := fmt.Sprintf("```ini\n[ %s ] - [ %s ]\n%s\n```", quote.Timestamp.Format("Jan 2 3:04:05PM 2006"), quote.Identifier, quote.Quote)
 	// Return the sent message for vote monitoring
-	msg, err := s.ChannelMessageSend(m.ChannelID, fmtQuote)
+	msg, err := s.ChannelMessageSend(cID, fmtQuote)
 	if err != nil {
 		panic(err)
 	}

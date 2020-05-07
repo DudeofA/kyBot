@@ -12,7 +12,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -71,46 +70,8 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 	case "dailies", "day":
 		msgUser := k.kdb.ReadUser(s, m.Author.ID)
 		msgGuild := k.kdb.ReadGuild(s, m.GuildID)
-		// If the dailies have not been done
-		if !msgUser.DoneDailies {
-			// Mark dailies as done and add the appropriate amount
-			msgUser.UpdateDailies(s, true)
-			msgUser.Credits += k.botConfig.DailyAmt
-			msgUser.Update()
-			// Indicate to user they have received their dailies
-			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf(
-				"💵 | Daily %d coins received! Total %scoins: **%d**",
-				k.botConfig.DailyAmt, msgGuild.Currency, msgUser.Credits))
-		} else {
-			// Display time until dailies are available based on
-			// when the next cronjob will run
+		msgUser.CollectDailies(s, m, msgGuild)
 
-			// _, nextRuntime := gocron.NextRun()
-			jobs := k.cron.Entries()
-			nextRuntime := jobs[0].Next
-			timeUntil := time.Until(nextRuntime)
-			hour := timeUntil / time.Hour
-			timeUntil -= hour * time.Hour
-			min := timeUntil / time.Minute
-			timeUntil -= min * time.Minute
-			sec := timeUntil / time.Second
-
-			hourStr := "s"
-			minStr := "s"
-			secStr := "s"
-			if hour == 1 {
-				hourStr = ""
-			}
-			if min == 1 {
-				minStr = ""
-			}
-			if sec == 1 {
-				secStr = ""
-			}
-			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf(
-				"💵 | You have already collected today's dailies.\nDailies reset in %d hour%s, %d minute%s and %d second%s.",
-				hour, hourStr, min, minStr, sec, secStr))
-		}
 		break
 
 	//----- D A R L I N G -----
@@ -142,14 +103,14 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 			break
 		}
 
-		help := strings.SplitAfter(string(readme), ":")
-		if len(help) < 4 {
-			s.ChannelMessageSend(m.ChannelID, "Misconfigured README, missing `--------` to separate commands")
+		help := strings.SplitAfter(string(readme), "Begin help command here:")
+		if len(help) < 2 {
+			s.ChannelMessageSend(m.ChannelID, "Misconfigured README, missing `Begin help command here:` to separate commands")
 			break
 		}
 
 		// Print readme within a code blog to make the formatting work output
-		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("```"+help[3]+"```"))
+		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("```"+help[1]+"```"))
 		break
 
 	//----- I P -----
@@ -172,6 +133,15 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 		msgGuild := k.kdb.ReadGuild(s, m.GuildID)
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("☯ | Current Karma: %d", msgGuild.Karma))
 		break
+
+	//----- M I N E C R A F T -----
+
+	// Polls the configured Minecraft Servers to check if they are up and who is playing
+	/*
+		case "minecraft", "mc":
+			UpdateMinecraft(s, m, data)
+			break
+	*/
 
 	//----- P I N G -----
 	// Replies immediately with 'pong' then calculates the difference of the timestamps to get the ping
@@ -202,7 +172,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 			QuoteListIDs(s, m.ChannelID)
 			return
 		}
-		QuotePrint(s, m, quote)
+		quote.Print(s, m.ChannelID)
 		break
 
 	//----- Q U O T E R A N D -----
@@ -213,7 +183,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 			s.ChannelMessageSend(m.ChannelID, "No quotes found :(")
 			break
 		}
-		QuotePrint(s, m, quote)
+		quote.Print(s, m.ChannelID)
 		break
 
 	//----- T E S T [ADMIN] -----

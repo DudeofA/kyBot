@@ -287,7 +287,7 @@ func (kdb *KDB) ReadWatch(messageID string) (inTable bool, watchType string) {
 
 // DeleteWatch - Remove watch from watch table based on passed messageID
 func (kdb *KDB) DeleteWatch(messageID string) {
-	_, err := k.db.Exec("DELETE FROM WATCH WHERE messageID=?", messageID)
+	_, err := k.db.Exec("DELETE FROM watch WHERE messageID=?", messageID)
 	if err == sql.ErrNoRows {
 		k.Log("HANGMAN", "Unable to delete watch table entry, not found")
 	} else if err != nil {
@@ -324,8 +324,8 @@ func (kdb *KDB) CreateVote(messageID string, guildID string, options int, quote 
 // ReadVote - Return the vote structure from the database if it exists
 func (kdb *KDB) ReadVote(messageID string) (vote Vote) {
 	var startTime, endTime string
-	row := k.db.QueryRow("SELECT messageID, guildID, options, voteText, result, startTime, endTime FROM votes WHERE messageID = ?", messageID)
-	err := row.Scan(&vote.MessageID, &vote.GuildID, &vote.Options, &vote.VoteText, &vote.Result, &startTime, &endTime)
+	row := k.db.QueryRow("SELECT messageID, guildID, options, quote, voteText, result, startTime, endTime FROM votes WHERE messageID = ?", messageID)
+	err := row.Scan(&vote.MessageID, &vote.GuildID, &vote.Options, &vote.Quote, &vote.VoteText, &vote.Result, &startTime, &endTime)
 	if err == sql.ErrNoRows {
 		return Vote{}
 	} else if err == nil {

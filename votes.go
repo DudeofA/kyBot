@@ -19,7 +19,7 @@ var numBlocks = []string{"1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", 
 
 // StartVote - begin a vote with variable vote options
 func StartVote(s *discordgo.Session, m *discordgo.MessageCreate, data string, quote bool) {
-	// Parse the incoming command into # of vote options and string afterward
+	// Parse the incoming command into an array of options
 	array := strings.SplitAfter(data, "|")
 	options := len(array)
 
@@ -30,22 +30,8 @@ func StartVote(s *discordgo.Session, m *discordgo.MessageCreate, data string, qu
 
 	s.ChannelMessageSend(m.ChannelID, "```\nStarting vote...react now!\n```")
 
-	// Special actions for certain votes
-	var voteMsg *discordgo.Message
-	switch options {
-	case 1:
-		// If vote is a quote, prepare the quote
-		if quote {
-
-		}
-		break
-
-	default:
-		break
-	}
-
 	// Send vote text
-	voteMsg = VotePrint(s, m, data, quote)
+	voteMsg := VotePrint(s, m, data, quote)
 
 	// Insert the vote into the vote table
 	k.kdb.CreateVote(voteMsg.ID, m.GuildID, options, quote, data)
@@ -93,30 +79,25 @@ func (vote *Vote) HandleVote(s *discordgo.Session, r *discordgo.MessageReactionA
 		}
 	}
 
-	switch vote.Result {
-	case -1:
-		break
-
-	case 0:
-		s.ChannelMessageSend(r.ChannelID, "Vote failed, yikes")
-		k.kdb.DeleteWatch(r.MessageID)
-		break
-
-	case 1:
-		if vote.Quote {
+	if vote.Quote {
+		if vote.Result == 1 {
 			s.ChannelMessageSend(r.ChannelID, "Vote succeeded, yay!")
 			k.kdb.DeleteWatch(r.MessageID)
-			k.kdb.CreateQuote(s, vote.GuildID, vote.VoteText)
-			break
-		}
-		// Jumps to default
-		fallthrough
+			quoteAdded := k.kdb.CreateQuote(s, vote.GuildID, vote.VoteText)
+			quoteAdded.Print(s, r.ChannelID)
 
-	default:
+		} else {
+			s.ChannelMessageSend(r.ChannelID, "Vote failed, yikes!")
+			k.kdb.DeleteWatch(r.MessageID)
+		}
+		return
+	}
+
+	if vote.Result >= 0 {
 		optionArray := strings.SplitAfter(vote.VoteText, "|")
 		option := strings.TrimSpace(strings.TrimRight(optionArray[vote.Result-1], "|"))
 
-		s.ChannelMessageSend(r.ChannelID, fmt.Sprintf("Option %d, \"%s\", wins the vote!", vote.Result, option))
+		s.ChannelMessageSend(r.ChannelID, fmt.Sprintf("```\nOption %d, \"%s\", wins the vote!\n```", vote.Result, option))
 		vote.EndVote()
 		k.kdb.DeleteWatch(r.MessageID)
 	}
@@ -124,22 +105,28 @@ func (vote *Vote) HandleVote(s *discordgo.Session, r *discordgo.MessageReactionA
 
 // VotePrint - print out a vote and add reactions
 func VotePrint(s *discordgo.Session, m *discordgo.MessageCreate, voteText string, quote bool) (message *discordgo.Message) {
+	var err error
 	array := strings.SplitAfter(voteText, "|")
 
 	if quote {
-		// TODO - Quote isolation
-	}
+		voteMsg := "```\n" + voteText + "\n```"
+		message, err = s.ChannelMessageSend(m.ChannelID, voteMsg)
+		if err != nil {
+			panic(err)
+		}
+	} else {
 
-	voteMsg := "```\n"
-	for i, option := range array {
-		cleanOption := strings.TrimSpace(strings.TrimRight(option, "|"))
-		voteMsg += fmt.Sprintf("%d. %s\n", i+1, cleanOption)
-	}
-	voteMsg += "```"
+		voteMsg := "```\n"
+		for i, option := range array {
+			cleanOption := strings.TrimSpace(strings.TrimRight(option, "|"))
+			voteMsg += fmt.Sprintf("%d. %s\n", i+1, cleanOption)
+		}
+		voteMsg += "```"
 
-	message, err := s.ChannelMessageSend(m.ChannelID, voteMsg)
-	if err != nil {
-		panic(err)
+		message, err = s.ChannelMessageSend(m.ChannelID, voteMsg)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	// Add reactions (up/down for single or numbers per option)

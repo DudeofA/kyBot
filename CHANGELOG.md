@@ -1,7 +1,17 @@
 # Changelog
 All notable changes will be documented in this file.
 
-## [3.0.4] - 2/24/20
+## [3.0.5] - 4/11/20
+### Add
+- --Minecraft command to poll configured MC servers-- On hold, moved to website API (which doesn't exist yet)
+- Version is pulled from changelog, no need to update readme for version
+- Moved dailies to their own function in users.go
+### Fixed
+- Help not reading README correctly
+- Quotes not completing correctly
+- Votes not looking as they are supposed to
+
+## [3.0.4] - 4/11/20
 ### Add
 - New watch table for monitoring messages (i.e. hangman, votes)
 - Added vote command

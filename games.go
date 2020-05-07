@@ -111,3 +111,57 @@ func Slots(s *discordgo.Session, m *discordgo.MessageCreate, data string) {
 	}
 	s.ChannelMessageSend(m.ChannelID, result+"\n"+balanceNotice)
 }
+
+// ----- M I N E C R A F T -----
+
+// UpdateMinecraft - poll configured minecraft servers to status, players, MOTD, and other info
+/*
+
+func UpdateMinecraft(s *discordgo.Session, m *discordgo.MessageCreate, command string) (updateMsg *discordgo.Message) {
+	serverUp := true
+	rawData := make([]byte, 512)
+	var motd string
+	var currentPlayers string
+	var maxPlayers string
+
+	// Make initial connection to server
+	conn, err := net.DialTimeout("tcp", "<ip address>", time.Duration(5)*time.Second)
+
+	// Write server list ping packet
+	_, err = conn.Write([]byte("\xFE\x01"))
+	if err != nil {
+		serverUp = false
+		return
+	}
+
+	// Read data from connection
+	_, err = conn.Read(rawData)
+	if err != nil {
+		serverUp = false
+		return
+	}
+	conn.Close()
+
+	if rawData == nil || len(rawData) == 0 {
+		serverUp = false
+		return
+	}
+
+	data := strings.Split(string(rawData[:]), "\x00\x00\x00")
+	if data != nil && len(data) >= 6 {
+		serverUp = true
+		motd = strings.Replace(data[3], "\x00", "", -1)
+		currentPlayers = strings.Replace(data[4], "\x00", "", -1)
+		maxPlayers = strings.Replace(data[5], "\x00", "", -1)
+	} else {
+		serverUp = false
+	}
+
+	if serverUp {
+		updateMsg, _ = s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("```diff\n! [ FTB Revelations ]\nDownload it from the Twitch App!\nGive yourself 4-5GB of RAM in the Twitch settings on the Minecraft section\nASK TO BE WHITELISTED IF YOU HAVEN'T PLAYED ON ONE OF MY SERVERS\n\n----- S T A T U S -----\nAddress: %s\nCurrent Server Version: %s\nThe server is:\n+ UP!\nMOTD: %s\nCurrent players: %s / %s```", address, serverVer, motd, currentPlayers, maxPlayers))
+	}
+
+	return updateMsg
+}
+
+*/
