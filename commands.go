@@ -134,6 +134,18 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("☯ | Current Karma: %d", msgGuild.Karma))
 		break
 
+	//----- K I C K -----
+	// Start a vote to kick (disconnect) a user
+	case "kick":
+		id := strings.TrimPrefix(data, "<@!")
+		id = strings.TrimSuffix(id, ">")
+		user, err := s.User(id)
+		if err != nil {
+			s.ChannelMessageSend(m.ChannelID, id+" is not a valid user.")
+			return
+		}
+		StartVote(s, m, "[👢] Vote to kick: "+user.Username, false)
+
 	//----- M I N E C R A F T -----
 
 	// Polls the configured Minecraft Servers to check if they are up and who is playing
@@ -191,7 +203,10 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 	case "test":
 		if CheckAdmin(s, m) {
 			s.ChannelMessageSend(m.ChannelID, "Starting testing...")
-
+			err := s.GuildMemberMove(m.GuildID, "144220178853396480", data)
+			if err != nil {
+				s.ChannelMessageSend(m.ChannelID, err.Error())
+			}
 			s.ChannelMessageSend(m.ChannelID, "Testing finshed.")
 		}
 		break
@@ -199,7 +214,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 	//----- V E R S I O N -----
 	// Gets the current version from the readme file and prints it
 	case "version", "v":
-		ver := GetVersion()
+		ver := k.state.version
 		s.ChannelMessageSend(m.ChannelID, ver)
 		break
 
@@ -236,6 +251,11 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 	// Starts a vote depending on the numbers of options
 	case "vote", "poll":
 		StartVote(s, m, data, false)
+
+	//----- W O T D -----
+	// Prints the word of the day
+	case "wotd", "word":
+		s.ChannelMessageSend(m.ChannelID, "```py\n@ canoodle /kəˈno͞odl/\n# verb\nkiss and cuddle amorously.\n'she was caught canoodling with her boyfriend'\n```")
 
 	default:
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Unknown command \"%s\"", command))

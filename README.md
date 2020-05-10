@@ -31,6 +31,7 @@ Begin help command here:
 | help         | h     | Print out this file
 | gamble       | slots | Gambles the given credits
 | karma        | karma | Displays the current level of karma for the bot
+| kick         | k     | Starts a vote to kick the mentioned user out of the voice channel
 | minecraft    | mc    | Displays status of currently configured Minecraft servers
 | ping         | ping  | Send a ping to the bot to measure latency
 | quote        | q     | Starts a vote to save a memorable quote
@@ -38,7 +39,8 @@ Begin help command here:
 | quoterandom  | qr    | Print a random quote from the database
 | version      | v     | Gets bot's current version
 | voiceserver  | vs    | Change the voice server region
-| vote         | poll  | Start a vote/poll using "|" as a separator, i.e. !vote red | yellow)     
+| vote         | poll  | Start a vote/poll using "|" as a separator, i.e. !vote red | yellow)   
+| wotd         | word  | Displays the word of the day (CANOODLE)  
  
 | Admin CMD    | Alias | Description
 | -----------  | ----- | -----------

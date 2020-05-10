@@ -1,9 +1,18 @@
 # Changelog
 All notable changes will be documented in this file.
 
+## [3.0.6] - 5/11/20
+### Add
+- kick command to votekick users (moves them to the AFK channel)
+- Logging submitter of votes, they can now cancel their own votes easily
+- Word of the day (maybe it will get real words someday)
+### Fixed
+- Sending just the prefix made the bot reply
+- KDB version control
+
 ## [3.0.5] - 4/11/20
 ### Add
-- --Minecraft command to poll configured MC servers-- On hold, moved to website API (which doesn't exist yet)
+- ~~Minecraft command to poll configured MC servers~~ On hold, moved to website API (which doesn't exist yet)
 - Version is pulled from changelog, no need to update readme for version
 - Moved dailies to their own function in users.go
 ### Fixed

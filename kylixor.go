@@ -60,7 +60,8 @@ type BotState struct {
 	currentVC discordgo.VoiceConnection // Current voice channel connected to
 	pwd       string                    // Working directory
 	servers   int                       // Servers listenning on
-	self      *discordgo.User
+	self      *discordgo.User           // Self object
+	version   string                    // Identify own version
 }
 
 //------------------------------------------------------------------------------
@@ -136,10 +137,12 @@ func main() {
 			return
 		}
 
-		// Save version
-		k.botConfig.Version = GetVersion()
+		// Write back config
 		k.botConfig.Write()
 	}
+
+	// Save version
+	k.state.version = GetBotVersion()
 
 	// Connect/Setup database
 	k.Log("KDB", "Connecting to MySQL DB...")
@@ -175,13 +178,13 @@ func main() {
 		result := k.db.QueryRow("SELECT version FROM state")
 		err = result.Scan(&version)
 		if err != nil {
-			panic(err)
+			k.Log("WARN", "Error reading database version")
 		}
 		k.Log("INFO", "Found database version: "+version)
-		localVer := GetVersion()
+		localVer := k.state.version
 		if version != localVer {
-			k.Log("WARN", "Database version (\""+version+"\") does not equal README version (\""+localVer+"\"), initializing KDB...")
-			k.kdb.Init()
+			k.Log("WARN", "Database version (\""+version+"\") does not equal README version (\""+localVer+"\"), updating KDB...")
+			k.kdb.Update(version)
 		}
 		break
 	default:
@@ -384,6 +387,10 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if strings.HasPrefix(m.Content, k.botConfig.Prefix) {
 		// Trim the prefix to extract the command
 		input := strings.TrimPrefix(m.Content, k.botConfig.Prefix)
+		//If it is a lone '!', ignore
+		if strings.HasPrefix(input, " ") || input == "" {
+			return
+		}
 		// Split command into the command and what comes after
 		inputPieces := strings.SplitN(input, " ", 2)
 		command := strings.ToLower(inputPieces[0])
@@ -462,8 +469,8 @@ func (bc *BotConfig) Update() {
 
 //----- M I S C .   F U N C T I O N S -----
 
-// GetVersion - Get the version of the bot from the readme
-func GetVersion() (ver string) {
+// GetBotVersion - Get the version of the bot from the readme
+func GetBotVersion() (ver string) {
 	// Open the file and grab it line by line into textlines
 	changelog, err := os.Open(filepath.FromSlash(k.state.pwd + "/CHANGELOG.md"))
 	if err != nil {

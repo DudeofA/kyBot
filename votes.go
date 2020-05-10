@@ -34,7 +34,7 @@ func StartVote(s *discordgo.Session, m *discordgo.MessageCreate, data string, qu
 	voteMsg := VotePrint(s, m, data, quote)
 
 	// Insert the vote into the vote table
-	k.kdb.CreateVote(voteMsg.ID, m.GuildID, options, quote, data)
+	k.kdb.CreateVote(voteMsg.ID, m.GuildID, m.Author.ID, options, quote, data)
 
 	// Upsert the vote in the watch table
 	k.kdb.CreateWatch(voteMsg.ID, "vote")
@@ -77,6 +77,9 @@ func (vote *Vote) HandleVote(s *discordgo.Session, r *discordgo.MessageReactionA
 			vote.Result = i + 1
 			vote.UpdateVote()
 		}
+		if react.Me && r.UserID == vote.SubmitterID {
+			vote.EndVote()
+		}
 	}
 
 	if vote.Quote {
@@ -90,6 +93,18 @@ func (vote *Vote) HandleVote(s *discordgo.Session, r *discordgo.MessageReactionA
 			s.ChannelMessageSend(r.ChannelID, "Vote failed, yikes!")
 			k.kdb.DeleteWatch(r.MessageID)
 		}
+		return
+	}
+
+	k.Log("TEST", vote.VoteText)
+
+	if strings.Contains(vote.VoteText, "👢") {
+		guild, err := s.Guild(r.GuildID)
+		if err != nil {
+			panic(err)
+		}
+		s.GuildMemberMove(r.GuildID, vote.VoteText, guild.AfkChannelID)
+		s.ChannelMessageSend(r.ChannelID, "See ya!")
 		return
 	}
 
@@ -119,7 +134,11 @@ func VotePrint(s *discordgo.Session, m *discordgo.MessageCreate, voteText string
 		voteMsg := "```\n"
 		for i, option := range array {
 			cleanOption := strings.TrimSpace(strings.TrimRight(option, "|"))
-			voteMsg += fmt.Sprintf("%d. %s\n", i+1, cleanOption)
+			voteIndex := ""
+			if len(array) > 1 {
+				voteIndex = fmt.Sprintf("%d. ", i+1)
+			}
+			voteMsg += fmt.Sprintf("%s%s\n", voteIndex, cleanOption)
 		}
 		voteMsg += "```"
 

@@ -72,14 +72,15 @@ type Reminders struct {
 
 // Vote - hold stats for votes
 type Vote struct {
-	MessageID string    `json:"messageID"` // MessageID of vote
-	GuildID   string    `json:"guildID"`   // Guild vote is in
-	Options   int       `json:"options"`   // How many options the vote has
-	Quote     bool      `json:"quote"`     // Is vote a quote application
-	VoteText  string    `json:"voteText"`  // All the options for the vote in one string
-	Result    int       `json:"result"`    // Numeric result of vote (negative is in progress, zero is no for single option vote, numbers are voting options)
-	StartTime time.Time `json:"startTime"` // Time vote was started
-	EndTime   time.Time `json:"endTime"`   // Time vote was ended, by default it is same as startTime
+	MessageID   string    `json:"messageID"`   // MessageID of vote
+	GuildID     string    `json:"guildID"`     // Guild vote is in
+	SubmitterID string    `json:"submitterID"` // ID of submitter
+	Options     int       `json:"options"`     // How many options the vote has
+	Quote       bool      `json:"quote"`       // Is vote a quote application
+	VoteText    string    `json:"voteText"`    // All the options for the vote in one string
+	Result      int       `json:"result"`      // Numeric result of vote (negative is in progress, zero is no for single option vote, numbers are voting options)
+	StartTime   time.Time `json:"startTime"`   // Time vote was started
+	EndTime     time.Time `json:"endTime"`     // Time vote was ended, by default it is same as startTime
 }
 
 //----- D B   F U N C T I O N S -----
@@ -144,6 +145,7 @@ func (kdb *KDB) Init() {
 	_, err = k.db.Exec(`CREATE TABLE IF NOT EXISTS votes (
 		messageID VARCHAR(32) PRIMARY KEY NOT NULL,
 		guildID VARCHAR(32) NOT NULL,
+		submitterID VARCHAR(32) NOT NULL,
 		options INT NOT NULL,
 		quote BOOL NOT NULL DEFAULT FALSE,
 		voteText TEXT NOT NULL,
@@ -298,10 +300,11 @@ func (kdb *KDB) DeleteWatch(messageID string) {
 //----- V O T E   M A N A G E M E N T -----
 
 // CreateVote - Create a vote and store it in the votes table
-func (kdb *KDB) CreateVote(messageID string, guildID string, options int, quote bool, voteText string) (vote Vote) {
+func (kdb *KDB) CreateVote(messageID string, guildID string, submitterID string, options int, quote bool, voteText string) (vote Vote) {
 
 	vote.MessageID = messageID
 	vote.GuildID = guildID
+	vote.SubmitterID = submitterID
 	vote.Options = options
 	vote.Quote = quote
 	vote.VoteText = voteText
@@ -324,8 +327,8 @@ func (kdb *KDB) CreateVote(messageID string, guildID string, options int, quote 
 // ReadVote - Return the vote structure from the database if it exists
 func (kdb *KDB) ReadVote(messageID string) (vote Vote) {
 	var startTime, endTime string
-	row := k.db.QueryRow("SELECT messageID, guildID, options, quote, voteText, result, startTime, endTime FROM votes WHERE messageID = ?", messageID)
-	err := row.Scan(&vote.MessageID, &vote.GuildID, &vote.Options, &vote.Quote, &vote.VoteText, &vote.Result, &startTime, &endTime)
+	row := k.db.QueryRow("SELECT messageID, guildID, submitterID, options, quote, voteText, result, startTime, endTime FROM votes WHERE messageID = ?", messageID)
+	err := row.Scan(&vote.MessageID, &vote.GuildID, &vote.SubmitterID, &vote.Options, &vote.Quote, &vote.VoteText, &vote.Result, &startTime, &endTime)
 	if err == sql.ErrNoRows {
 		return Vote{}
 	} else if err == nil {
