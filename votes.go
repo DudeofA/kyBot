@@ -70,7 +70,8 @@ func (vote *Vote) HandleVote(s *discordgo.Session, r *discordgo.MessageReactionA
 		panic(err)
 	}
 
-	k.Log("VOTE", "Processing reaction for option "+r.Emoji.Name)
+	logInfo := fmt.Sprintf("[Reaction] \"%s\" by [%s] found on message %s", r.Emoji.Name, r.UserID, r.MessageID)
+	k.Log("VOTE", logInfo)
 
 	for i, react := range msg.Reactions {
 		if react.Me && react.Count > k.botConfig.MinVotes {
@@ -84,10 +85,11 @@ func (vote *Vote) HandleVote(s *discordgo.Session, r *discordgo.MessageReactionA
 
 	if vote.Quote {
 		if vote.Result == 1 {
+			// Print finalized quote with identifier
 			s.ChannelMessageSend(r.ChannelID, "Vote succeeded, yay!")
 			k.kdb.DeleteWatch(r.MessageID)
 			quoteAdded := k.kdb.CreateQuote(s, vote.GuildID, vote.VoteText)
-			quoteAdded.Print(s, r.ChannelID)
+			quoteAdded.RequestIdentifier(s, r)
 
 		} else {
 			s.ChannelMessageSend(r.ChannelID, "Vote failed, yikes!")

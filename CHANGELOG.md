@@ -1,6 +1,13 @@
 # Changelog
 All notable changes will be documented in this file.
 
+## [3.0.7] - 5/12/20
+### Add
+- Changed watch table to accommodate users 
+- Users can submit their own quote identifiers
+### Fixed
+- Dependencies in Makefile
+
 ## [3.0.6] - 5/11/20
 ### Add
 - kick command to votekick users (moves them to the AFK channel)

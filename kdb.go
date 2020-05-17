@@ -160,6 +160,7 @@ func (kdb *KDB) Init() {
 	k.Log("KDB", "Creating watch table")
 	_, err = k.db.Exec(`CREATE TABLE IF NOT EXISTS watch (
 		messageID VARCHAR(32) PRIMARY KEY NOT NULL,
+		userID VARCHAR(32),
 		type VARCHAR(32) NOT NULL)`)
 	if err != nil {
 		panic(err)
@@ -267,16 +268,24 @@ func (guild GuildInfo) UpdateKarma(s *discordgo.Session, delta int) {
 //----- W A T C H   M A N A G E M E N T -----
 
 // CreateWatch - Start monitoring a message for reactions
-func (kdb *KDB) CreateWatch(messageID string, watchType string) {
-	_, err := k.db.Exec("INSERT INTO watch (messageID, type) VALUES (?,?)", messageID, watchType)
+func (kdb *KDB) CreateWatch(id string, watchType string) {
+	_, err := k.db.Exec("INSERT INTO watch (id, type) VALUES (?,?)", id, watchType)
 	if err != nil {
 		panic(err)
 	}
 }
 
-// ReadWatch - Checks watch table for the messageID passed as argument
-func (kdb *KDB) ReadWatch(messageID string) (inTable bool, watchType string) {
-	row := k.db.QueryRow("SELECT type FROM watch WHERE messageID = ?", messageID)
+// CreateUserWatch - Start monitoring users messages for answers, save as channel+user
+func (kdb *KDB) CreateUserWatch(channelID string, userID string, watchType string) {
+	_, err := k.db.Exec("INSERT INTO watch (id, type) VALUES (?,?)", channelID+userID, watchType)
+	if err != nil {
+		panic(err)
+	}
+}
+
+// ReadWatch - Checks watch table for the id passed as argument
+func (kdb *KDB) ReadWatch(id string) (inTable bool, watchType string) {
+	row := k.db.QueryRow("SELECT type FROM watch WHERE id = ?", id)
 	err := row.Scan(&watchType)
 	if err == sql.ErrNoRows {
 		return false, ""
@@ -287,9 +296,9 @@ func (kdb *KDB) ReadWatch(messageID string) (inTable bool, watchType string) {
 	}
 }
 
-// DeleteWatch - Remove watch from watch table based on passed messageID
-func (kdb *KDB) DeleteWatch(messageID string) {
-	_, err := k.db.Exec("DELETE FROM watch WHERE messageID=?", messageID)
+// DeleteWatch - Remove watch from watch table based on passed id
+func (kdb *KDB) DeleteWatch(id string) {
+	_, err := k.db.Exec("DELETE FROM watch WHERE id = ?", id)
 	if err == sql.ErrNoRows {
 		k.Log("HANGMAN", "Unable to delete watch table entry, not found")
 	} else if err != nil {
@@ -314,8 +323,8 @@ func (kdb *KDB) CreateVote(messageID string, guildID string, submitterID string,
 	startTime := vote.StartTime.Format("2006-01-02 15:04:05")
 	endTime := vote.EndTime.Format("2006-01-02 15:04:05")
 
-	_, err := k.db.Exec("INSERT INTO votes (messageID, guildID, options, quote, voteText, result, startTime, endTime) VALUES (?,?,?,?,?,?,?,?)",
-		vote.MessageID, vote.GuildID, vote.Options, vote.Quote, vote.VoteText, vote.Result, startTime, endTime)
+	_, err := k.db.Exec("INSERT INTO votes (messageID, guildID, submitterID, options, quote, voteText, result, startTime, endTime) VALUES (?,?,?,?,?,?,?,?,?)",
+		vote.MessageID, vote.GuildID, vote.SubmitterID, vote.Options, vote.Quote, vote.VoteText, vote.Result, startTime, endTime)
 	if err != nil {
 		panic(err)
 	}

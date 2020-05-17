@@ -183,7 +183,7 @@ func main() {
 		k.Log("INFO", "Found database version: "+version)
 		localVer := k.state.version
 		if version != localVer {
-			k.Log("WARN", "Database version (\""+version+"\") does not equal README version (\""+localVer+"\"), updating KDB...")
+			k.Log("WARN", "Database version: (\""+version+"\") does not equal bot's version: (\""+localVer+"\"), updating KDB...")
 			k.kdb.Update(version)
 		}
 		break
@@ -401,6 +401,18 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 		// Send the data to the command function for execution
 		runCommand(s, m, command, data)
+	}
+
+	found, quoteID := k.kdb.ReadWatch(m.ChannelID + m.Author.ID)
+	if found {
+		if !strings.Contains(m.Content, " ") && len(m.Content) < 20 {
+			quote := k.kdb.ReadQuote(s, m.GuildID, quoteID)
+			quote.UpdateID(s, m.Content)
+			quote.Print(s, m.ChannelID)
+			k.kdb.DeleteWatch(m.ChannelID + m.Author.ID)
+		} else {
+			s.ChannelMessageSend(m.ChannelID, "Identifier must be less than 20 characters and not contain any spaces, try again")
+		}
 	}
 }
 

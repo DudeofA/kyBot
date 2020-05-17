@@ -8,6 +8,7 @@ kylixor: ## Default action. Builds Kylixor.
 	go get -u -v "github.com/bwmarrin/dgvoice"
 	go get -u -v "github.com/robfig/cron"
 	go get -u -v "github.com/go-sql-driver/mysql"
+	go get -u -v "github.com/hashicorp/go-version"
 	
 	go build -o bin/kylixor *.go
 

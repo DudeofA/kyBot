@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"math/rand"
 	"strings"
 	"time"
@@ -80,12 +81,12 @@ func (kdb *KDB) ReadQuote(s *discordgo.Session, guildID, identifier string) (quo
 	}
 }
 
-// Update [Quote] - update quote in database
-func (quote *Quote) Update(s *discordgo.Session) {
+// UpdateID [Quote] - update identifier in quote database
+func (quote *Quote) UpdateID(s *discordgo.Session, newID string) {
 
-	LogDB("Quote", quote.Identifier, quote.GuildID, "updated in")
-
-	//TODO
+	k.db.Exec("UPDATE quotes SET identifier = ? WHERE identifier = ?", newID, quote.Identifier)
+	quote.Identifier = newID
+	LogDB("Quote", quote.Identifier, quote.GuildID, fmt.Sprintf("ID updated to %s in", newID))
 
 }
 
@@ -107,4 +108,14 @@ func QuoteListIDs(s *discordgo.Session, cID string) {
 
 	msg := strings.Join(idenString, "\n")
 	s.ChannelMessageSend(cID, "```\nValid quote IDs are:\n"+msg+"\n```")
+}
+
+// RequestIdentifier - Request a custom identifier from the quote submitter
+func (quote *Quote) RequestIdentifier(s *discordgo.Session, r *discordgo.MessageReactionAdd) {
+	// Create watch entry
+	vote := k.kdb.ReadVote(r.MessageID)
+	k.kdb.CreateUserWatch(r.ChannelID, vote.SubmitterID, quote.Identifier)
+
+	// Make request
+	s.ChannelMessageSend(r.ChannelID, fmt.Sprintf("<@!%s>, please type an identifier for this quote (<15 characters, no spaces)", vote.SubmitterID))
 }
