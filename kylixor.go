@@ -183,7 +183,7 @@ func main() {
 		k.Log("INFO", "Found database version: "+version)
 		localVer := k.state.version
 		if version != localVer {
-			k.Log("WARN", "Database version: (\""+version+"\") does not equal bot's version: (\""+localVer+"\"), updating KDB...")
+			k.Log("WARN", "Database version: (\""+version+"\") does not equal bot's version: (\""+localVer+"\"), updating KDB if necessary...")
 			k.kdb.Update(version)
 		}
 		break
@@ -217,7 +217,7 @@ func main() {
 		panic(err)
 	}
 
-	// Keep session globally accessable
+	// Keep session globally accessible
 	k.session = ky
 
 	// Use the state to cache messages

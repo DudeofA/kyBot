@@ -144,7 +144,8 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 			s.ChannelMessageSend(m.ChannelID, id+" is not a valid user.")
 			return
 		}
-		StartVote(s, m, "[👢] Vote to kick: "+user.Username, false)
+		voteText := fmt.Sprintf("👢 Vote to kick: %s (%s)", user.Username, user.ID)
+		StartVote(s, m, voteText, false)
 
 	//----- M I N E C R A F T -----
 

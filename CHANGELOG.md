@@ -1,6 +1,11 @@
 # Changelog
 All notable changes will be documented in this file.
 
+## [3.0.8] - 5/20/20
+### Fixed
+- Vote kicking not reporting errors
+- Vote kicking not sending userID correctly
+
 ## [3.0.7] - 5/12/20
 ### Add
 - Changed watch table to accommodate users 

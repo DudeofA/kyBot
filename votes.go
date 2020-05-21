@@ -9,6 +9,7 @@ package main
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
@@ -105,8 +106,20 @@ func (vote *Vote) HandleVote(s *discordgo.Session, r *discordgo.MessageReactionA
 		if err != nil {
 			panic(err)
 		}
-		s.GuildMemberMove(r.GuildID, vote.VoteText, guild.AfkChannelID)
-		s.ChannelMessageSend(r.ChannelID, "See ya!")
+
+		// Pull userID out of the  voteText
+		magic := regexp.MustCompile(`\((.*?)\)`)
+		result := magic.FindStringSubmatch(vote.VoteText)
+		userID := result[1]
+
+		err = s.GuildMemberMove(r.GuildID, userID, guild.AfkChannelID)
+		if err != nil {
+			s.ChannelMessageSend(r.ChannelID, "ERR: Unable to 'kick' member: "+err.Error())
+		} else {
+			s.ChannelMessageSend(r.ChannelID, "See ya!")
+		}
+		vote.EndVote()
+		k.kdb.DeleteWatch(r.MessageID)
 		return
 	}
 

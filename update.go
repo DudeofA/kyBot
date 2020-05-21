@@ -61,5 +61,16 @@ func (kdb *KDB) Update(ver string) {
 		}
 	}
 
+	// Always update to lastest version in case of no KDB updates needed
+	_, err = k.db.Exec(`DELETE FROM state`)
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = k.db.Exec(`INSERT INTO state (version) VALUES(?)`, k.state.version)
+	if err != nil {
+		panic(err)
+	}
+
 	k.Log("INFO", "Update to database successful, now version "+k.state.version)
 }
