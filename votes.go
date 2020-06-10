@@ -80,12 +80,12 @@ func (vote *Vote) HandleVote(s *discordgo.Session, r *discordgo.MessageReactionA
 			vote.UpdateVote()
 		}
 
-		if react.Me && r.UserID == vote.SubmitterID && vote.Quote && i == 1 {
+		if react.Me && r.UserID == vote.SubmitterID && vote.Quote && react.Emoji.Name == "⬇️" {
 			vote.EndVote()
 		}
 	}
 
-	if vote.Quote {
+	if vote.Quote && vote.Result != -1 {
 		if vote.Result == 1 {
 			// Print finalized quote with identifier
 			s.ChannelMessageSend(r.ChannelID, "Vote succeeded, yay!")
