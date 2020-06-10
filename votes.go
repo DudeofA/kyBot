@@ -80,7 +80,7 @@ func (vote *Vote) HandleVote(s *discordgo.Session, r *discordgo.MessageReactionA
 			vote.UpdateVote()
 		}
 
-		if react.Me && r.UserID == vote.SubmitterID && vote.Quote && i == 0 {
+		if react.Me && r.UserID == vote.SubmitterID && vote.Quote && i == 1 {
 			vote.EndVote()
 		}
 	}
