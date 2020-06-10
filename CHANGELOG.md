@@ -1,6 +1,10 @@
 # Changelog
 All notable changes will be documented in this file.
 
+## [3.0.9] - 6/9/20
+### Fixed
+- Vote ending if submitter votes at all (not just downvote)
+
 ## [3.0.8] - 5/20/20
 ### Fixed
 - Vote kicking not reporting errors
