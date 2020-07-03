@@ -147,14 +147,12 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 		voteText := fmt.Sprintf("👢 Vote to kick: %s (%s)", user.Username, user.ID)
 		StartVote(s, m, voteText, false)
 
-	//----- M I N E C R A F T -----
+		//----- M I N E C R A F T -----
 
-	// Polls the configured Minecraft Servers to check if they are up and who is playing
-	/*
-		case "minecraft", "mc":
-			UpdateMinecraft(s, m, data)
-			break
-	*/
+		// Polls the configured Minecraft Servers to check if they are up and who is playing
+	case "minecraft", "mc":
+		UpdateMinecraft(s, m, data)
+		break
 
 	//----- P I N G -----
 	// Replies immediately with 'pong' then calculates the difference of the timestamps to get the ping

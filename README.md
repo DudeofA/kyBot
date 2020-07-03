@@ -32,7 +32,7 @@ Begin help command here:
 | gamble       | slots | Gambles the given credits
 | karma        | karma | Displays the current level of karma for the bot
 | kick         | k     | Starts a vote to kick the mentioned user out of the voice channel
-| minecraft    | mc    | Displays status of currently configured Minecraft servers
+| minecraft    | mc    | Displays status of currently configured Minecraft servers or given hostname
 | ping         | ping  | Send a ping to the bot to measure latency
 | quote        | q     | Starts a vote to save a memorable quote
 | quotelist    | ql    | Lists the specified quote (i.e. quotelist <identifier>)

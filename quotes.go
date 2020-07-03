@@ -99,14 +99,33 @@ func QuoteListIDs(s *discordgo.Session, cID string) {
 
 	var idenString []string
 	var iden string
+	var minSpacing = 0
 	for allQuotes.Next() {
 		if err := allQuotes.Scan(&iden); err != nil {
 			panic(err)
 		}
 		idenString = append(idenString, iden)
+		if len(iden) > minSpacing {
+			minSpacing = len(iden)
+		}
 	}
 
-	msg := strings.Join(idenString, "\n")
+	half := len(idenString) / 2
+	for i, iden := range idenString {
+		// If the word should be in the second column
+		if i >= len(idenString) - half {
+			// Append the word in the second column to the corresponding first column
+			columnIndex := i - (len(idenString) - half)
+			wordLen := len(idenString[columnIndex])
+			for j := 0; j < minSpacing - wordLen; j++ {
+				idenString[columnIndex] += " "
+			}
+			idenString[columnIndex] += "\t" + iden
+		}
+	}
+	// Trim the 2nd column off the end of the list and put it in one string
+	finalSlice := idenString[:len(idenString) - half]
+	msg := strings.Join(finalSlice, "\n")
 	s.ChannelMessageSend(cID, "```\nValid quote IDs are:\n"+msg+"\n```")
 }
 

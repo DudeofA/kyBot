@@ -1,6 +1,11 @@
 # Changelog
 All notable changes will be documented in this file.
 
+## [3.0.10] - 6/29/20
+### Add
+- Minecraft server polling using api.kylixor.com/mc
+- Update quotelist command to have 2 columns for better readability
+
 ## [3.0.9] - 6/9/20
 ### Fixed
 - Vote ending if submitter votes at all (not just downvote)

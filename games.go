@@ -8,8 +8,11 @@ kylixor.com
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"math/rand"
+	"net/http"
 	"strconv"
 
 	"github.com/bwmarrin/discordgo"
@@ -115,53 +118,41 @@ func Slots(s *discordgo.Session, m *discordgo.MessageCreate, data string) {
 // ----- M I N E C R A F T -----
 
 // UpdateMinecraft - poll configured minecraft servers to status, players, MOTD, and other info
-/*
+func UpdateMinecraft(s *discordgo.Session, m *discordgo.MessageCreate, command string) {
 
-func UpdateMinecraft(s *discordgo.Session, m *discordgo.MessageCreate, command string) (updateMsg *discordgo.Message) {
-	serverUp := true
-	rawData := make([]byte, 512)
-	var motd string
-	var currentPlayers string
-	var maxPlayers string
+	type MCResponce struct {
+		IP             string `json:"ip"`
+		Port           string `json:"port"`
+		Online         bool   `json:"online"`
+		Version        string `json:"version"`
+		MOTD           string `json:"motd"`
+		CurrentPlayers string `json:"current_players"`
+		MaxPlayers     string `json:"max_players"`
+		Error          string `json:"error"`
+	}
 
-	// Make initial connection to server
-	conn, err := net.DialTimeout("tcp", "<ip address>", time.Duration(5)*time.Second)
+	var response MCResponce
 
-	// Write server list ping packet
-	_, err = conn.Write([]byte("\xFE\x01"))
+	apiResponse, err := http.Get("https://api.kylixor.com/mc/" + command)
 	if err != nil {
-		serverUp = false
+		s.ChannelMessageSend(m.ChannelID, "ERROR: Unable to make request to API"+err.Error())
 		return
 	}
 
-	// Read data from connection
-	_, err = conn.Read(rawData)
-	if err != nil {
-		serverUp = false
-		return
-	}
-	conn.Close()
+	data, _ := ioutil.ReadAll(apiResponse.Body)
+	json.Unmarshal(data, &response)
 
-	if rawData == nil || len(rawData) == 0 {
-		serverUp = false
-		return
+	var status = "- DOWN"
+	if response.Online {
+		status = "+ UP!"
 	}
 
-	data := strings.Split(string(rawData[:]), "\x00\x00\x00")
-	if data != nil && len(data) >= 6 {
-		serverUp = true
-		motd = strings.Replace(data[3], "\x00", "", -1)
-		currentPlayers = strings.Replace(data[4], "\x00", "", -1)
-		maxPlayers = strings.Replace(data[5], "\x00", "", -1)
-	} else {
-		serverUp = false
+	if response.Error != "" {
+		status += "\n- ERROR: " + response.Error
 	}
 
-	if serverUp {
-		updateMsg, _ = s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("```diff\n! [ FTB Revelations ]\nDownload it from the Twitch App!\nGive yourself 4-5GB of RAM in the Twitch settings on the Minecraft section\nASK TO BE WHITELISTED IF YOU HAVEN'T PLAYED ON ONE OF MY SERVERS\n\n----- S T A T U S -----\nAddress: %s\nCurrent Server Version: %s\nThe server is:\n+ UP!\nMOTD: %s\nCurrent players: %s / %s```", address, serverVer, motd, currentPlayers, maxPlayers))
-	}
+	msg := fmt.Sprintf("```diff\n----- S T A T U S -----\nAddress: %s\nCurrent Server Version: %s\nThe server is:\n%s\nMOTD: %s\nCurrent players: %s / %s```",
+		response.IP, response.Version, status, response.MOTD, response.CurrentPlayers, response.MaxPlayers)
+	s.ChannelMessageSend(m.ChannelID, msg)
 
-	return updateMsg
 }
-
-*/
