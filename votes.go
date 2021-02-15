@@ -102,7 +102,7 @@ func (vote *Vote) HandleVote(s *discordgo.Session, r *discordgo.MessageReactionA
 
 	k.Log("TEST", vote.VoteText)
 
-	if strings.Contains(vote.VoteText, "👢") {
+	if strings.Contains(vote.VoteText, "👢") && vote.Result == 1 {
 		guild, err := s.Guild(r.GuildID)
 		if err != nil {
 			panic(err)
@@ -125,16 +125,18 @@ func (vote *Vote) HandleVote(s *discordgo.Session, r *discordgo.MessageReactionA
 	}
 
 	if strings.Contains(vote.VoteText, "✨") {
-		guild := k.kdb.ReadGuild(s, r.GuildID)
+		if vote.Result == 1 {
+			guild := k.kdb.ReadGuild(s, r.GuildID)
 
-		err := s.GuildMemberRoleAdd(r.GuildID, vote.SubmitterID, guild.MemberRole)
-		if err != nil {
-			s.ChannelMessageSend(r.ChannelID, "ERR: Unable to 'add' member: "+err.Error())
-		} else {
-			s.ChannelMessageSend(r.ChannelID, "Added member successfully!")
+			err := s.GuildMemberRoleAdd(r.GuildID, vote.SubmitterID, guild.MemberRole)
+			if err != nil {
+				s.ChannelMessageSend(r.ChannelID, "ERR: Unable to 'add' member: "+err.Error())
+			} else {
+				s.ChannelMessageSend(r.ChannelID, "Added member successfully!")
+			}
+			vote.EndVote()
+			k.kdb.DeleteWatch(r.MessageID)
 		}
-		vote.EndVote()
-		k.kdb.DeleteWatch(r.MessageID)
 		return
 	}
 
