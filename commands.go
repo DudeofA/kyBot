@@ -202,7 +202,7 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 	case "test":
 		if CheckAdmin(s, m) {
 			s.ChannelMessageSend(m.ChannelID, "Starting testing...")
-			err := s.GuildMemberMove(m.GuildID, "144220178853396480", data)
+			err := s.GuildMemberMove(m.GuildID, "144220178853396480", &data)
 			if err != nil {
 				s.ChannelMessageSend(m.ChannelID, err.Error())
 			}

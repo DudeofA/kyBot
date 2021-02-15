@@ -113,7 +113,7 @@ func (vote *Vote) HandleVote(s *discordgo.Session, r *discordgo.MessageReactionA
 		result := magic.FindStringSubmatch(vote.VoteText)
 		userID := result[1]
 
-		err = s.GuildMemberMove(r.GuildID, userID, guild.AfkChannelID)
+		err = s.GuildMemberMove(r.GuildID, userID, &guild.AfkChannelID)
 		if err != nil {
 			s.ChannelMessageSend(r.ChannelID, "ERR: Unable to 'kick' member: "+err.Error())
 		} else {
