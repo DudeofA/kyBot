@@ -124,6 +124,20 @@ func (vote *Vote) HandleVote(s *discordgo.Session, r *discordgo.MessageReactionA
 		return
 	}
 
+	if strings.Contains(vote.VoteText, "✨") {
+		guild := k.kdb.ReadGuild(s, r.GuildID)
+
+		err := s.GuildMemberRoleAdd(r.GuildID, vote.SubmitterID, guild.MemberRole)
+		if err != nil {
+			s.ChannelMessageSend(r.ChannelID, "ERR: Unable to 'add' member: "+err.Error())
+		} else {
+			s.ChannelMessageSend(r.ChannelID, "Added member successfully!")
+		}
+		vote.EndVote()
+		k.kdb.DeleteWatch(r.MessageID)
+		return
+	}
+
 	if vote.Result >= 0 {
 		optionArray := strings.SplitAfter(vote.VoteText, "|")
 		option := strings.TrimSpace(strings.TrimRight(optionArray[vote.Result-1], "|"))

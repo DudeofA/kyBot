@@ -147,9 +147,15 @@ func runCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string
 		voteText := fmt.Sprintf("👢 Vote to kick: %s (%s)", user.Username, user.ID)
 		StartVote(s, m, voteText, false)
 
-		//----- M I N E C R A F T -----
+	//----- M E M B E R -----
+	case "member", "mem":
+		guild := k.kdb.ReadGuild(s, m.GuildID)
+		m.ChannelID = guild.DefaultChan
+		StartVote(s, m, fmt.Sprintf("[✨] Add %s to Discord Server?", m.Author.Username), false)
+		break
 
-		// Polls the configured Minecraft Servers to check if they are up and who is playing
+	//----- M I N E C R A F T -----
+	// Polls the configured Minecraft Servers to check if they are up and who is playing
 	case "minecraft", "mc":
 		UpdateMinecraft(s, m, data)
 		break

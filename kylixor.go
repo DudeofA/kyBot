@@ -318,7 +318,6 @@ func MessageReactionAdd(s *discordgo.Session, r *discordgo.MessageReactionAdd) {
 	if r.UserID == k.state.self.ID {
 		return
 	}
-
 	found, msgType := k.kdb.ReadWatch(r.MessageID)
 	if found {
 		switch msgType {
@@ -511,7 +510,7 @@ func GetBotVersion() (ver string) {
 
 // SetStatus - sets the status of the bot to the version and the default help commands
 func SetStatus(s *discordgo.Session) {
-	s.UpdateStatus(0, fmt.Sprintf("%shelp - v%s", k.botConfig.Prefix, k.botConfig.Version))
+	s.UpdateGameStatus(0, fmt.Sprintf("%shelp - v%s", k.botConfig.Prefix, k.botConfig.Version))
 }
 
 // CheckAdmin - returns true if user is admin, otherwise posts that permission is denied
@@ -525,7 +524,7 @@ func CheckAdmin(s *discordgo.Session, m *discordgo.MessageCreate) bool {
 }
 
 // MemberHasPermission - Checks if the user has permission to do the given action in the given channels
-func MemberHasPermission(s *discordgo.Session, guildID string, userID string, permission int) (bool, error) {
+func MemberHasPermission(s *discordgo.Session, guildID string, userID string, permission int64) (bool, error) {
 	member, err := s.State.Member(guildID, userID)
 	if err != nil {
 		if member, err = s.GuildMember(guildID, userID); err != nil {
