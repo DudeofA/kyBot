@@ -113,11 +113,25 @@ func (vote *Vote) HandleVote(s *discordgo.Session, r *discordgo.MessageReactionA
 		result := magic.FindStringSubmatch(vote.VoteText)
 		userID := result[1]
 
-		err = s.GuildMemberMove(r.GuildID, userID, guild.AfkChannelID)
+		err = s.GuildMemberMove(r.GuildID, userID, &guild.AfkChannelID)
 		if err != nil {
 			s.ChannelMessageSend(r.ChannelID, "ERR: Unable to 'kick' member: "+err.Error())
 		} else {
 			s.ChannelMessageSend(r.ChannelID, "See ya!")
+		}
+		vote.EndVote()
+		k.kdb.DeleteWatch(r.MessageID)
+		return
+	}
+
+	if strings.Contains(vote.VoteText, "✨") {
+		guild := k.kdb.ReadGuild(s, r.GuildID)
+
+		err := s.GuildMemberRoleAdd(r.GuildID, vote.SubmitterID, guild.MemberRole)
+		if err != nil {
+			s.ChannelMessageSend(r.ChannelID, "ERR: Unable to 'add' member: "+err.Error())
+		} else {
+			s.ChannelMessageSend(r.ChannelID, "Added member successfully!")
 		}
 		vote.EndVote()
 		k.kdb.DeleteWatch(r.MessageID)

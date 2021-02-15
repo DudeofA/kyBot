@@ -24,11 +24,13 @@ type KDB struct {
 
 // GuildInfo - Hold all the pertaining information for each server
 type GuildInfo struct {
-	Currency string `json:"currency"` // Name of currency that bot uses (i.e. <gold> coins)
-	ID       string `json:"guildID"`  // discord guild ID
-	Karma    int    `json:"karma"`    // Bot's karma - per guild
-	Name     string `json:"name"`     // Name of guild
-	Region   string `json:"region"`   // Geolocation region of the guild
+	Currency    string `json:"currency"`    // Name of currency that bot uses (i.e. <gold> coins)
+	DefaultChan string `json:"defaultChan"` // Default text channel
+	ID          string `json:"guildID"`     // discord guild ID
+	MemberRole  string `json:"memberRole"`  // Role all members will be assigned
+	Karma       int    `json:"karma"`       // Bot's karma - per guild
+	Name        string `json:"name"`        // Name of guild
+	Region      string `json:"region"`      // Geolocation region of the guild
 }
 
 // Quote - Data about quotes and quotes themselves
@@ -108,6 +110,8 @@ func (kdb *KDB) Init() {
 	_, err = k.db.Exec(`CREATE TABLE IF NOT EXISTS guilds (
 		guildID VARCHAR(32) PRIMARY KEY NOT NULL,
 		name VARCHAR(32) NOT NULL,
+		defaultChan VARCHAR(32) NOT NULL,
+		memberRole VARCHAR(32) NOT NULL,
 		region VARCHAR(32) NOT NULL,
 		karma INT NOT NULL DEFAULT 0,
 		currency VARCHAR(32) NOT NULL DEFAULT '')`)
@@ -159,7 +163,7 @@ func (kdb *KDB) Init() {
 	// Create watch table
 	k.Log("KDB", "Creating watch table")
 	_, err = k.db.Exec(`CREATE TABLE IF NOT EXISTS watch (
-		messageID VARCHAR(32) PRIMARY KEY NOT NULL,
+		id VARCHAR(32) PRIMARY KEY NOT NULL,
 		userID VARCHAR(32),
 		type VARCHAR(32) NOT NULL)`)
 	if err != nil {
@@ -217,8 +221,8 @@ func (kdb *KDB) ReadGuild(s *discordgo.Session, guildID string) (guild GuildInfo
 	// 	}
 	// }
 
-	row := k.db.QueryRow("SELECT guildID, name, region, karma, currency FROM guilds WHERE guildID = ?", guildID)
-	err := row.Scan(&guild.ID, &guild.Name, &guild.Region, &guild.Karma, &guild.Currency)
+	row := k.db.QueryRow("SELECT guildID, name, defaultChan, memberRole, region, karma, currency FROM guilds WHERE guildID = ?", guildID)
+	err := row.Scan(&guild.ID, &guild.Name, &guild.DefaultChan, &guild.MemberRole, &guild.Region, &guild.Karma, &guild.Currency)
 	switch err {
 	case sql.ErrNoRows:
 		k.Log("KDB", "Guild not found in DB, creating new...")

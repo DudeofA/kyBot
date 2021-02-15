@@ -61,6 +61,24 @@ func (kdb *KDB) Update(ver string) {
 		}
 	}
 
+	// 3.0.10 => 3.0.11
+	// Generalize id column to be used with users as well as messages
+	v3011, err := version.NewVersion("3.0.11")
+	if err != nil {
+		panic(err)
+	}
+	if curVer.LessThan(v3011) {
+		k.Log("KDB", "Attempting to update to DBv3.1.1")
+		_, err = k.db.Exec(`ALTER TABLE guilds ADD defaultChan VARCHAR(32)`)
+		if err != nil {
+			k.Log("KDB", err.Error())
+		}
+		_, err = k.db.Exec(`ALTER TABLE guilds ADD memberRole VARCHAR(32)`)
+		if err != nil {
+			k.Log("KDB", err.Error())
+		}
+	}
+
 	// Always update to lastest version in case of no KDB updates needed
 	_, err = k.db.Exec(`DELETE FROM state`)
 	if err != nil {
