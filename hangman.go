@@ -147,7 +147,6 @@ func HangmanGame(s *discordgo.Session, m *discordgo.MessageCreate, data string) 
 			hm.MessageID = ""
 			hm.PrintState(s)
 		}
-		break
 
 	// Move game to another channel
 	case "channel":
@@ -173,7 +172,6 @@ func HangmanGame(s *discordgo.Session, m *discordgo.MessageCreate, data string) 
 
 		hm.ChannelID = hmChannel.ID
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Changed game channel to %s", hmChannel.Mention()))
-		break
 
 	// Can guess a word or letter
 	case "guess", "g":
@@ -184,7 +182,6 @@ func HangmanGame(s *discordgo.Session, m *discordgo.MessageCreate, data string) 
 		}
 
 		hm.Guess(s, m.Author.ID, argument)
-		break
 
 	case "quit", "stop":
 		if hm.GameState == 0 {
@@ -197,7 +194,6 @@ func HangmanGame(s *discordgo.Session, m *discordgo.MessageCreate, data string) 
 		hm.PrintState(s)
 		hm.ResetGame()
 		hm.Update()
-		break
 	}
 }
 
@@ -231,7 +227,7 @@ func (hm *Hangman) Guess(s *discordgo.Session, authorID string, guess string) {
 		s.MessageReactionAdd(hm.ChannelID, hm.MessageID, guessReaction)
 
 		lowerWord := strings.ToLower(hm.Word)
-		if strings.Index(lowerWord, guess) != -1 {
+		if strings.Contains(lowerWord, guess) {
 			// Check if the guessed letter is in the word and put those matches in the wordState
 			for {
 				index := strings.Index(lowerWord, guess)
@@ -302,7 +298,7 @@ func (hm Hangman) PrintState(s *discordgo.Session) {
 	var stage string
 	var gameMessage string
 	if hm.GameState < 0 {
-		gameMessage = fmt.Sprintf("Guessed correctly\n")
+		gameMessage = "Guessed correctly\n"
 
 		// Put the word in the underline
 		hm.WordState = strings.Split(hm.Word, "")

@@ -2,6 +2,16 @@
 
 All notable changes will be documented in this file.
 
+## [3.0.12] - 3/13/21
+
+#### Add
+
+-   meme command using imgflip api
+
+#### Fixed
+
+-   Unnecessary break statements throughout
+
 ## [3.0.11] - 2/14/21
 
 #### Add

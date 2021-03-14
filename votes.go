@@ -50,17 +50,14 @@ func ReactionAdd(s *discordgo.Session, m *discordgo.Message, reaction string) {
 		if err != nil {
 			s.ChannelMessageSend(m.ChannelID, "Unable to use upvote emote")
 		}
-		break
 
 	case "DOWNVOTE":
 		err := s.MessageReactionAdd(m.ChannelID, m.ID, "⬇️")
 		if err != nil {
 			s.ChannelMessageSend(m.ChannelID, "Unable to use downvote emote")
 		}
-		break
 	default:
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Unable to post emote: %s", reaction))
-		break
 	}
 }
 

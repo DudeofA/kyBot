@@ -48,6 +48,7 @@ type BotConfig struct {
 	DailyAmt  int    `json:"dailyAmt"`  // Amount of dailies to be collected daily
 	DBName    string `json:"dbName"`    // Name of database where data is kept
 	DBURI     string `json:"dbURI"`     // URI of database to connect to (localhost or hosted)
+	KyAPI     string `json:"kyAPI"`     // kyAPI URI base location
 	MinVotes  int    `json:"minVotes"`  // Minimum votes to pass a vote
 	Prefix    string `json:"prefix"`    // Prefix the bot will respond to
 	ResetTime string `json:"resetTime"` // Time when dailies reset i.e. 19:00
@@ -186,7 +187,6 @@ func main() {
 			k.Log("WARN", "Database version: (\""+version+"\") does not equal bot's version: (\""+localVer+"\"), updating KDB if necessary...")
 			k.kdb.Update(version)
 		}
-		break
 	default:
 		panic(err)
 	}
@@ -256,7 +256,7 @@ func main() {
 	done := make(chan bool, 1)
 
 	// Bot will end on any of the following signals
-	signal.Notify(botChan, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
+	signal.Notify(botChan, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 
 	go func() {
 		signalType := <-botChan
@@ -288,7 +288,8 @@ func Ready(s *discordgo.Session, event *discordgo.Ready) {
 	k.state.self = event.User
 
 	servers := s.State.Guilds
-	k.Log("STARTUP", fmt.Sprintf("Kylixor Discord bot has started on %d servers", len(servers)))
+	k.state.servers = len(servers)
+	k.Log("STARTUP", fmt.Sprintf("Kylixor Discord bot has started on %d servers", k.state.servers))
 	for _, server := range servers {
 		k.kdb.UpdateGuild(s, server.ID)
 	}
@@ -576,7 +577,7 @@ func GetAge(rawID string) string {
 	year := 365 * day
 	var years time.Duration
 
-	tAlive := time.Now().Sub(t)
+	tAlive := time.Since(t)
 
 	if tAlive >= year {
 		// At least a year
