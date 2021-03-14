@@ -61,7 +61,8 @@ func GenerateMeme(data string) (msg string) {
 	var m MemeResp
 	err = json.NewDecoder(resp.Body).Decode(&m)
 	if err != nil {
-		k.Log("ERR", "Error decoding response from kyAPI:\n"+err.Error())
+		k.Log("ERR", "Error decoding response from kyAPI")
+		k.Log("ERR", err.Error())
 		return "Error creating meme"
 	}
 
