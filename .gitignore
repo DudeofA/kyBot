@@ -1,12 +1,3 @@
-bin/
-*.log
-conf.json
-
-__debug_bin
 .vscode/
+.env
 
-go/
-.bash_history
-.cache/
-.config/
-.viminfo

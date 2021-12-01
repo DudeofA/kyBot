@@ -1,0 +1,10 @@
+version: "3.8"
+
+services:
+    kybot:
+        build:
+            context: .
+        container_name: kybot
+        hostname: kybot
+        environment:
+            - DISCORD_TOKEN=${DISCORD_TOKEN}
