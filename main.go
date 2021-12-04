@@ -1,39 +1,40 @@
 package main
 
 import (
-	"bytes"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"kyBot/handlers"
+
 	"github.com/bwmarrin/discordgo"
 	"github.com/joho/godotenv"
+	"github.com/sirupsen/logrus"
 )
 
 func main() {
-
-	var (
-		buf  bytes.Buffer
-		klog = log.New(&buf, "kyBot: ", log.Lshortfile|log.Ldate|log.Ltime)
-	)
+	logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetFormatter(&logrus.TextFormatter{
+		FullTimestamp: true,
+	})
 
 	godotenv.Load()
 
-	klog.SetOutput(os.Stdout)
-
-	klog.Println("STARTING UP")
+	logrus.Info("STARTING UP")
 
 	s, err := discordgo.New("Bot " + os.Getenv("DISCORD_TOKEN"))
 	if err != nil {
-		klog.Fatal("Error creating Discord session :(", err)
+		logrus.Fatal("Error creating Discord session :(", err)
 		return
 	}
 	defer s.Close()
 
+	s.AddHandlerOnce(handlers.Ready)
+
 	err = s.Open()
 	if err != nil {
-		klog.Fatal("Error openning connection :(", err)
+		logrus.Fatal("Error openning connection :(", err)
+
 		return
 	}
 
@@ -46,7 +47,7 @@ func main() {
 
 	go func() {
 		signalType := <-botChan
-		klog.Println("Shutting down from signal", signalType)
+		logrus.Info("Shutting down from signal: ", signalType)
 		done <- true
 	}()
 
