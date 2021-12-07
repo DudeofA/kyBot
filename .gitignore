@@ -1,3 +1,7 @@
 .vscode/
 .env
 
+*.exe
+*.sqlite
+
+docker-compose.yml
