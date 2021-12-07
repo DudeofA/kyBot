@@ -6,37 +6,57 @@ import (
 	"syscall"
 
 	"kyBot/handlers"
+	"kyBot/kyDB"
+	"kyBot/minecraft"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/joho/godotenv"
-	"github.com/sirupsen/logrus"
+	"github.com/robfig/cron"
+	log "github.com/sirupsen/logrus"
+)
+
+var (
+	s *discordgo.Session
 )
 
 func main() {
-	logrus.SetLevel(logrus.DebugLevel)
-	logrus.SetFormatter(&logrus.TextFormatter{
+	log.SetLevel(log.DebugLevel)
+	log.SetFormatter(&log.TextFormatter{
 		FullTimestamp: true,
+		ForceColors:   true,
 	})
 
 	godotenv.Load()
+	token, token_found := os.LookupEnv("DISCORD_TOKEN")
+	if !token_found {
+		log.Fatal("No token found, please set env DISCORD_TOKEN to a valid Discord bot token")
+	}
 
-	logrus.Info("STARTING UP")
+	log.Info("STARTING UP")
 
-	s, err := discordgo.New("Bot " + os.Getenv("DISCORD_TOKEN"))
+	db := kyDB.Connect()
+	db.AutoMigrate(&kyDB.User{}, &kyDB.Guild{}, &kyDB.Hangman{}, &minecraft.MinecraftServer{})
+
+	var err error
+	s, err = discordgo.New("Bot " + token)
 	if err != nil {
-		logrus.Fatal("Error creating Discord session :(", err)
-		return
+		log.Fatalln("Error creating Discord session :(", err)
 	}
 	defer s.Close()
 
 	s.AddHandlerOnce(handlers.Ready)
+	s.AddHandler(handlers.MessageCreate)
+	s.AddHandler(handlers.ReactAdd)
 
 	err = s.Open()
 	if err != nil {
-		logrus.Fatal("Error openning connection :(", err)
-
-		return
+		log.Panicln("Error openning connection :(", err)
 	}
+
+	c := cron.New()
+	// log.Info("Updating Minecraft servers every minute")
+	// c.AddFunc("0 * * * * *", func() { minecraft.UpdateAllServers(s) })
+	c.Start()
 
 	// Create channels to watch for kill signals
 	botChan := make(chan os.Signal, 1)
@@ -47,11 +67,10 @@ func main() {
 
 	go func() {
 		signalType := <-botChan
-		logrus.Info("Shutting down from signal: ", signalType)
+		log.Warningln("Shutting down from signal", signalType)
 		done <- true
 	}()
 
 	// Wait here until CTRL-C or other term signal is received.
 	<-done
-
 }

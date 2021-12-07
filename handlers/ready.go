@@ -1,16 +1,17 @@
 package handlers
 
 import (
+	"kyBot/minecraft"
+
 	"github.com/bwmarrin/discordgo"
-	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 func Ready(s *discordgo.Session, event *discordgo.Ready) {
 	self := event.User
 	servers := s.State.Guilds
 
-	logrus.Debug(self)
-	for _, server := range servers {
-		logrus.Debug(server.ID)
-	}
+	log.Infof("%s Bot has started...running in %d Discord servers", self, len(servers))
+
+	minecraft.UpdateAllServers(s)
 }
