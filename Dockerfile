@@ -10,9 +10,11 @@ COPY go.sum ./
 RUN go mod download
 
 COPY *.go ./
+COPY commands/*.go ./commands/
+COPY config/*.go ./config/
 COPY handlers/*.go ./handlers/
 COPY kyDB/*.go ./kyDB/
-COPY minecraft/*.go ./minecraft/
+COPY servers/*.go ./servers/
 
 RUN go build -o /kybot
 
