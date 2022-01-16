@@ -5,12 +5,11 @@ import (
 	"os/signal"
 	"syscall"
 
+	"kyBot/config"
 	"kyBot/handlers"
 	"kyBot/kyDB"
-	"kyBot/minecraft"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/joho/godotenv"
 	"github.com/robfig/cron"
 	log "github.com/sirupsen/logrus"
 )
@@ -26,19 +25,14 @@ func main() {
 		ForceColors:   true,
 	})
 
-	godotenv.Load()
-	token, token_found := os.LookupEnv("DISCORD_TOKEN")
-	if !token_found {
-		log.Fatal("No token found, please set env DISCORD_TOKEN to a valid Discord bot token")
-	}
-
 	log.Info("STARTING UP")
 
-	db := kyDB.Connect()
-	db.AutoMigrate(&kyDB.User{}, &kyDB.Guild{}, &kyDB.Hangman{}, &minecraft.MinecraftServer{})
+	kyDB.Connect()
+	log.Infof("Connected to kyDB")
 
+	// Session
 	var err error
-	s, err = discordgo.New("Bot " + token)
+	s, err = discordgo.New("Bot " + config.TOKEN)
 	if err != nil {
 		log.Fatalln("Error creating Discord session :(", err)
 	}
@@ -47,6 +41,7 @@ func main() {
 	s.AddHandlerOnce(handlers.Ready)
 	s.AddHandler(handlers.MessageCreate)
 	s.AddHandler(handlers.ReactAdd)
+	s.AddHandler(handlers.InteractionCreate)
 
 	err = s.Open()
 	if err != nil {
