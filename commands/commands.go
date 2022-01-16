@@ -1,6 +1,8 @@
 package commands
 
 import (
+	"kyBot/config"
+
 	"github.com/bwmarrin/discordgo"
 	log "github.com/sirupsen/logrus"
 )
@@ -13,16 +15,8 @@ func AddCommand(cmd *discordgo.ApplicationCommand) {
 }
 
 func RegisterCommands(appid string, s *discordgo.Session) {
-	// DELETE ALL COMMANDS IN ALL GUILDS
-	// for _, guild := range s.State.Guilds {
-	// 	commands, _ := s.ApplicationCommands(appid, guild.ID)
-	// 	for _, command := range commands {
-	// 		s.ApplicationCommandDelete(appid, guild.ID, command.ID)
-	// 	}
-	// }
-
-	// Get current commands
-	currentCommandArray, err := s.ApplicationCommands(appid, s.State.Guilds[1].ID)
+	// Get current commands to check if new ones need to be added
+	currentCommandArray, err := s.ApplicationCommands(appid, "")
 	if err != nil {
 		log.Errorln("Error fetching current apppliation commands for guild", err)
 	}
@@ -34,13 +28,17 @@ func RegisterCommands(appid string, s *discordgo.Session) {
 	}
 
 	// Register all commands
+	guildID := ""
+	if config.DEBUG {
+		guildID = s.State.Guilds[1].ID
+	}
 	for _, command := range commands {
 		if _, exists := currentCommands[command.Name]; !exists {
-			command, err := s.ApplicationCommandCreate(appid, s.State.Guilds[1].ID, command)
+			command, err := s.ApplicationCommandCreate(appid, guildID, command)
 			if err != nil {
 				log.Errorln("Error creating application command", err, command)
 			} else {
-				log.Debugf("Registered command in %s: %s", s.State.Guilds[1].Name, command.Name)
+				log.Debugf("Registered command in [%s]: %s", guildID, command.Name)
 			}
 		}
 	}

@@ -10,6 +10,7 @@ import (
 var (
 	TOKEN string
 	APPID string
+	DEBUG bool
 )
 
 func init() {
@@ -23,5 +24,12 @@ func init() {
 	APPID, found = os.LookupEnv("APP_ID")
 	if !found {
 		log.Fatal("No app id found, please set env APP_ID to a valid Discord app id")
+	}
+
+	DEBUG = false
+	_, found = os.LookupEnv("DEBUG")
+	if found {
+		log.Fatal("No app id found, please set env APP_ID to a valid Discord app id")
+		DEBUG = true
 	}
 }
