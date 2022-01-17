@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"kyBot/kyDB"
-	"kyBot/servers"
+	"kyBot/status"
 
 	"github.com/bwmarrin/discordgo"
 	log "github.com/sirupsen/logrus"
@@ -25,7 +25,10 @@ func InteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			host = serverMap["host"]
 			port = serverMap["port"]
 
-			servers.AddServer(s, i, serverType, host, port)
+			status.AddServer(s, i, serverType, host, port)
+
+		case "add-wordle-reminder":
+			status.AddWordleReminder(s, i)
 
 		default:
 			log.Warnln("aw fuck idk what this is: ", data.Name)
@@ -44,14 +47,14 @@ func InteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 		switch i.MessageComponentData().CustomID {
 		case "refresh_server":
-			var server servers.Server
-			result := kyDB.DB.Where(&servers.Server{StatusMessageID: i.Message.ID}).Limit(1).Find(&server)
+			var server status.Server
+			result := kyDB.DB.Where(&status.Server{StatusMessageID: i.Message.ID}).Limit(1).Find(&server)
 			if result.RowsAffected == 1 {
 				server.Update(s)
 			}
 		case "delete_server":
-			var server servers.Server
-			result := kyDB.DB.Where(&servers.Server{StatusMessageID: i.Message.ID}).Limit(1).Find(&server)
+			var server status.Server
+			result := kyDB.DB.Where(&status.Server{StatusMessageID: i.Message.ID}).Limit(1).Find(&server)
 			if result.RowsAffected == 1 {
 				server.Remove(s)
 			}

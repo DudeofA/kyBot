@@ -1,4 +1,4 @@
-package servers
+package status
 
 import (
 	"fmt"
@@ -83,7 +83,7 @@ func init() {
 	commands.AddCommand(addServerCommand)
 }
 
-func AddServer(s *discordgo.Session, i *discordgo.InteractionCreate, serverType string, host string, portString string) (success bool) {
+func AddServer(s *discordgo.Session, i *discordgo.InteractionCreate, serverType string, host string, portString string) {
 	var port uint16
 	if portString == "" {
 		switch serverType {
@@ -96,7 +96,7 @@ func AddServer(s *discordgo.Session, i *discordgo.InteractionCreate, serverType 
 		port64, err := strconv.ParseUint(portString, 10, 10)
 		if err != nil {
 			log.Errorf("Error converting port to integer: %s", portString)
-			return false
+			return
 		}
 		port = uint16(port64)
 	}
@@ -135,9 +135,7 @@ func AddServer(s *discordgo.Session, i *discordgo.InteractionCreate, serverType 
 		}
 		server.StatusMessageID = interaction.ID
 		kyDB.DB.Model(&server).Where(&Server{Host: server.Host}).Updates(&Server{StatusMessageID: server.StatusMessageID})
-		return true
 	}
-	return false
 }
 
 func (server *Server) Update(s *discordgo.Session) {
@@ -216,7 +214,7 @@ func (server *Server) ping(s *discordgo.Session) {
 		if err != nil {
 			server.Status = false
 			server.Version = "N/A"
-			server.MOTD = ""
+			server.Ping = -1
 			server.CurrentUsers = 0
 		} else {
 			major, minor, patch := resp.Version.SemanticVersion()
@@ -242,11 +240,11 @@ func (server *Server) buildEmbedMsg(s *discordgo.Session) (msg *discordgo.Messag
 	if server.Port != MINECRAFT_DEFAULT_PORT && server.Port != MUMBLE_DEFAULT_PORT {
 		ip = fmt.Sprintf("%s:%d", server.Host, server.Port)
 	}
-	ipEmbed := discordgo.MessageEmbedField{
+	ipEmbed := &discordgo.MessageEmbedField{
 		Name:  "Server IP",
 		Value: ip,
 	}
-	versionEmbed := discordgo.MessageEmbedField{
+	versionEmbed := &discordgo.MessageEmbedField{
 		Name:  "Version",
 		Value: server.Version,
 	}
@@ -256,12 +254,12 @@ func (server *Server) buildEmbedMsg(s *discordgo.Session) (msg *discordgo.Messag
 		status = "Online"
 		color = 0x00ff00
 	}
-	statusEmbed := discordgo.MessageEmbedField{
+	statusEmbed := &discordgo.MessageEmbedField{
 		Name:  "Status",
 		Value: status,
 	}
 	playersStr := fmt.Sprintf("%d/%d Online\n%s", server.CurrentUsers, server.MaxUsers, server.UserList)
-	playersEmbed := discordgo.MessageEmbedField{
+	playersEmbed := &discordgo.MessageEmbedField{
 		Name:  "Players",
 		Value: playersStr,
 	}
@@ -274,10 +272,10 @@ func (server *Server) buildEmbedMsg(s *discordgo.Session) (msg *discordgo.Messag
 			URL: url,
 		},
 		Fields: []*discordgo.MessageEmbedField{
-			&ipEmbed,
-			&versionEmbed,
-			&statusEmbed,
-			&playersEmbed,
+			ipEmbed,
+			versionEmbed,
+			statusEmbed,
+			playersEmbed,
 		},
 		Footer: &discordgo.MessageEmbedFooter{
 			Text: fmt.Sprintf("Last updated: %s", time.Now().Local().Format("Jan 2 2006 - 3:04 PM MST")),

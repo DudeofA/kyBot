@@ -8,6 +8,7 @@ import (
 	"kyBot/config"
 	"kyBot/handlers"
 	"kyBot/kyDB"
+	"kyBot/status"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/robfig/cron"
@@ -49,8 +50,8 @@ func main() {
 	}
 
 	c := cron.New()
-	// log.Info("Updating Minecraft servers every minute")
-	// c.AddFunc("0 * * * * *", func() { minecraft.UpdateAllServers(s) })
+	log.Info("Updating Wordle servers every day")
+	c.AddFunc("0 0 * * *", func() { status.SendWordleReminders(s) })
 	c.Start()
 
 	// Create channels to watch for kill signals

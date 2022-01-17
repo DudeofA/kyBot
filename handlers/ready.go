@@ -4,7 +4,7 @@ import (
 	"kyBot/commands"
 	"kyBot/config"
 	"kyBot/kyDB"
-	"kyBot/servers"
+	"kyBot/status"
 
 	"github.com/bwmarrin/discordgo"
 	log "github.com/sirupsen/logrus"
@@ -19,9 +19,9 @@ func Ready(s *discordgo.Session, event *discordgo.Ready) {
 	// Register commands
 	commands.RegisterCommands(config.APPID, s)
 
-	// Loop through all Minecraft servers and update their status
-	kyDB.DB.AutoMigrate(&servers.Server{})
-	var server_objects []servers.Server
+	// Loop through all Minecraft status and update their status
+	kyDB.DB.AutoMigrate(&status.Server{})
+	var server_objects []status.Server
 	_ = kyDB.DB.Find(&server_objects)
 	for _, server := range server_objects {
 		// log.Debugf("NOT updating server: %s", server.Host)
