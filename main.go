@@ -51,7 +51,7 @@ func main() {
 
 	c := cron.New()
 	log.Info("Updating Wordle servers every day")
-	c.AddFunc("0 0 * * *", func() { status.SendWordleReminders(s) })
+	c.AddFunc("0 0 0 * * *", func() { status.SendWordleReminders(s) })
 	c.Start()
 
 	// Create channels to watch for kill signals
