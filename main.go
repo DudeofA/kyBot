@@ -40,10 +40,8 @@ func main() {
 	defer s.Close()
 
 	s.AddHandlerOnce(handlers.Ready)
-	if config.DEBUG {
-		s.AddHandler(handlers.MessageCreate)
-		s.AddHandler(handlers.ReactAdd)
-	}
+	s.AddHandler(handlers.MessageCreate)
+	s.AddHandler(handlers.ReactAdd)
 	s.AddHandler(handlers.InteractionCreate)
 
 	err = s.Open()
