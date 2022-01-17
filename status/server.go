@@ -139,6 +139,9 @@ func AddServer(s *discordgo.Session, i *discordgo.InteractionCreate, serverType 
 }
 
 func (server *Server) Update(s *discordgo.Session) {
+	if server.Type == "wordle" {
+		return
+	}
 	server.ping(s)
 	kyDB.DB.Model(&server).Where(&Server{Host: server.Host}).Updates(&server)
 	msg := server.buildEmbedMsg(s)
@@ -161,7 +164,7 @@ func (server *Server) updateStatusMessage(s *discordgo.Session, updateContent *d
 		// Send status
 		statusMsg, err = s.ChannelMessageSendComplex(server.StatusChannelID, updateContent)
 		if err != nil {
-			log.Errorln("Could not send message", err.Error())
+			log.Errorln("Could not send server status message", err.Error())
 			return
 		}
 	} else {

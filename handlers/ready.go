@@ -24,7 +24,6 @@ func Ready(s *discordgo.Session, event *discordgo.Ready) {
 	var server_objects []status.Server
 	_ = kyDB.DB.Find(&server_objects)
 	for _, server := range server_objects {
-		// log.Debugf("NOT updating server: %s", server.Host)
 		server.Update(s)
 	}
 

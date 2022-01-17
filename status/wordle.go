@@ -9,8 +9,9 @@ import (
 )
 
 const (
-	STOP_EMOJI = "🛑"
-	WORDLE_URL = "https://www.powerlanguage.co.uk/wordle/"
+	STOP_EMOJI   = "🛑"
+	WORDLE_EMOJI = "🟩"
+	WORDLE_URL   = "https://www.powerlanguage.co.uk/wordle/"
 )
 
 func init() {
@@ -49,18 +50,9 @@ func AddWordleReminder(s *discordgo.Session, i *discordgo.InteractionCreate) {
 func SendWordleReminders(s *discordgo.Session) {
 	wordleEmbed := &discordgo.MessageEmbed{
 		URL:         WORDLE_URL,
-		Type:        "",
 		Title:       "WORDLE REMINDER",
 		Description: "New wordle now available!",
-		Timestamp:   "",
 		Color:       0,
-		Footer:      &discordgo.MessageEmbedFooter{},
-		Image:       &discordgo.MessageEmbedImage{},
-		Thumbnail:   &discordgo.MessageEmbedThumbnail{},
-		Video:       &discordgo.MessageEmbedVideo{},
-		Provider:    &discordgo.MessageEmbedProvider{},
-		Author:      &discordgo.MessageEmbedAuthor{},
-		Fields:      []*discordgo.MessageEmbedField{},
 	}
 
 	stopButton := &discordgo.Button{
@@ -71,6 +63,7 @@ func SendWordleReminders(s *discordgo.Session) {
 			ID:       "",
 			Animated: false,
 		},
+		CustomID: "stop_reminders",
 	}
 
 	wordleLinkButton := &discordgo.Button{
@@ -78,7 +71,7 @@ func SendWordleReminders(s *discordgo.Session) {
 		Style: 5,
 		URL:   WORDLE_URL,
 		Emoji: discordgo.ComponentEmoji{
-			Name:     STOP_EMOJI,
+			Name:     WORDLE_EMOJI,
 			ID:       "",
 			Animated: false,
 		},
@@ -87,14 +80,21 @@ func SendWordleReminders(s *discordgo.Session) {
 	msg := &discordgo.MessageSend{
 		Embed: wordleEmbed,
 		Components: []discordgo.MessageComponent{
-			wordleLinkButton,
-			stopButton,
+			&discordgo.ActionsRow{
+				Components: []discordgo.MessageComponent{
+					wordleLinkButton,
+					stopButton,
+				},
+			},
 		},
 	}
 
 	var server_objects []Server
 	_ = kyDB.DB.Find(&server_objects).Where(&Server{Type: "wordle"})
 	for _, server := range server_objects {
-		s.ChannelMessageSendComplex(server.StatusChannelID, msg)
+		_, err := s.ChannelMessageSendComplex(server.StatusChannelID, msg)
+		if err != nil {
+			log.Errorf("Error sending wordle update: %s", err.Error())
+		}
 	}
 }
