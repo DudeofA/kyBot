@@ -11,6 +11,7 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.Bot {
 		return
 	}
+
 	if !strings.HasPrefix(m.Content, "k!") {
 		return
 	}

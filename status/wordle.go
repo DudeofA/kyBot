@@ -63,7 +63,7 @@ func SendWordleReminders(s *discordgo.Session) {
 			ID:       "",
 			Animated: false,
 		},
-		CustomID: "stop_reminders",
+		CustomID: "delete_server",
 	}
 
 	wordleLinkButton := &discordgo.Button{
@@ -90,7 +90,7 @@ func SendWordleReminders(s *discordgo.Session) {
 	}
 
 	var server_objects []Server
-	_ = kyDB.DB.Find(&server_objects).Where(&Server{Type: "wordle"})
+	_ = kyDB.DB.Where(&Server{Type: "wordle"}).Find(&server_objects)
 	for _, server := range server_objects {
 		_, err := s.ChannelMessageSendComplex(server.StatusChannelID, msg)
 		if err != nil {
