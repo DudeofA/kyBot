@@ -3,15 +3,21 @@ package status
 import (
 	"kyBot/commands"
 	"kyBot/kyDB"
+	"strings"
 
 	"github.com/bwmarrin/discordgo"
 	log "github.com/sirupsen/logrus"
 )
 
 const (
-	STOP_EMOJI   = "🛑"
-	WORDLE_EMOJI = "🟩"
-	WORDLE_URL   = "https://www.powerlanguage.co.uk/wordle/"
+	STOP_EMOJI              = "🛑"
+	WORDLE_EMOJI            = "🟩"
+	WORDLE_URL              = "https://www.powerlanguage.co.uk/wordle/"
+	WORDLE_GREEN            = 0x538d4e
+	WORDLE_JOIN_EMOTE_NAME  = "aenezukojump"
+	WORDLE_JOIN_EMOTE_ID    = "849514753042546719"
+	WORDLE_LEAVE_EMOTE_NAME = "PES2_SadGeRain"
+	WORDLE_LEAVE_EMOTE_ID   = "849698641869406261"
 )
 
 func init() {
@@ -45,56 +51,99 @@ func AddWordleReminder(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if err := kyDB.DB.Take(&server).Error; err != nil {
 		kyDB.DB.Create(&server)
 	}
+
 }
 
 func SendWordleReminders(s *discordgo.Session) {
-	wordleEmbed := &discordgo.MessageEmbed{
-		URL:         WORDLE_URL,
-		Title:       "WORDLE REMINDER",
-		Description: "New wordle now available!",
-		Color:       0,
+	var server_objects []Server
+	_ = kyDB.DB.Where(&Server{Type: "wordle"}).Find(&server_objects)
+	for _, server := range server_objects {
+		msg := server.buildWordleEmbedMsg(s)
+		update, err := s.ChannelMessageSendComplex(server.StatusChannelID, msg)
+		if err != nil {
+			log.Errorf("Error sending wordle update: %s", err.Error())
+		}
+		server.StatusMessageID = update.ID
+		kyDB.DB.Model(&server).Where(&Server{Host: server.Host}).Updates(&Server{StatusMessageID: server.StatusMessageID})
 	}
+}
 
-	stopButton := &discordgo.Button{
-		Label: "Stop reminding",
+func (server *Server) AddUser(s *discordgo.Session, u *discordgo.User) {
+	if server.UserList == "" {
+		server.UserList += u.Mention()
+	} else if !strings.Contains(server.UserList, u.Mention()) {
+		server.UserList += "\n" + u.Mention()
+	}
+	kyDB.DB.Model(&server).Where(&Server{Host: server.Host}).Updates(&Server{UserList: server.UserList})
+	msg := server.buildWordleEmbedMsg(s)
+	server.updateStatusMessage(s, msg)
+}
+
+func (server *Server) RemoveUser(s *discordgo.Session, u *discordgo.User) {
+	if server.UserList != "" && strings.Contains(server.UserList, u.Mention()) {
+		server.UserList = strings.Replace(server.UserList, u.Mention(), "", 1)
+		server.UserList = strings.Replace(server.UserList, "\n\n", "\n", 1)
+	}
+	kyDB.DB.Model(&server).Where(&Server{Host: server.Host}).Updates(&Server{UserList: server.UserList})
+	msg := server.buildWordleEmbedMsg(s)
+	server.updateStatusMessage(s, msg)
+}
+
+func (server *Server) buildWordleEmbedMsg(s *discordgo.Session) (msg *discordgo.MessageSend) {
+	optInButton := &discordgo.Button{
+		Label: "Join Game",
+		Style: 1,
+		Emoji: discordgo.ComponentEmoji{
+			Name:     WORDLE_JOIN_EMOTE_NAME,
+			ID:       WORDLE_JOIN_EMOTE_ID,
+			Animated: true,
+		},
+		CustomID: "join_server",
+	}
+	optOutButton := &discordgo.Button{
+		Label: "Leave Game",
 		Style: 4,
 		Emoji: discordgo.ComponentEmoji{
-			Name:     STOP_EMOJI,
-			ID:       "",
-			Animated: false,
+			Name:     WORDLE_LEAVE_EMOTE_NAME,
+			ID:       WORDLE_LEAVE_EMOTE_ID,
+			Animated: true,
 		},
-		CustomID: "delete_server",
+		CustomID: "leave_server",
 	}
 
-	wordleLinkButton := &discordgo.Button{
-		Label: "Wordle Link",
-		Style: 5,
-		URL:   WORDLE_URL,
-		Emoji: discordgo.ComponentEmoji{
-			Name:     WORDLE_EMOJI,
-			ID:       "",
-			Animated: false,
+	var playerString string
+	if server.UserList == "" {
+		playerString = "None :("
+	} else {
+		playerString = server.UserList
+	}
+	wordleEmbed := &discordgo.MessageEmbed{
+		URL:         WORDLE_URL,
+		Title:       "CLICK HERE TO PLAY WORDLE",
+		Description: "New wordle available now!",
+		Timestamp:   "",
+		Color:       WORDLE_GREEN,
+		Fields: []*discordgo.MessageEmbedField{
+			{
+				Name:  "Join In!",
+				Value: "Click the button to join the game for tracking",
+			},
+			{
+				Name:  "Players",
+				Value: playerString,
+			},
 		},
 	}
-
-	msg := &discordgo.MessageSend{
+	msg = &discordgo.MessageSend{
 		Embed: wordleEmbed,
 		Components: []discordgo.MessageComponent{
 			&discordgo.ActionsRow{
 				Components: []discordgo.MessageComponent{
-					wordleLinkButton,
-					stopButton,
+					optInButton,
+					optOutButton,
 				},
 			},
 		},
 	}
-
-	var server_objects []Server
-	_ = kyDB.DB.Where(&Server{Type: "wordle"}).Find(&server_objects)
-	for _, server := range server_objects {
-		_, err := s.ChannelMessageSendComplex(server.StatusChannelID, msg)
-		if err != nil {
-			log.Errorf("Error sending wordle update: %s", err.Error())
-		}
-	}
+	return msg
 }

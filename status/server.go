@@ -160,7 +160,9 @@ func (server *Server) updateStatusMessage(s *discordgo.Session, updateContent *d
 
 	var statusMsg *discordgo.Message
 	var err error
-	if server.StatusMessageID == "" {
+
+	_, err = s.ChannelMessage(server.StatusChannelID, server.StatusMessageID)
+	if err != nil {
 		// Send status
 		statusMsg, err = s.ChannelMessageSendComplex(server.StatusChannelID, updateContent)
 		if err != nil {
@@ -209,6 +211,8 @@ func (server *Server) ping(s *discordgo.Session) {
 				}
 				playerString += "```"
 				server.UserList = playerString
+			} else {
+				server.UserList = ""
 			}
 		}
 	case "mumble":
@@ -217,7 +221,7 @@ func (server *Server) ping(s *discordgo.Session) {
 		if err != nil {
 			server.Status = false
 			server.Version = "N/A"
-			server.Ping = -1
+			server.Ping = 0
 			server.CurrentUsers = 0
 		} else {
 			major, minor, patch := resp.Version.SemanticVersion()

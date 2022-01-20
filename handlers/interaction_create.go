@@ -45,18 +45,23 @@ func InteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			log.Errorf("Error responding to the interaction: %s", err.Error())
 		}
 
+		var server status.Server
 		switch i.MessageComponentData().CustomID {
 		case "refresh_server":
-			var server status.Server
 			result := kyDB.DB.Where(&status.Server{StatusMessageID: i.Message.ID}).Limit(1).Find(&server)
 			if result.RowsAffected == 1 {
 				server.Update(s)
 			}
-		case "delete_server":
-			var server status.Server
-			result := kyDB.DB.Where(&status.Server{StatusMessageID: i.Message.ID}).Limit(1).Find(&server)
+
+		case "join_server":
+			result := kyDB.DB.Where(&status.Server{Host: i.ChannelID}).Limit(1).Find(&server)
 			if result.RowsAffected == 1 {
-				server.Remove(s)
+				server.AddUser(s, i.Member.User)
+			}
+		case "leave_server":
+			result := kyDB.DB.Where(&status.Server{Host: i.ChannelID}).Limit(1).Find(&server)
+			if result.RowsAffected == 1 {
+				server.RemoveUser(s, i.Member.User)
 			}
 
 		default:
