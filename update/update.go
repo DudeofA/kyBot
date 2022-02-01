@@ -46,6 +46,7 @@ func ConvertServerToWordle(s *discordgo.Session) {
 		if result := kyDB.DB.Limit(1).Find(&existing_wordle, status.Wordle{ChannelID: wordle.ChannelID}); result.RowsAffected == 0 {
 			kyDB.DB.Create(&wordle)
 		}
+		kyDB.DB.Delete(&server)
 	}
 
 	kyDB.DB.Migrator().DropColumn(&kyDB.User{}, "created_at")
