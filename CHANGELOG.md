@@ -2,6 +2,12 @@
 
 All notable changes will be documented in this file.
 
+## [4.1.2] - 2/1/22
+
+#### Add
+
+-   Status that includes version from changelog
+
 ## [4.1.1] - 1/31/22
 
 #### Fix
