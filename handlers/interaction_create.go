@@ -27,8 +27,8 @@ func InteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 			status.AddServer(s, i, serverType, host, port)
 
-		case "add-wordle-reminder":
-			status.AddWordleReminder(s, i)
+		case "add-wordle-channel":
+			status.AddWordleChannel(s, i)
 
 		default:
 			log.Warnln("aw fuck idk what this is: ", data.Name)
@@ -47,21 +47,28 @@ func InteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 		var server status.Server
 		switch i.MessageComponentData().CustomID {
+
 		case "refresh_server":
 			result := kyDB.DB.Where(&status.Server{StatusMessageID: i.Message.ID}).Limit(1).Find(&server)
 			if result.RowsAffected == 1 {
 				server.Update(s)
 			}
 
-		case "join_server":
-			result := kyDB.DB.Where(&status.Server{Host: i.ChannelID}).Limit(1).Find(&server)
-			if result.RowsAffected == 1 {
-				server.AddUser(s, i.Member.User)
+		case "join_wordle":
+			wordle, err := status.GetWordle(i.Message.ChannelID)
+			if err == nil {
+				changed := wordle.AddUser(i.Member.User)
+				if changed {
+					wordle.UpdateStatus(s)
+				}
 			}
-		case "leave_server":
-			result := kyDB.DB.Where(&status.Server{Host: i.ChannelID}).Limit(1).Find(&server)
-			if result.RowsAffected == 1 {
-				server.RemoveUser(s, i.Member.User)
+		case "leave_wordle":
+			wordle, err := status.GetWordle(i.Message.ChannelID)
+			if err == nil {
+				changed := wordle.RemoveUser(i.Member.User)
+				if changed {
+					wordle.UpdateStatus(s)
+				}
 			}
 
 		default:

@@ -12,6 +12,10 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
+	if strings.HasPrefix(m.Content, "Wordle") {
+		status.AddWordleStats(s, m)
+	}
+
 	if !strings.HasPrefix(m.Content, "k!") {
 		return
 	}

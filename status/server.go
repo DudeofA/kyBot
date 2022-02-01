@@ -93,7 +93,7 @@ func AddServer(s *discordgo.Session, i *discordgo.InteractionCreate, serverType 
 			port = MUMBLE_DEFAULT_PORT
 		}
 	} else {
-		port64, err := strconv.ParseUint(portString, 10, 10)
+		port64, err := strconv.ParseUint(portString, 10, 64)
 		if err != nil {
 			log.Errorf("Error converting port to integer: %s", portString)
 			return
@@ -139,9 +139,6 @@ func AddServer(s *discordgo.Session, i *discordgo.InteractionCreate, serverType 
 }
 
 func (server *Server) Update(s *discordgo.Session) {
-	if server.Type == "wordle" {
-		return
-	}
 	server.ping(s)
 	kyDB.DB.Model(&server).Where(&Server{Host: server.Host}).Updates(&server)
 	msg := server.buildEmbedMsg(s)
@@ -179,7 +176,7 @@ func (server *Server) updateStatusMessage(s *discordgo.Session, updateContent *d
 		}
 		statusMsg, err = s.ChannelMessageEditComplex(edit)
 		if err != nil {
-			log.Errorln("Could not edit message", err.Error())
+			log.Errorln("Could not edit server message", err.Error())
 			return
 		}
 	}

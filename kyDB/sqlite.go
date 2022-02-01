@@ -14,17 +14,6 @@ var (
 	DB *gorm.DB
 )
 
-// type User struct {
-// 	gorm.Model
-// 	ID            string `gorm:"primaryKey"` // User ID
-// 	Name          string // Username
-// 	Discriminator string // Unique identifier (#4712)
-// 	CurrentVCID   string // Current voice channel ID
-// 	PreviousVCID  string // Previous voice channel ID
-// 	Credits       int    // Credits in account
-// 	GotDailies    bool   // True if dailies have been claimed today
-// }
-
 // type Guild struct {
 // 	gorm.Model
 // 	ID           string `gorm:"primaryKey"` // discord guild ID
@@ -73,7 +62,7 @@ func Connect() *gorm.DB {
 		log.Panicln("Failed to connect to database", err.Error())
 	}
 
-	// DB.AutoMigrate(&User{}, &Guild{}, &Hangman{})
+	DB.AutoMigrate(&User{})
 
 	return DB
 }
