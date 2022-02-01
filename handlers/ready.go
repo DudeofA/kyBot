@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"kyBot/commands"
 	"kyBot/config"
 	"kyBot/kyDB"
@@ -31,6 +32,11 @@ func Ready(s *discordgo.Session, event *discordgo.Ready) {
 
 	// Migrate servers to Wordle
 	update.ConvertServerToWordle(s)
+
+	err := s.UpdateGameStatus(0, fmt.Sprintf("Wordle [v%s]", config.VERSION))
+	if err != nil {
+		log.Errorf("Error updating status: %s", err.Error())
+	}
 
 	log.Info("READY!")
 }
