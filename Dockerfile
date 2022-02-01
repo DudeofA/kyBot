@@ -6,6 +6,7 @@ RUN apk add gcc musl-dev
 
 COPY go.mod ./
 COPY go.sum ./
+COPY CHANGELOG.md /CHANGELOG.md
 
 RUN go mod download
 
@@ -30,6 +31,7 @@ WORKDIR /
 RUN apk update && apk add --no-cache tzdata
 
 COPY --from=build /kybot /kybot
+COPY --from=build /CHANGELOG.md /CHANGELOG.md
 RUN mkdir -p /data
 
 ENTRYPOINT ["/kybot"]

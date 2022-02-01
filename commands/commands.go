@@ -16,7 +16,32 @@ func AddCommand(cmd *discordgo.ApplicationCommand) {
 
 func RegisterCommands(appid string, s *discordgo.Session) {
 	// Get current commands to check if new ones need to be added
-	currentCommandArray, err := s.ApplicationCommands(appid, "")
+	// Blank guildID means register commands globally across Discord
+	guildID := ""
+	if config.DEBUG {
+		guildID = config.DEBUG_GUILD_ID
+
+		// Remove any global commands from debug
+		var currentGlobalCommands = make(map[string]*discordgo.ApplicationCommand)
+		currentGlobalCommandArray, err := s.ApplicationCommands(appid, "")
+		if err != nil {
+			log.Errorln("Error fetching current apppliation commands for guild", err)
+		}
+		for _, command := range currentGlobalCommandArray {
+			currentGlobalCommands[command.Name] = command
+		}
+
+		for _, command := range currentGlobalCommands {
+			err := s.ApplicationCommandDelete(appid, "", command.ID)
+			if err != nil {
+				log.Errorln("Error deleting unused application command", err, command)
+			} else {
+				log.Debugf("Successfully unregistered global command: %s", command.Name)
+			}
+		}
+	}
+
+	currentCommandArray, err := s.ApplicationCommands(appid, guildID)
 	if err != nil {
 		log.Errorln("Error fetching current apppliation commands for guild", err)
 	}
@@ -29,11 +54,7 @@ func RegisterCommands(appid string, s *discordgo.Session) {
 		}
 	}
 
-	// Blank guildID means register commands globally across Discord
-	guildID := ""
-	if config.DEBUG {
-		guildID = config.DEBUG_GUILD_ID
-	}
+	// Register any missing commands
 	for _, command := range commands {
 		if _, exists := currentCommands[command.Name]; !exists {
 			command, err := s.ApplicationCommandCreate(appid, guildID, command)
@@ -41,6 +62,18 @@ func RegisterCommands(appid string, s *discordgo.Session) {
 				log.Errorln("Error creating application command", err, command)
 			} else {
 				log.Debugf("Registered command in [%s]: %s", guildID, command.Name)
+			}
+		}
+	}
+
+	// Unregister commands no longer used
+	for _, command := range currentCommands {
+		if _, exists := commands[command.Name]; !exists {
+			err := s.ApplicationCommandDelete(appid, guildID, command.ID)
+			if err != nil {
+				log.Errorln("Error deleting unused application command", err, command)
+			} else {
+				log.Debugf("Unregistered command in [%s]: %s", guildID, command.Name)
 			}
 		}
 	}

@@ -2,6 +2,17 @@
 
 All notable changes will be documented in this file.
 
+## [4.1.3] - 2/1/22
+
+#### Fix
+
+-   Add changelog to final build so it can be read for version number in Docker
+
+#### Add
+
+-   Automatically removes unused commands upon startup
+-   In debug mode, also automatically global commands
+
 ## [4.1.2] - 2/1/22
 
 #### Add
