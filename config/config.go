@@ -8,9 +8,10 @@ import (
 )
 
 var (
-	TOKEN string
-	APPID string
-	DEBUG bool
+	TOKEN          string
+	APPID          string
+	DEBUG          bool
+	DEBUG_GUILD_ID string
 )
 
 func init() {
@@ -30,5 +31,9 @@ func init() {
 	_, found = os.LookupEnv("DEBUG")
 	if found {
 		DEBUG = true
+		DEBUG_GUILD_ID, found = os.LookupEnv("DEBUG_GUILD_ID")
+		if !found {
+			log.Fatal("Debug mode, but DEBUG_GUILD_ID not set")
+		}
 	}
 }

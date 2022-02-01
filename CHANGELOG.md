@@ -2,6 +2,12 @@
 
 All notable changes will be documented in this file.
 
+## [4.1.1] - 1/31/22
+
+#### Fix
+
+-   Gave startup debug messages clarity on registering commands with Discord
+
 ## [4.1.0] - 1/30/22
 
 #### Add
@@ -16,7 +22,7 @@ All notable changes will be documented in this file.
 
 ## [4.0.0] - 7/21/21
 
-#### Version 4
+#### Version 4 - The 4th rework
 
 -   One can dream it will be the final iteration
 
