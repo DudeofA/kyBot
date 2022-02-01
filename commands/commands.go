@@ -21,16 +21,18 @@ func RegisterCommands(appid string, s *discordgo.Session) {
 		log.Errorln("Error fetching current apppliation commands for guild", err)
 	}
 
-	log.Debug("Current registered commands:")
-	for _, command := range currentCommandArray {
-		currentCommands[command.Name] = command
-		log.Debugf("ID: %s | Name: %s", command.ID, command.Name)
+	if len(currentCommandArray) != 0 {
+		log.Debug("Existing registered commands:")
+		for _, command := range currentCommandArray {
+			currentCommands[command.Name] = command
+			log.Debugf("ID: %s | Name: %s", command.ID, command.Name)
+		}
 	}
 
-	// Register all commands
+	// Blank guildID means register commands globally across Discord
 	guildID := ""
 	if config.DEBUG {
-		guildID = s.State.Guilds[1].ID
+		guildID = config.DEBUG_GUILD_ID
 	}
 	for _, command := range commands {
 		if _, exists := currentCommands[command.Name]; !exists {
