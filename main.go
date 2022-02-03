@@ -43,6 +43,7 @@ func main() {
 	s.AddHandler(handlers.MessageCreate)
 	s.AddHandler(handlers.ReactAdd)
 	s.AddHandler(handlers.InteractionCreate)
+	s.AddHandler(handlers.RateLimit)
 
 	err = s.Open()
 	if err != nil {
@@ -50,7 +51,7 @@ func main() {
 	}
 
 	c := cron.New()
-	log.Info("Updating Wordle servers every day")
+	log.Debug("Wordle reminders will go out each day at 12am")
 	c.AddFunc("0 0 0 * * *", func() { status.SendWordleReminders(s) })
 	c.Start()
 
