@@ -41,6 +41,7 @@ type Wordle struct {
 
 type WordleStat struct {
 	gorm.Model
+	MessageID      string
 	UserID         string
 	ChannelID      string
 	Day            int16 // Wordle day number
@@ -102,14 +103,15 @@ func AddWordleChannel(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	}
 }
 
-func AddWordleStats(s *discordgo.Session, m *discordgo.MessageCreate) {
+func AddWordleStats(s *discordgo.Session, m *discordgo.Message) (added bool) {
 	regex := regexp.MustCompile(`Wordle (\d*) (\d)\/6`)
 	if !regex.MatchString(m.Content) {
 		log.Debug("Message does not match Wordle regex")
-		return
+		return false
 	}
 
 	wordleStat := WordleStat{
+		MessageID: m.ID,
 		ChannelID: m.ChannelID,
 		UserID:    m.Author.ID,
 	}
@@ -119,7 +121,7 @@ func AddWordleStats(s *discordgo.Session, m *discordgo.MessageCreate) {
 	day, err := strconv.ParseInt(data[1], 10, 16)
 	if err != nil {
 		log.Errorf("Error converting Wordle day to int: %s", err.Error())
-		return
+		return false
 	}
 	wordleStat.Day = int16(day)
 
@@ -128,7 +130,7 @@ func AddWordleStats(s *discordgo.Session, m *discordgo.MessageCreate) {
 	result := kyDB.DB.Limit(1).Where(WordleStat{UserID: wordleStat.UserID, Day: wordleStat.Day}).Find(&existing)
 	if result.RowsAffected >= 1 {
 		log.Debugf("User %s already submitted their Wordle for day %d", wordleStat.UserID, wordleStat.Day)
-		return
+		return false
 	}
 
 	score, err := strconv.ParseInt(data[2], 10, 8)
@@ -137,7 +139,7 @@ func AddWordleStats(s *discordgo.Session, m *discordgo.MessageCreate) {
 			wordleStat.Score = 0
 		} else {
 			log.Errorf("Error converting Wordle day to int: %s", err.Error())
-			return
+			return false
 		}
 	}
 	wordleStat.Score = int8(score)
@@ -156,19 +158,23 @@ func AddWordleStats(s *discordgo.Session, m *discordgo.MessageCreate) {
 		}
 	}
 
-	err = s.MessageReactionAdd(m.ChannelID, m.ID, WORDLE_ACK_EMOJI)
-	if err != nil {
-		log.Errorf("Unable to add reaction to Wordle game results: %s", err.Error())
-		return
-	}
-
 	wordle, err := GetWordle(m.ChannelID)
 	if err != nil {
 		log.Debug("No Wordle game found in this channel")
-		return
+		return false
 	}
+
+	s.Ratelimiter.Lock()
+	err = s.MessageReactionAdd(m.ChannelID, m.ID, WORDLE_ACK_EMOJI)
+	if err != nil {
+		log.Errorf("Unable to add reaction to Wordle game results: %s", err.Error())
+		return false
+	}
+	s.Ratelimiter.Unlock()
+
 	wordle.Stats = append(wordle.Stats, wordleStat)
 	kyDB.DB.Model(&wordle).Where(&Wordle{ChannelID: wordle.ChannelID}).Updates(&wordle)
+	return true
 }
 
 func SendWordleReminders(s *discordgo.Session) {
@@ -321,4 +327,79 @@ func (wordle *Wordle) editStatusMessage(s *discordgo.Session, updateContent *dis
 	}
 
 	wordle.StatusMessageID = statusMsg.ID
+}
+
+func (wordle *Wordle) CatchUp(s *discordgo.Session) {
+	after := ""
+	if len(wordle.Stats) > 0 {
+		sort.Slice(wordle.Stats, func(i, j int) bool {
+			return wordle.Stats[i].ID > wordle.Stats[j].ID
+		})
+		after = wordle.Stats[0].MessageID
+	}
+	messages, err := s.ChannelMessages(wordle.ChannelID, 100, "", after, "")
+	if err != nil {
+		log.Errorf("Unable to fetch channel messages from %s: %s", wordle.ChannelID, err.Error())
+	}
+
+	sort.Slice(messages, func(i, j int) bool {
+		return messages[i].ID < messages[j].ID
+	})
+	for _, message := range messages {
+		if strings.HasPrefix(message.Content, "Wordle") {
+			var wordle_stat *WordleStat
+			if result := kyDB.DB.Limit(1).Find(&wordle_stat, WordleStat{MessageID: message.ID}); result.RowsAffected == 0 {
+				AddWordleStats(s, message)
+			} else {
+				break
+			}
+		}
+	}
+}
+
+// Go through entire channel and attempt to add previous Wordles
+func ScrapeChannel(s *discordgo.Session, m *discordgo.Message) {
+	var wordle Wordle
+	result := kyDB.DB.Preload(clause.Associations).Find(&wordle, Wordle{ChannelID: m.ChannelID})
+	if result.RowsAffected != 1 {
+		log.Errorf("Wordle not found in this channel: %s", m.ChannelID)
+		return
+	}
+
+	// Start looking for messages before the earliest wordle stat
+	before := ""
+	if len(wordle.Stats) > 0 {
+		sort.Slice(wordle.Stats, func(i, j int) bool {
+			return wordle.Stats[i].ID < wordle.Stats[j].ID
+		})
+		before = wordle.Stats[0].MessageID
+	}
+
+	foundWordle := true
+	for foundWordle {
+		foundWordle = false
+
+		messages, err := s.ChannelMessages(wordle.ChannelID, 100, before, "", "")
+		if err != nil {
+			log.Errorf("Unable to fetch channel messages from %s: %s", wordle.ChannelID, err.Error())
+		}
+		if len(messages) == 0 {
+			log.Debug("No messages before oldest Wordle Stat")
+			return
+		}
+		sort.Slice(messages, func(i, j int) bool {
+			return messages[i].ID < messages[j].ID
+		})
+
+		for _, message := range messages {
+			if strings.HasPrefix(message.Content, "Wordle") {
+				var wordle_stat *WordleStat
+				if result := kyDB.DB.Limit(1).Find(&wordle_stat, WordleStat{MessageID: message.ID}); result.RowsAffected == 0 {
+					if AddWordleStats(s, message) {
+						foundWordle = true
+					}
+				}
+			}
+		}
+	}
 }

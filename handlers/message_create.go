@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
+	log "github.com/sirupsen/logrus"
 )
 
 func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -13,10 +14,19 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	if strings.HasPrefix(m.Content, "Wordle") {
-		status.AddWordleStats(s, m)
+		status.AddWordleStats(s, m.Message)
 	}
 
 	if !strings.HasPrefix(m.Content, "k!") {
+		return
+	}
+
+	perm, err := s.State.MessagePermissions(m.Message)
+	if err != nil {
+		log.Errorf("Unable to get message author's channel: %s", err.Error())
+	}
+	if perm&discordgo.PermissionAdministrator != discordgo.PermissionAdministrator {
+		log.Warnf("%s tried to use a command but their permissions are %d", m.Author.Username, perm)
 		return
 	}
 
@@ -28,7 +38,9 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	command := strings.ToLower(split_content[0])
 
 	switch command {
-	case "test":
+	case "wordle":
 		status.SendWordleReminders(s)
+	case "scrape":
+		status.ScrapeChannel(s, m.Message)
 	}
 }
