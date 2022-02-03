@@ -2,6 +2,13 @@
 
 All notable changes will be documented in this file.
 
+## [4.1.4] - 2/1/22
+
+#### Add
+
+-   Upon start, bot will look for any wordle games it has missed
+-   Command to force bot to re-search channel for Wordle games
+
 ## [4.1.3] - 2/1/22
 
 #### Fix

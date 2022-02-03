@@ -8,7 +8,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-// Temp to add previous users to Wordle object
+// DEPRECIATED
 func ConvertServerToWordle(s *discordgo.Session) {
 	var server_objects []status.Server
 	kyDB.DB.Where(&status.Server{Type: "wordle"}).Find(&server_objects)
