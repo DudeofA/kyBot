@@ -6,10 +6,10 @@ import (
 	"kyBot/config"
 	"kyBot/kyDB"
 	"kyBot/status"
-	"kyBot/update"
 
 	"github.com/bwmarrin/discordgo"
 	log "github.com/sirupsen/logrus"
+	"gorm.io/gorm/clause"
 )
 
 func Ready(s *discordgo.Session, event *discordgo.Ready) {
@@ -23,15 +23,19 @@ func Ready(s *discordgo.Session, event *discordgo.Ready) {
 
 	kyDB.DB.AutoMigrate(&status.Server{}, &status.Wordle{}, &status.WordleStat{})
 
-	// Loop through all Minecraft status and update their status
+	// Loop through all servers and update their status
 	var server_objects []status.Server
-	_ = kyDB.DB.Not(&status.Server{Type: "wordle"}).Find(&server_objects)
+	_ = kyDB.DB.Find(&server_objects)
 	for _, server := range server_objects {
 		server.Update(s)
 	}
 
-	// Migrate servers to Wordle
-	update.ConvertServerToWordle(s)
+	// Find any Wordle stats that have been posted since the bot was down
+	var wordle_channels []status.Wordle
+	_ = kyDB.DB.Preload(clause.Associations).Find(&wordle_channels)
+	for _, wordle := range wordle_channels {
+		wordle.CatchUp(s)
+	}
 
 	err := s.UpdateGameStatus(0, fmt.Sprintf("Wordle [v%s]", config.VERSION))
 	if err != nil {
