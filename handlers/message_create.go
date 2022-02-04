@@ -42,5 +42,6 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		status.SendWordleReminders(s)
 	case "scrape":
 		status.ScrapeChannel(s, m.Message)
+		log.Debug("Done scraping")
 	}
 }

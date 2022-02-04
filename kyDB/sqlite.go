@@ -62,7 +62,7 @@ func Connect() *gorm.DB {
 		log.Panicln("Failed to connect to database", err.Error())
 	}
 
-	DB.AutoMigrate(&User{})
+	DB.Migrator().AutoMigrate(&User{})
 
 	return DB
 }

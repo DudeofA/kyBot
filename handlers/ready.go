@@ -21,7 +21,7 @@ func Ready(s *discordgo.Session, event *discordgo.Ready) {
 	// Register commands
 	commands.RegisterCommands(config.APPID, s)
 
-	kyDB.DB.AutoMigrate(&status.Server{}, &status.Wordle{}, &status.WordleStat{})
+	kyDB.DB.Migrator().AutoMigrate(&status.Server{}, &status.Wordle{}, &status.WordleStat{})
 
 	// Loop through all servers and update their status
 	var server_objects []status.Server
@@ -34,6 +34,7 @@ func Ready(s *discordgo.Session, event *discordgo.Ready) {
 	var wordle_channels []status.Wordle
 	_ = kyDB.DB.Preload(clause.Associations).Find(&wordle_channels)
 	for _, wordle := range wordle_channels {
+		log.Debugf("Catching up on Wordle %s", wordle.ChannelID)
 		wordle.CatchUp(s)
 	}
 
