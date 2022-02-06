@@ -2,6 +2,12 @@
 
 All notable changes will be documented in this file.
 
+## [4.1.6] - 2/6/22
+
+#### Add
+
+-   Add basic stats to the Wordle reminder
+
 ## [4.1.5] - 2/3/22
 
 #### Change

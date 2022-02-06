@@ -5,7 +5,6 @@ import (
 	"kyBot/commands"
 	"kyBot/kyDB"
 	"sort"
-	"strings"
 
 	"github.com/bwmarrin/discordgo"
 	log "github.com/sirupsen/logrus"
@@ -25,6 +24,7 @@ const (
 	WORDLE_JOIN_EMOTE_ID    = "849514753042546719"
 	WORDLE_LEAVE_EMOTE_NAME = "PES2_SadGeRain"
 	WORDLE_LEAVE_EMOTE_ID   = "849698641869406261"
+	WORDLE_FAIL_SCORE       = 7
 
 	STOP_EMOJI = "🛑"
 )
@@ -34,6 +34,13 @@ type Wordle struct {
 	Users           []*User      `gorm:"many2many:wordle_users;"`
 	Stats           []WordleStat `gorm:"foreignKey:ChannelID"`
 	StatusMessageID string
+}
+
+type WordlePlayerStats struct {
+	User            *User
+	AverageScore    float32
+	AverageFirstRow float32
+	GamesPlayed     int16
 }
 
 func init() {
@@ -160,21 +167,30 @@ func (wordle *Wordle) buildEmbedMsg(s *discordgo.Session) (msg *discordgo.Messag
 		CustomID: "leave_wordle",
 	}
 
-	var playerString string
-	if len(wordle.Users) == 0 {
-		playerString = "None :("
-	} else {
+	playerString := "None :("
+	if len(wordle.Users) != 0 {
+		playerString = "```\n Avg |Total| Name\n"
+		var users []*WordlePlayerStats
+
 		sortedUsers := wordle.Users
-		sort.Slice(sortedUsers, func(i, j int) bool {
-			return strings.ToLower(sortedUsers[i].Username) < strings.ToLower(sortedUsers[j].Username)
-		})
 		for _, player := range sortedUsers {
-			if player.Username == "" {
-				player.QueryInfo(s)
+			player.QueryInfo(s)
+
+			user := &WordlePlayerStats{
+				User:         player,
+				AverageScore: player.GetAverageScore(),
+				// AverageFirstRow: player.GetAverageFirstRow(),
+				GamesPlayed: player.GetGamesPlayed(),
 			}
-			score := player.GetAverageScore()
-			playerString += fmt.Sprintf("%.2f <@%s>\n", score, player.ID)
+			users = append(users, user)
 		}
+		sort.Slice(users, func(i, j int) bool {
+			return users[i].AverageScore < users[j].AverageScore
+		})
+		for _, user := range users {
+			playerString += fmt.Sprintf("%.2f | %03d | %s\n", user.AverageScore, user.GamesPlayed, user.User.Username)
+		}
+		playerString += "\n```"
 	}
 	wordleEmbed := &discordgo.MessageEmbed{
 		URL:         WORDLE_URL,

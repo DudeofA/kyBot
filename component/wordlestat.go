@@ -57,7 +57,7 @@ func AddWordleStats(s *discordgo.Session, m *discordgo.Message) (added bool) {
 	score, err := strconv.ParseInt(data[2], 10, 8)
 	if err != nil {
 		if data[2] == "X" {
-			wordleStat.Score = 0
+			wordleStat.Score = WORDLE_FAIL_SCORE
 		} else {
 			log.Errorf("Error converting Wordle day to int: %s", err.Error())
 			return false

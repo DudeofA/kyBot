@@ -5,6 +5,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	log "github.com/sirupsen/logrus"
+	"gorm.io/gorm/clause"
 )
 
 type User struct {
@@ -31,16 +32,31 @@ func GetUser(discord_user *discordgo.User) (user *User) {
 }
 
 func (user *User) QueryInfo(s *discordgo.Session) {
-	discord_user, err := s.User(user.ID)
-	if err != nil {
-		log.Errorf("Unable to get Discord user: %s", user.ID)
-		return
+	var discord_user *discordgo.User
+	var err error
+	if user.Username == "" {
+		discord_user, err = s.User(user.ID)
+		if err != nil {
+			log.Errorf("Unable to get Discord user: %s", user.ID)
+			return
+		}
+		user.Username = discord_user.Username
+		user.Discriminator = discord_user.Discriminator
 	}
-	user.Username = discord_user.Username
-	user.Discriminator = discord_user.Discriminator
+
+	kyDB.DB.Preload(clause.Associations).Find(&user)
 	kyDB.DB.Save(&user)
 }
 
 func (user *User) GetAverageScore() (average float32) {
-	return 0
+	row := kyDB.DB.Model(&WordleStat{}).Where(&WordleStat{UserID: user.ID}).Select("avg(score)").Row()
+	row.Scan(&average)
+	return average
+}
+
+func (user *User) GetGamesPlayed() (count int16) {
+	var temp_count int64
+	kyDB.DB.Model(&WordleStat{}).Where(&WordleStat{UserID: user.ID}).Count(&temp_count)
+	count = int16(temp_count)
+	return count
 }
