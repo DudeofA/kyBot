@@ -1,4 +1,4 @@
-package status
+package component
 
 import (
 	"fmt"
@@ -31,7 +31,7 @@ const (
 
 type Wordle struct {
 	ChannelID       string       `gorm:"primaryKey"`
-	Users           []*kyDB.User `gorm:"many2many:wordle_users;"`
+	Users           []*User      `gorm:"many2many:wordle_users;"`
 	Stats           []WordleStat `gorm:"foreignKey:ChannelID"`
 	StatusMessageID string
 }
@@ -110,7 +110,7 @@ func (wordle *Wordle) AddUser(discord_user *discordgo.User) (changed bool) {
 		}
 	}
 
-	user := kyDB.GetUser(discord_user)
+	user := GetUser(discord_user)
 	wordle.Users = append(wordle.Users, user)
 	kyDB.DB.Model(&wordle).Association("Users").Append(&user)
 	return true
@@ -130,7 +130,7 @@ func (wordle *Wordle) RemoveUser(discord_user *discordgo.User) (changed bool) {
 		}
 	}
 	wordle.Users = wordle.Users[:i]
-	kyDB.DB.Model(&wordle).Association("Users").Delete(&kyDB.User{ID: discord_user.ID})
+	kyDB.DB.Model(&wordle).Association("Users").Delete(&User{ID: discord_user.ID})
 	return changed
 }
 
@@ -173,8 +173,8 @@ func (wordle *Wordle) buildEmbedMsg(s *discordgo.Session) (msg *discordgo.Messag
 			if player.Username == "" {
 				player.QueryInfo(s)
 			}
-			playerString += fmt.Sprintf("<@%s>\n", player.ID)
-
+			score := player.GetAverageScore()
+			playerString += fmt.Sprintf("%.2f <@%s>\n", score, player.ID)
 		}
 	}
 	wordleEmbed := &discordgo.MessageEmbed{
@@ -189,7 +189,7 @@ func (wordle *Wordle) buildEmbedMsg(s *discordgo.Session) (msg *discordgo.Messag
 				Value: "Click the button to join the game for tracking",
 			},
 			{
-				Name:  "Players",
+				Name:  "Average | Players",
 				Value: playerString,
 			},
 		},

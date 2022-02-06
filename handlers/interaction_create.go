@@ -1,8 +1,8 @@
 package handlers
 
 import (
+	"kyBot/component"
 	"kyBot/kyDB"
-	"kyBot/status"
 
 	"github.com/bwmarrin/discordgo"
 	log "github.com/sirupsen/logrus"
@@ -25,10 +25,10 @@ func InteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			host = serverMap["host"]
 			port = serverMap["port"]
 
-			status.AddServer(s, i, serverType, host, port)
+			component.AddServer(s, i, serverType, host, port)
 
 		case "add-wordle-channel":
-			status.AddWordleChannel(s, i)
+			component.AddWordleChannel(s, i)
 
 		default:
 			log.Warnln("aw fuck idk what this is: ", data.Name)
@@ -45,17 +45,17 @@ func InteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			log.Errorf("Error responding to the interaction: %s", err.Error())
 		}
 
-		var server status.Server
+		var server component.Server
 		switch i.MessageComponentData().CustomID {
 
 		case "refresh_server":
-			result := kyDB.DB.Where(&status.Server{StatusMessageID: i.Message.ID}).Limit(1).Find(&server)
+			result := kyDB.DB.Where(&component.Server{StatusMessageID: i.Message.ID}).Limit(1).Find(&server)
 			if result.RowsAffected == 1 {
 				server.Update(s)
 			}
 
 		case "join_wordle":
-			wordle, err := status.GetWordle(i.Message.ChannelID)
+			wordle, err := component.GetWordle(i.Message.ChannelID)
 			if err == nil {
 				changed := wordle.AddUser(i.Member.User)
 				if changed {
@@ -63,7 +63,7 @@ func InteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
 				}
 			}
 		case "leave_wordle":
-			wordle, err := status.GetWordle(i.Message.ChannelID)
+			wordle, err := component.GetWordle(i.Message.ChannelID)
 			if err == nil {
 				changed := wordle.RemoveUser(i.Member.User)
 				if changed {

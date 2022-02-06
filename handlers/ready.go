@@ -3,9 +3,9 @@ package handlers
 import (
 	"fmt"
 	"kyBot/commands"
+	"kyBot/component"
 	"kyBot/config"
 	"kyBot/kyDB"
-	"kyBot/status"
 
 	"github.com/bwmarrin/discordgo"
 	log "github.com/sirupsen/logrus"
@@ -21,17 +21,15 @@ func Ready(s *discordgo.Session, event *discordgo.Ready) {
 	// Register commands
 	commands.RegisterCommands(config.APPID, s)
 
-	kyDB.DB.Migrator().AutoMigrate(&status.Server{}, &status.Wordle{}, &status.WordleStat{})
-
-	// Loop through all servers and update their status
-	var server_objects []status.Server
+	// Loop through all servers and update their component
+	var server_objects []component.Server
 	_ = kyDB.DB.Find(&server_objects)
 	for _, server := range server_objects {
 		server.Update(s)
 	}
 
 	// Find any Wordle stats that have been posted since the bot was down
-	var wordle_channels []status.Wordle
+	var wordle_channels []component.Wordle
 	_ = kyDB.DB.Preload(clause.Associations).Find(&wordle_channels)
 	for _, wordle := range wordle_channels {
 		log.Debugf("Catching up on Wordle %s", wordle.ChannelID)

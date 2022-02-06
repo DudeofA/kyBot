@@ -15,7 +15,7 @@ COPY commands/*.go ./commands/
 COPY config/*.go ./config/
 COPY handlers/*.go ./handlers/
 COPY kyDB/*.go ./kyDB/
-COPY status/*.go ./status/
+COPY component/*.go ./component/
 COPY update/*.go ./update/
 
 RUN go build -o /kybot

@@ -27,7 +27,7 @@ func ConvertServerToWordle(s *discordgo.Session) {
 			id = strings.TrimSpace(id)
 
 			if id != "" {
-				user := &kyDB.User{
+				user := &status.User{
 					ID: id,
 				}
 				discord_user, err = s.User(id)
@@ -35,8 +35,8 @@ func ConvertServerToWordle(s *discordgo.Session) {
 					user.Username = discord_user.Username
 					user.Discriminator = discord_user.Discriminator
 				}
-				var existing_user kyDB.User
-				if result := kyDB.DB.Limit(1).Find(&existing_user, kyDB.User{ID: user.ID}); result.RowsAffected == 0 {
+				var existing_user status.User
+				if result := kyDB.DB.Limit(1).Find(&existing_user, status.User{ID: user.ID}); result.RowsAffected == 0 {
 					kyDB.DB.Create(&user)
 				}
 				wordle.Users = append(wordle.Users, user)
@@ -49,14 +49,14 @@ func ConvertServerToWordle(s *discordgo.Session) {
 		kyDB.DB.Delete(&server)
 	}
 
-	kyDB.DB.Migrator().DropColumn(&kyDB.User{}, "created_at")
-	kyDB.DB.Migrator().DropColumn(&kyDB.User{}, "updated_at")
-	kyDB.DB.Migrator().DropColumn(&kyDB.User{}, "deleted_at")
-	kyDB.DB.Migrator().DropColumn(&kyDB.User{}, "name")
-	kyDB.DB.Migrator().DropColumn(&kyDB.User{}, "current_vc_id")
-	kyDB.DB.Migrator().DropColumn(&kyDB.User{}, "previous_vc_id")
-	kyDB.DB.Migrator().DropColumn(&kyDB.User{}, "credits")
-	kyDB.DB.Migrator().DropColumn(&kyDB.User{}, "got_dailies")
+	kyDB.DB.Migrator().DropColumn(&status.User{}, "created_at")
+	kyDB.DB.Migrator().DropColumn(&status.User{}, "updated_at")
+	kyDB.DB.Migrator().DropColumn(&status.User{}, "deleted_at")
+	kyDB.DB.Migrator().DropColumn(&status.User{}, "name")
+	kyDB.DB.Migrator().DropColumn(&status.User{}, "current_vc_id")
+	kyDB.DB.Migrator().DropColumn(&status.User{}, "previous_vc_id")
+	kyDB.DB.Migrator().DropColumn(&status.User{}, "credits")
+	kyDB.DB.Migrator().DropColumn(&status.User{}, "got_dailies")
 
 	kyDB.DB.Migrator().DropTable("guilds")
 	kyDB.DB.Migrator().DropTable("hangmen")

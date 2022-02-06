@@ -2,6 +2,13 @@
 
 All notable changes will be documented in this file.
 
+## [4.1.5] - 2/3/22
+
+#### Change
+
+-   Move users module into status
+-   Rename status to component
+
 ## [4.1.4] - 2/1/22
 
 #### Add

@@ -1,4 +1,4 @@
-package status
+package component
 
 import (
 	"kyBot/kyDB"

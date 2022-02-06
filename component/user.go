@@ -1,6 +1,8 @@
-package kyDB
+package component
 
 import (
+	"kyBot/kyDB"
+
 	"github.com/bwmarrin/discordgo"
 	log "github.com/sirupsen/logrus"
 )
@@ -8,11 +10,12 @@ import (
 type User struct {
 	ID            string `gorm:"primaryKey"` // User ID
 	Username      string
-	Discriminator string // Unique identifier (#4712)
+	Discriminator string        // Unique identifier (#4712)
+	Stats         []*WordleStat `gorm:"many2many:wordle_stats;"`
 }
 
 func GetUser(discord_user *discordgo.User) (user *User) {
-	result := DB.Limit(1).Find(&user, User{ID: discord_user.ID})
+	result := kyDB.DB.Limit(1).Find(&user, User{ID: discord_user.ID})
 	if result.RowsAffected == 1 {
 		return user
 	}
@@ -22,7 +25,7 @@ func GetUser(discord_user *discordgo.User) (user *User) {
 		Username:      discord_user.Username,
 		Discriminator: discord_user.Discriminator,
 	}
-	DB.Create(&user)
+	kyDB.DB.Create(&user)
 
 	return user
 }
@@ -35,5 +38,9 @@ func (user *User) QueryInfo(s *discordgo.Session) {
 	}
 	user.Username = discord_user.Username
 	user.Discriminator = discord_user.Discriminator
-	DB.Save(&user)
+	kyDB.DB.Save(&user)
+}
+
+func (user *User) GetAverageScore() (average float32) {
+	return 0
 }

@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"kyBot/status"
+	"kyBot/component"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
@@ -14,7 +14,7 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	if strings.HasPrefix(m.Content, "Wordle") {
-		status.AddWordleStats(s, m.Message)
+		component.AddWordleStats(s, m.Message)
 	}
 
 	if !strings.HasPrefix(m.Content, "k!") {
@@ -39,9 +39,9 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	switch command {
 	case "wordle":
-		status.SendWordleReminders(s)
+		component.SendWordleReminders(s)
 	case "scrape":
-		status.ScrapeChannel(s, m.Message)
+		component.ScrapeChannel(s, m.Message)
 		log.Debug("Done scraping")
 	}
 }
