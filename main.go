@@ -5,18 +5,14 @@ import (
 	"os/signal"
 	"syscall"
 
+	"kyBot/component"
 	"kyBot/config"
 	"kyBot/handlers"
 	"kyBot/kyDB"
-	"kyBot/status"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/robfig/cron"
 	log "github.com/sirupsen/logrus"
-)
-
-var (
-	s *discordgo.Session
 )
 
 func main() {
@@ -29,11 +25,14 @@ func main() {
 	log.Info("STARTING UP")
 
 	kyDB.Connect()
+	err := kyDB.DB.Migrator().AutoMigrate(&component.Server{}, &component.Wordle{}, &component.WordleStat{}, &component.User{})
+	if err != nil {
+		log.Fatalf("Database migration failed: %s", err.Error())
+	}
 	log.Infof("Connected to kyDB")
 
 	// Session
-	var err error
-	s, err = discordgo.New("Bot " + config.TOKEN)
+	s, err := discordgo.New("Bot " + config.TOKEN)
 	if err != nil {
 		log.Fatalln("Error creating Discord session :(", err)
 	}
@@ -52,7 +51,7 @@ func main() {
 
 	c := cron.New()
 	log.Debug("Wordle reminders will go out each day at 12am")
-	c.AddFunc("0 0 0 * * *", func() { status.SendWordleReminders(s) })
+	c.AddFunc("0 0 0 * * *", func() { component.SendWordleReminders(s) })
 	c.Start()
 
 	// Create channels to watch for kill signals
