@@ -99,7 +99,7 @@ func SendWordleReminders(s *discordgo.Session) {
 			log.Errorf("Error sending wordle update: %s", err.Error())
 		}
 		wordle.StatusMessageID = update.ID
-		kyDB.DB.Model(&wordle).Where(&Wordle{ChannelID: wordle.ChannelID}).Updates(&Wordle{StatusMessageID: wordle.StatusMessageID})
+		kyDB.DB.Where(&Wordle{ChannelID: wordle.ChannelID}).Updates(&Wordle{StatusMessageID: wordle.StatusMessageID})
 	}
 }
 
@@ -125,7 +125,6 @@ func (wordle *Wordle) RemoveUser(discord_user *discordgo.User) (changed bool) {
 			wordle.Users[i] = user
 			i++
 		} else {
-
 			changed = true
 		}
 	}
@@ -237,4 +236,5 @@ func (wordle *Wordle) editStatusMessage(s *discordgo.Session, updateContent *dis
 	}
 
 	wordle.StatusMessageID = statusMsg.ID
+	kyDB.DB.Where(&Wordle{ChannelID: wordle.ChannelID}).Updates(&Wordle{StatusMessageID: wordle.StatusMessageID})
 }
