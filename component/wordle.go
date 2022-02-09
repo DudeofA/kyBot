@@ -167,31 +167,17 @@ func (wordle *Wordle) buildEmbedMsg(s *discordgo.Session) (msg *discordgo.Messag
 		CustomID: "leave_wordle",
 	}
 
-	playerString := "None :("
-	if len(wordle.Users) != 0 {
-		playerString = "```\n Avg |Total| Name\n"
-		var users []*WordlePlayerStats
-
-		sortedUsers := wordle.Users
-		for _, player := range sortedUsers {
-			player.QueryInfo(s)
-
-			user := &WordlePlayerStats{
-				User:         player,
-				AverageScore: player.GetAverageScore(),
-				// AverageFirstRow: player.GetAverageFirstRow(),
-				GamesPlayed: player.GetGamesPlayed(),
-			}
-			users = append(users, user)
-		}
-		sort.Slice(users, func(i, j int) bool {
-			return users[i].AverageScore < users[j].AverageScore
-		})
-		for _, user := range users {
-			playerString += fmt.Sprintf("%.2f | %03d | %s\n", user.AverageScore, user.GamesPlayed, user.User.Username)
-		}
-		playerString += "\n```"
+	leaderBoard, worstFirstGuessUser := wordle.GenerateStatistics(s)
+	var worstGuessUsername string
+	var worstGuessValue float32
+	if worstFirstGuessUser != nil {
+		worstGuessUsername = worstFirstGuessUser.User.ID
+		worstGuessValue = worstFirstGuessUser.AverageFirstRow
+	} else {
+		worstGuessUsername = "N/A"
+		worstGuessValue = 0
 	}
+
 	wordleEmbed := &discordgo.MessageEmbed{
 		URL:         WORDLE_URL,
 		Title:       "CLICK HERE TO PLAY WORDLE",
@@ -204,8 +190,12 @@ func (wordle *Wordle) buildEmbedMsg(s *discordgo.Session) (msg *discordgo.Messag
 				Value: "Click the button to join the game for tracking",
 			},
 			{
-				Name:  "Average | Players",
-				Value: playerString,
+				Name:  "Worst First Guess",
+				Value: fmt.Sprintf("<@%s> with average score of %f [Green=2,Yellow=1]", worstGuessUsername, worstGuessValue),
+			},
+			{
+				Name:  "Leaderboard",
+				Value: leaderBoard,
 			},
 		},
 	}
@@ -230,7 +220,7 @@ func (wordle *Wordle) editStatusMessage(s *discordgo.Session, updateContent *dis
 
 	_, err = s.ChannelMessage(wordle.ChannelID, wordle.StatusMessageID)
 	if err != nil {
-		// Send status
+		// Send status if previous status message does not exist anymore (user deleted)
 		statusMsg, err = s.ChannelMessageSendComplex(wordle.ChannelID, updateContent)
 		if err != nil {
 			log.Errorln("Could not send server status message", err.Error())
@@ -253,4 +243,66 @@ func (wordle *Wordle) editStatusMessage(s *discordgo.Session, updateContent *dis
 
 	wordle.StatusMessageID = statusMsg.ID
 	kyDB.DB.Where(&Wordle{ChannelID: wordle.ChannelID}).Updates(&Wordle{StatusMessageID: wordle.StatusMessageID})
+}
+
+func (wordle *Wordle) GenerateStatistics(s *discordgo.Session) (leaderBoard string, worstFirstRowUser *WordlePlayerStats) {
+	leaderBoard = "None :("
+	worstFirstRowUser = &WordlePlayerStats{
+		User:            &User{Username: "No one :(", ID: "211307697331634186"},
+		AverageScore:    0,
+		AverageFirstRow: 0,
+		GamesPlayed:     0,
+	}
+
+	if len(wordle.Users) != 0 {
+		leaderBoard = "```\n Avg |Total| Name\n"
+		var users []*WordlePlayerStats
+
+		for _, player := range wordle.Users {
+			if player.Username == "" {
+				player.QueryInfo(s)
+			}
+
+			totalScore := int16(0)
+			firstRowTotalScore := int16(0)
+			gamesPlayed := int16(0)
+			for _, stat := range wordle.Stats {
+				if stat.UserID == player.ID {
+					totalScore += int16(stat.Score)
+					firstRowTotalScore += int16(stat.FirstWordScore)
+					gamesPlayed++
+				}
+			}
+
+			var averageScore float32
+			var averageFirstRowScore float32
+			if gamesPlayed == 0 {
+				averageScore = 7
+				averageFirstRowScore = 7
+			} else {
+				averageScore = float32(totalScore) / float32(gamesPlayed)
+				averageFirstRowScore = float32(firstRowTotalScore) / float32(gamesPlayed)
+			}
+
+			user := &WordlePlayerStats{
+				User:            player,
+				AverageScore:    averageScore,
+				AverageFirstRow: averageFirstRowScore,
+				GamesPlayed:     gamesPlayed,
+			}
+			users = append(users, user)
+
+			if worstFirstRowUser.AverageFirstRow == 0 || user.AverageFirstRow < worstFirstRowUser.AverageFirstRow {
+				worstFirstRowUser = user
+			}
+		}
+		sort.Slice(users, func(i, j int) bool {
+			return users[i].AverageScore < users[j].AverageScore
+		})
+		for _, user := range users {
+			leaderBoard += fmt.Sprintf("%.2f | %03d | %s\n", user.AverageScore, user.GamesPlayed, user.User.Username)
+		}
+		leaderBoard += "\n```"
+	}
+	return leaderBoard, worstFirstRowUser
 }

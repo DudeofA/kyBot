@@ -2,6 +2,12 @@
 
 All notable changes will be documented in this file.
 
+## [4.1.7] - 2/8/22
+
+#### Add
+
+-   Add Stat for the person who has the worst first word
+
 ## [4.1.6] - 2/6/22
 
 #### Add
