@@ -2,6 +2,13 @@
 
 All notable changes will be documented in this file.
 
+## [4.1.8] - 2/13/22
+
+#### Add
+
+-   Function to import Wordle stats
+-   More clarity when Adding Wordle stats fails
+
 ## [4.1.7] - 2/8/22
 
 #### Add

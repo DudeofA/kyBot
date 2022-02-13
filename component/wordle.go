@@ -191,7 +191,7 @@ func (wordle *Wordle) buildEmbedMsg(s *discordgo.Session) (msg *discordgo.Messag
 			},
 			{
 				Name:  "Worst First Guess",
-				Value: fmt.Sprintf("<@%s> with average score of %f [Green=2,Yellow=1]", worstGuessUsername, worstGuessValue),
+				Value: fmt.Sprintf("<@%s> with average score of %.02f [Green=2,Yellow=1]", worstGuessUsername, worstGuessValue),
 			},
 			{
 				Name:  "Leaderboard",

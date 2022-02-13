@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"fmt"
 	"kyBot/component"
+	"regexp"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
@@ -14,7 +16,7 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	if strings.HasPrefix(m.Content, "Wordle") {
-		component.AddWordleStats(s, m.Message)
+		component.AddWordleStats(s, m.Message, "")
 	}
 
 	if !strings.HasPrefix(m.Content, "k!") {
@@ -36,12 +38,36 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 	command := strings.ToLower(split_content[0])
+	var data string
+	if len(split_content) < 2 {
+		data = ""
+	} else {
+		data = split_content[1]
+	}
 
 	switch command {
+	case "import":
+		regex := regexp.MustCompile(`https://discord.com/channels/(.*)/(.*)/(.*)`)
+
+		messageLink := regex.FindStringSubmatch(data)
+		if len(messageLink) != 4 {
+			s.ChannelMessageSend(m.ChannelID, "Not a valid discord message link")
+			return
+		}
+		// messageLink[0] is the whole link
+		// messageLink[1] is the guild ID
+		chanID := messageLink[2]
+		msgID := messageLink[3]
+
+		if err := component.ImportWordleStat(s, m.ChannelID, chanID, msgID); err != nil {
+			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Failed to add Wordle stat: %s", err))
+		} else {
+			s.ChannelMessageSend(m.ChannelID, "Added Wordle stats successfully")
+		}
+	case "scrape":
+		component.ScrapeChannel(s, m.ChannelID)
+		log.Debug("Done scraping")
 	case "wordle":
 		component.SendWordleReminders(s)
-	case "scrape":
-		component.ScrapeChannel(s, m.Message)
-		log.Debug("Done scraping")
 	}
 }
