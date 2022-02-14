@@ -1,12 +1,8 @@
-bin/
-*.log
-conf.json
+.vscode/
+.env
+
+*.exe
+*.sqlite
 
 __debug_bin
-.vscode/
-
-go/
-.bash_history
-.cache/
-.config/
-.viminfo
+docker-compose.yml

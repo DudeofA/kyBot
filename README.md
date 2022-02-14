@@ -1,7 +1,7 @@
 **Kylixor Multi-Purpose Discord Bot**
 =====================================
 
-[![CodeFactor](https://www.codefactor.io/repository/github/dudeofa/kylixor/badge)](https://www.codefactor.io/repository/github/dudeofa/kylixor)  [![Go report](http://goreportcard.com/badge/dudeofa/kylixor)](http://goreportcard.com/report/dudeofa/kylixor)
+[![CodeFactor](https://www.codefactor.io/repository/github/dudeofa/kyBot/badge)](https://www.codefactor.io/repository/github/dudeofa/kyBot)  [![Go report](http://goreportcard.com/badge/dudeofa/kyBot)](http://goreportcard.com/report/dudeofa/kyBot)
 
 Dependencies:
 ~~~

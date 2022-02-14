@@ -2,6 +2,80 @@
 
 All notable changes will be documented in this file.
 
+## [4.1.8] - 2/13/22
+
+#### Add
+
+-   Function to import Wordle stats
+-   More clarity when Adding Wordle stats fails
+
+## [4.1.7] - 2/8/22
+
+#### Add
+
+-   Add Stat for the person who has the worst first word
+
+## [4.1.6] - 2/6/22
+
+#### Add
+
+-   Add basic stats to the Wordle reminder
+
+## [4.1.5] - 2/3/22
+
+#### Change
+
+-   Move users module into status
+-   Rename status to component
+
+## [4.1.4] - 2/1/22
+
+#### Add
+
+-   Upon start, bot will look for any wordle games it has missed
+-   Command to force bot to re-search channel for Wordle games
+
+## [4.1.3] - 2/1/22
+
+#### Fix
+
+-   Add changelog to final build so it can be read for version number in Docker
+
+#### Add
+
+-   Automatically removes unused commands upon startup
+-   In debug mode, also automatically global commands
+
+## [4.1.2] - 2/1/22
+
+#### Add
+
+-   Status that includes version from changelog
+
+## [4.1.1] - 1/31/22
+
+#### Fix
+
+-   Gave startup debug messages clarity on registering commands with Discord
+
+## [4.1.0] - 1/30/22
+
+#### Add
+
+-   Wordle Stat Recording
+
+## [4.0.1] - 1/19/22
+
+#### Add
+
+-   Wordle reminders and opt in
+
+## [4.0.0] - 7/21/21
+
+#### Version 4 - The 4th rework
+
+-   One can dream it will be the final iteration
+
 ## [3.0.12] - 3/13/21
 
 #### Add
