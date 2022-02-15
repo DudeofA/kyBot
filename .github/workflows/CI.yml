@@ -1,37 +1,42 @@
-name: Docker v4 CI
+name: kyBot-pipeline
 
 on:
-  push:
-    branches: [ v4 ]
-  pull_request:
-    branches: [ v4 ]
-
   workflow_dispatch:
-
+  push:
+    branches:
+      - main
+      
+env:
+  IMAGE_NAME: kybot
+      
 jobs:
-  build:
+  push:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Install Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: 1.16.4
+      - uses: actions/checkout@v2
+    
+      - name: Build image
+        run:
+          docker build . --file Dockerfile --tag $IMAGE_NAME --label "runnumber=${GITHUB_RUN_ID}"
+        
+      - name: Log in to registry
+        run:
+          echo "${{ secrets.PACKAGES_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+        
+      - name: Push image
+        run: |
+          IMAGE_ID=ghcr.io/${{ github.repository_owner }}/$IMAGE_NAME
 
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Fetch required Go modules
-        run:  go mod download
-
-      - name: Build
-        run:  go build -v ./...
-
-      - name: Build Docker image
-        uses: docker/build-push-action@v2
-        with:
-          push: false
-          tags: ${{ github.event.repository.name }}:latest, ${{ github.repository }}:latest
-
-      - name: Run functional tests
-        run:  go test -v ./...
+          # Change all uppercase to lowercase
+          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+          # Strip git ref prefix from version
+          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+          # Strip "v" prefix from tag name
+          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
+          # Use Docker `latest` tag convention
+          [ "$VERSION" == "main" ] && VERSION=latest
+          echo IMAGE_ID=$IMAGE_ID
+          echo VERSION=$VERSION
+          docker tag $IMAGE_NAME $IMAGE_ID:$VERSION
+          docker push $IMAGE_ID:$VERSION
