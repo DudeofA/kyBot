@@ -2,7 +2,7 @@ FROM golang:alpine AS build
 
 WORKDIR /app
 
-RUN apk update && apk add gcc musl-dev
+RUN apk add build-base
 
 COPY go.mod ./
 COPY go.sum ./
