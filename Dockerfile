@@ -2,7 +2,7 @@ FROM golang:alpine AS build
 
 WORKDIR /app
 
-RUN apk add gcc musl-dev
+RUN apk update && apk add gcc musl-dev
 
 COPY go.mod ./
 COPY go.sum ./
@@ -24,7 +24,7 @@ RUN go build -o /kybot
 ## Deploy
 ##
 
-FROM alpine:latest
+FROM alpine:latest AS run
 
 WORKDIR /
 
