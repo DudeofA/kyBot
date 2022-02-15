@@ -1,4 +1,4 @@
-FROM golang:alpine AS build
+FROM golang:1.17.7-bullseye AS build
 
 WORKDIR /app
 
