@@ -2,8 +2,6 @@ FROM golang:1.17.7-bullseye AS build
 
 WORKDIR /app
 
-RUN apk add build-base
-
 COPY go.mod ./
 COPY go.sum ./
 COPY CHANGELOG.md /CHANGELOG.md
