@@ -1,6 +1,8 @@
-FROM golang:1.17.7-bullseye AS build
+FROM golang:alpine AS build
 
 WORKDIR /app
+
+RUN apk add --no-cache gcc musl-dev
 
 COPY go.mod ./
 COPY go.sum ./
