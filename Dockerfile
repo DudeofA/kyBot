@@ -31,3 +31,4 @@ COPY --from=build /CHANGELOG.md /CHANGELOG.md
 RUN mkdir -p /data
 
 ENTRYPOINT ["/kybot"]
+LABEL org.opencontainers.image.description "https://github.com/kylixor/kybot"
