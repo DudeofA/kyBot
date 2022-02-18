@@ -47,7 +47,7 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	switch command {
 	case "import":
-		regex := regexp.MustCompile(`https://discord.com/channels/(.*)/(.*)/(.*)`)
+		regex := regexp.MustCompile(`^https://discord\\.com/channels/(.*)/(.*)/(.*)`)
 
 		messageLink := regex.FindStringSubmatch(data)
 		if len(messageLink) != 4 {

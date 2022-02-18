@@ -93,7 +93,7 @@ func AddServer(s *discordgo.Session, i *discordgo.InteractionCreate, serverType 
 			port = MUMBLE_DEFAULT_PORT
 		}
 	} else {
-		port64, err := strconv.ParseUint(portString, 10, 64)
+		port64, err := strconv.ParseUint(portString, 10, 16)
 		if err != nil {
 			log.Errorf("Error converting port to integer: %s", portString)
 			return
