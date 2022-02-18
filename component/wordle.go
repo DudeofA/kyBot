@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	WORDLE_URL              = "https://www.powerlanguage.co.uk/wordle/"
+	WORDLE_URL              = "https://www.nytimes.com/games/wordle/index.html"
 	WORDLE_ROW_LENGTH       = 5
 	WORDLE_GREEN_SQUARE     = "🟩"
 	WORDLE_GREEN_SCORE      = 2
