@@ -29,7 +29,7 @@ type WordleStat struct {
 func AddWordleStats(s *discordgo.Session, m *discordgo.Message, bypassChanID string) (err error) {
 	regex := regexp.MustCompile(`Wordle (\d*) (\w)\/6`)
 	if !regex.MatchString(m.Content) {
-		err := errors.New(fmt.Sprintf("Message does not match Wordle regex: \n%s", m.Content))
+		err := fmt.Errorf("message does not match wordle regex: \n%s", strings.ToLower(m.Content))
 		log.Debug(err)
 		return err
 	}
@@ -51,7 +51,7 @@ func AddWordleStats(s *discordgo.Session, m *discordgo.Message, bypassChanID str
 
 	day, err := strconv.ParseInt(data[1], 10, 16)
 	if err != nil {
-		err := errors.New(fmt.Sprintf("Error converting Wordle day to int: %s", err.Error()))
+		err := fmt.Errorf("error converting wordle day to int: %s", err.Error())
 		log.Error(err)
 		return err
 	}
@@ -61,7 +61,7 @@ func AddWordleStats(s *discordgo.Session, m *discordgo.Message, bypassChanID str
 	var existing *WordleStat
 	result := kyDB.DB.Limit(1).Where(WordleStat{UserID: wordleStat.UserID, Day: wordleStat.Day}).Find(&existing)
 	if result.RowsAffected >= 1 {
-		err := errors.New(fmt.Sprintf("User %s already submitted their Wordle for day %d", wordleStat.UserID, wordleStat.Day))
+		err := fmt.Errorf("User %s already submitted their Wordle for day %d", wordleStat.UserID, wordleStat.Day)
 		log.Debug(err)
 		return err
 	}
@@ -72,7 +72,7 @@ func AddWordleStats(s *discordgo.Session, m *discordgo.Message, bypassChanID str
 		if data[2] == "X" {
 			score = WORDLE_FAIL_SCORE
 		} else {
-			err := errors.New(fmt.Sprintf("Error converting Wordle day to int: %s", err.Error()))
+			err := fmt.Errorf("error converting wordle day to int: %s", err.Error())
 			log.Error(err)
 			return err
 		}
@@ -101,14 +101,14 @@ func AddWordleStats(s *discordgo.Session, m *discordgo.Message, bypassChanID str
 	var wordle Wordle
 	result = kyDB.DB.Limit(1).Find(&wordle, Wordle{ChannelID: wordleChannelID})
 	if result.RowsAffected != 1 {
-		err := errors.New("No Wordle game found in this channel")
+		err := errors.New("no wordle game found in this channel")
 		log.Debug(err)
 		return err
 	}
 
 	err = s.MessageReactionAdd(m.ChannelID, m.ID, WORDLE_ACK_EMOJI)
 	if err != nil {
-		err := errors.New(fmt.Sprintf("Unable to add reaction to Wordle game results on messageID: %s\n%s", m.ID, err.Error()))
+		err := fmt.Errorf("unable to add reaction to wordle game results on messageid: %s\n%s", m.ID, err.Error())
 		log.Error(err)
 		return err
 	}
@@ -202,7 +202,7 @@ func ImportWordleStat(s *discordgo.Session, wordleChannelID string, channelID st
 	}
 	msg, err := s.ChannelMessage(channelID, messageID)
 	if err != nil {
-		err := errors.New(fmt.Sprintf("Error finding message %s in Discord: %s", messageID, err.Error()))
+		err := fmt.Errorf("error finding message %s in discord: %s", messageID, err.Error())
 		log.Error(err)
 		return err
 	}
