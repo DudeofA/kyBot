@@ -28,6 +28,8 @@ FROM alpine:latest AS run
 
 WORKDIR /
 
+RUN apk add --no-cache tzdata
+
 COPY --from=build /kybot /kybot
 COPY --from=build /CHANGELOG.md /CHANGELOG.md
 RUN mkdir -p /data
