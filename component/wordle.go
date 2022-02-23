@@ -30,14 +30,14 @@ const (
 )
 
 type Wordle struct {
-	ChannelID       string       `gorm:"primaryKey"`
-	Users           []*User      `gorm:"many2many:wordle_users;"`
-	Stats           []WordleStat `gorm:"foreignKey:ChannelID"`
+	ChannelID       string `gorm:"primaryKey"`
 	StatusMessageID string
+	UsersToRemind   []User `gorm:"foreignKey:ID"`
+	Users           []User `gorm:"foreignKey:ID"`
 }
 
 type WordlePlayerStats struct {
-	User            *User
+	User            User
 	AverageScore    float32
 	AverageFirstRow float32
 	GamesPlayed     int16
@@ -104,6 +104,7 @@ func SendWordleReminders(s *discordgo.Session) {
 		update, err := s.ChannelMessageSendComplex(wordle.ChannelID, msg)
 		if err != nil {
 			log.Errorf("Error sending wordle update: %s", err.Error())
+			continue
 		}
 		wordle.StatusMessageID = update.ID
 		kyDB.DB.Where(&Wordle{ChannelID: wordle.ChannelID}).Updates(&Wordle{StatusMessageID: wordle.StatusMessageID})
@@ -248,7 +249,7 @@ func (wordle *Wordle) editStatusMessage(s *discordgo.Session, updateContent *dis
 func (wordle *Wordle) GenerateStatistics(s *discordgo.Session) (leaderBoard string, worstFirstRowUser *WordlePlayerStats) {
 	leaderBoard = "None :("
 	worstFirstRowUser = &WordlePlayerStats{
-		User:            &User{Username: "No one :(", ID: "211307697331634186"},
+		User:            User{Username: "No one :(", ID: "211307697331634186"},
 		AverageScore:    0,
 		AverageFirstRow: 0,
 		GamesPlayed:     0,
@@ -266,7 +267,9 @@ func (wordle *Wordle) GenerateStatistics(s *discordgo.Session) (leaderBoard stri
 			totalScore := int16(0)
 			firstRowTotalScore := int16(0)
 			gamesPlayed := int16(0)
-			for _, stat := range wordle.Stats {
+			var stats []WordleStat
+			kyDB.DB.Find(&stats, WordleStat{ChannelID: wordle.ChannelID})
+			for _, stat := range stats {
 				if stat.UserID == player.ID {
 					totalScore += int16(stat.Score)
 					firstRowTotalScore += int16(stat.FirstWordScore)

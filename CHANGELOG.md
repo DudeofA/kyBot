@@ -2,6 +2,12 @@
 
 All notable changes will be documented in this file.
 
+## [4.2.0] - 2/23/22
+
+#### DB
+
+-   Restructured how data is organized, removing many to many relationships
+
 ## [4.1.8] - 2/13/22
 
 #### Add

@@ -119,11 +119,13 @@ func AddWordleStats(s *discordgo.Session, m *discordgo.Message, bypassChanID str
 
 func (wordle *Wordle) CatchUp(s *discordgo.Session) {
 	after := ""
-	if len(wordle.Stats) > 0 {
-		sort.Slice(wordle.Stats, func(i, j int) bool {
-			return wordle.Stats[i].MessageID > wordle.Stats[j].MessageID
+	var stats []WordleStat
+	kyDB.DB.Find(&stats, WordleStat{ChannelID: wordle.ChannelID})
+	if len(stats) > 0 {
+		sort.Slice(stats, func(i, j int) bool {
+			return stats[i].MessageID > stats[j].MessageID
 		})
-		after = wordle.Stats[0].MessageID
+		after = stats[0].MessageID
 	} else {
 		after = wordle.StatusMessageID
 	}
@@ -155,11 +157,13 @@ func ScrapeChannel(s *discordgo.Session, channelID string) {
 
 	// Start looking for messages before the earliest wordle stat
 	before := ""
-	if len(wordle.Stats) > 0 {
-		sort.Slice(wordle.Stats, func(i, j int) bool {
-			return wordle.Stats[i].MessageID < wordle.Stats[j].MessageID
+	var stats []WordleStat
+	kyDB.DB.Find(&stats, WordleStat{ChannelID: wordle.ChannelID})
+	if len(stats) > 0 {
+		sort.Slice(stats, func(i, j int) bool {
+			return stats[i].MessageID < stats[j].MessageID
 		})
-		before = wordle.Stats[0].MessageID
+		before = stats[0].MessageID
 	}
 
 	foundWordle := true

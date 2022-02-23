@@ -11,17 +11,17 @@ import (
 type User struct {
 	ID            string `gorm:"primaryKey"` // User ID
 	Username      string
-	Discriminator string        // Unique identifier (#4712)
-	Stats         []*WordleStat `gorm:"many2many:wordle_stats;"`
+	Discriminator string       // Unique identifier (#4712)
+	Stats         []WordleStat `gorm:"foreignKey:UserID;"`
 }
 
-func GetUser(discord_user *discordgo.User) (user *User) {
+func GetUser(discord_user *discordgo.User) (user User) {
 	result := kyDB.DB.Limit(1).Find(&user, User{ID: discord_user.ID})
 	if result.RowsAffected == 1 {
 		return user
 	}
 
-	user = &User{
+	user = User{
 		ID:            discord_user.ID,
 		Username:      discord_user.Username,
 		Discriminator: discord_user.Discriminator,

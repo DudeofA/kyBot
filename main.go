@@ -9,6 +9,7 @@ import (
 	"kyBot/config"
 	"kyBot/handlers"
 	"kyBot/kyDB"
+	"kyBot/update"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/robfig/cron"
@@ -29,6 +30,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Database migration failed: %s", err.Error())
 	}
+	update.Update()
 	log.Infof("Connected to kyDB")
 
 	// Session
