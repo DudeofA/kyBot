@@ -1,8 +1,7 @@
-package handlers
+package main
 
 import (
 	"fmt"
-	"kyBot/component"
 	"regexp"
 	"strings"
 
@@ -16,7 +15,7 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	if strings.HasPrefix(m.Content, "Wordle") {
-		component.AddWordleStats(s, m.Message, "")
+		AddWordleStats(m.Message, "")
 	}
 
 	if !strings.HasPrefix(m.Content, "k!") {
@@ -59,15 +58,15 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		chanID := messageLink[2]
 		msgID := messageLink[3]
 
-		if err := component.ImportWordleStat(s, m.ChannelID, chanID, msgID); err != nil {
+		if err := ImportWordleStat(m.ChannelID, chanID, msgID); err != nil {
 			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Failed to add Wordle stat: %s", err))
 		} else {
 			s.ChannelMessageSend(m.ChannelID, "Added Wordle stats successfully")
 		}
 	case "scrape":
-		component.ScrapeChannel(s, m.ChannelID)
+		ScrapeChannel(m.ChannelID)
 		log.Debug("Done scraping")
 	case "wordle":
-		component.SendWordleReminders(s)
+		SendWordleReminders()
 	}
 }

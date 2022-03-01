@@ -1,4 +1,4 @@
-package kyDB
+package main
 
 import (
 	"os"
@@ -10,9 +10,7 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-var (
-	DB *gorm.DB
-)
+var db *gorm.DB
 
 // type Guild struct {
 // 	gorm.Model
@@ -36,7 +34,7 @@ var (
 // }
 
 // Creates database
-func createDBFile(path string) {
+func CreateDBFile(path string) {
 
 	file, err := os.Create(path)
 	if err != nil {
@@ -46,21 +44,23 @@ func createDBFile(path string) {
 }
 
 // Connects to database and returns the connection
-func Connect() *gorm.DB {
-	cwd, _ := os.Getwd()
+func ConnectDB() {
+	cwd, err := os.Getwd()
+	if err != nil {
+		log.Panic(err)
+	}
 	db_path := path.Join(cwd, "data", "db.sqlite")
 
 	if _, err := os.Stat(db_path); os.IsNotExist(err) {
-		createDBFile(db_path)
+		CreateDBFile(db_path)
 	}
 
-	var err error
-	DB, err = gorm.Open(sqlite.Open(db_path), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Error),
-	})
+	db, err = gorm.Open(
+		sqlite.Open(db_path),
+		// &gorm.Config{Logger: logger.Default.LogMode(logger.Info)},
+		&gorm.Config{Logger: logger.Default.LogMode(logger.Error)},
+	)
 	if err != nil {
 		log.Panicln("Failed to connect to database", err.Error())
 	}
-
-	return DB
 }

@@ -1,22 +1,19 @@
-package component
+package main
 
 import (
-	"kyBot/kyDB"
-
 	"github.com/bwmarrin/discordgo"
 	log "github.com/sirupsen/logrus"
-	"gorm.io/gorm/clause"
 )
 
 type User struct {
 	ID            string `gorm:"primaryKey"` // User ID
 	Username      string
-	Discriminator string       // Unique identifier (#4712)
-	Stats         []WordleStat `gorm:"foreignKey:UserID;"`
+	Discriminator string // Unique identifier (#4712)
+	Stats         []*WordleStat
 }
 
 func GetUser(discord_user *discordgo.User) (user User) {
-	result := kyDB.DB.Limit(1).Find(&user, User{ID: discord_user.ID})
+	result := db.Limit(1).Find(&user, User{ID: discord_user.ID})
 	if result.RowsAffected == 1 {
 		return user
 	}
@@ -26,12 +23,11 @@ func GetUser(discord_user *discordgo.User) (user User) {
 		Username:      discord_user.Username,
 		Discriminator: discord_user.Discriminator,
 	}
-	kyDB.DB.Create(&user)
-
+	db.Create(&user)
 	return user
 }
 
-func (user *User) QueryInfo(s *discordgo.Session) {
+func (user *User) QueryInfo() {
 	var discord_user *discordgo.User
 	var err error
 	if user.Username == "" {
@@ -44,19 +40,18 @@ func (user *User) QueryInfo(s *discordgo.Session) {
 		user.Discriminator = discord_user.Discriminator
 	}
 
-	kyDB.DB.Preload(clause.Associations).Find(&user)
-	kyDB.DB.Save(&user)
+	db.Save(&user)
 }
 
 func (user *User) GetAverageScore() (average float32) {
-	row := kyDB.DB.Model(&WordleStat{}).Where(&WordleStat{UserID: user.ID}).Select("avg(score)").Row()
+	row := db.Model(&WordleStat{}).Where(&WordleStat{UserID: user.ID}).Select("avg(score)").Row()
 	row.Scan(&average)
 	return average
 }
 
 func (user *User) GetGamesPlayed() (count int16) {
 	var temp_count int64
-	kyDB.DB.Model(&WordleStat{}).Where(&WordleStat{UserID: user.ID}).Count(&temp_count)
+	db.Model(&WordleStat{}).Where(&WordleStat{UserID: user.ID}).Count(&temp_count)
 	count = int16(temp_count)
 	return count
 }

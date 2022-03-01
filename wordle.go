@@ -1,9 +1,7 @@
-package component
+package main
 
 import (
 	"fmt"
-	"kyBot/commands"
-	"kyBot/kyDB"
 	"sort"
 
 	"github.com/bwmarrin/discordgo"
@@ -32,143 +30,145 @@ const (
 type Wordle struct {
 	ChannelID       string `gorm:"primaryKey"`
 	StatusMessageID string
-	UsersToRemind   []User `gorm:"foreignKey:ID"`
-	Users           []User `gorm:"foreignKey:ID"`
+	Remindees       []*User `gorm:"many2many:wordle_remindees"`
+	Players         []*User `gorm:"many2many:wordle_players"`
 }
 
 type WordlePlayerStats struct {
-	User            User
+	User            *User
 	AverageScore    float32
 	AverageFirstRow float32
 	GamesPlayed     int16
 }
 
 func init() {
-	addServerCommand := &discordgo.ApplicationCommand{
-		Name:        "add-wordle-channel",
-		Type:        discordgo.ChatApplicationCommand,
-		Description: "Add a repeating wordle reminder message",
-	}
-	commands.AddCommand(addServerCommand)
+	// addServerCommand := &discordgo.ApplicationCommand{
+	// 	Name:        "add-wordle-channel",
+	// 	Type:        discordgo.ChatApplicationCommand,
+	// 	Description: "Add a repeating wordle reminder message",
+	// }
+	// AddCommand(addServerCommand)
 }
 
-func GetWordle(cid string) (wordle *Wordle, err error) {
-	result := kyDB.DB.Preload(clause.Associations).Limit(1).Find(&wordle, Wordle{ChannelID: cid})
-	if result.RowsAffected == 1 {
-		return wordle, nil
+func GetWordle(channelID string) (wordle Wordle, err error) {
+	result := db.Preload(clause.Associations).Limit(1).Find(&wordle, Wordle{ChannelID: channelID})
+	if result.RowsAffected != 1 {
+		return wordle, fmt.Errorf("no wordle found with channel id %s", channelID)
 	}
-	return wordle, fmt.Errorf("no wordle found with channel id %s", cid)
+	return wordle, nil
 }
 
-func AddWordleChannel(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	resp := &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: "This channel will now track Wordle messages and stats",
-		},
-	}
-
-	var wordle Wordle
-	result := kyDB.DB.Take(&wordle, Wordle{ChannelID: i.Message.ChannelID})
-	if result.RowsAffected != 0 {
-		resp.Data.Content = fmt.Sprintf("Wordle channel already exists for this server: #%s", wordle.ChannelID)
-		err := s.InteractionRespond(i.Interaction, resp)
-		if err != nil {
-			log.Errorf("Unable to respond to the interaction: %s", err.Error())
-		}
-		return
-	}
-
-	err := s.InteractionRespond(i.Interaction, resp)
+func EnableWordleReminder(i *discordgo.InteractionCreate) (err error) {
+	wordle, err := GetWordle(i.Message.ChannelID)
 	if err != nil {
-		log.Errorf("Unable to respond to the interaction: %s", err.Error())
+		return err
 	}
 
-	wordle = Wordle{
-		ChannelID: i.Message.ChannelID,
+	for _, existingUser := range wordle.Remindees {
+		if existingUser.ID == i.Member.User.ID {
+			return nil // No action needed if users is already a part of the notifications group
+		}
 	}
 
-	result = kyDB.DB.Create(&wordle)
-	if result.Error != nil {
-		log.Errorf("Unable to : %s", result.Error)
-	}
+	user := GetUser(i.Member.User)
+	wordle.Remindees = append(wordle.Remindees, &user)
+
+	wordle.UpdateStatus()
+	db.Save(&wordle)
+	return nil
 }
 
-func SendWordleReminders(s *discordgo.Session) {
+func DisableWordleReminder(i *discordgo.InteractionCreate) (err error) {
+	wordle, err := GetWordle(i.Message.ChannelID)
+	if err != nil {
+		return err
+	}
+
+	db.Model(&wordle).Association("Remindees").Delete(&User{ID: i.Member.User.ID})
+
+	wordle.UpdateStatus()
+	db.Save(&wordle)
+	return nil
+}
+
+// func AddWordleChannel(i *discordgo.InteractionCreate) {
+// 	resp := &discordgo.InteractionResponse{
+// 		Type: discordgo.InteractionResponseChannelMessageWithSource,
+// 		Data: &discordgo.InteractionResponseData{
+// 			Content: "This channel will now track Wordle messages and stats",
+// 		},
+// 	}
+
+// 	wordle, err := GetWordle(i.Message.ChannelID)
+// 	if err != nil {
+// 		wordle = Wordle{
+// 			ChannelID: i.Message.ChannelID,
+// 		}
+
+// 		result := db.Create(&wordle)
+// 		if result.Error != nil {
+// 			err = fmt.Errorf("unable to create wordle in db: %s", result.Error)
+// 			log.Error(err)
+// 			resp.Data.Content = err.Error()
+// 		}
+// 	} else {
+// 		resp.Data.Content = fmt.Sprintf("Wordle channel already exists for this server: #%s", wordle.ChannelID)
+// 	}
+
+// 	err = s.InteractionRespond(i.Interaction, resp)
+// 	if err != nil {
+// 		log.Errorf("unable to respond to the interaction: %s", err.Error())
+// 	}
+// }
+
+func SendWordleReminders() {
 	var wordles []Wordle
-	kyDB.DB.Preload(clause.Associations).Find(&wordles)
+	db.Preload(clause.Associations).Find(&wordles)
 
 	for _, wordle := range wordles {
-
-		msg := wordle.buildEmbedMsg(s)
-		update, err := s.ChannelMessageSendComplex(wordle.ChannelID, msg)
-		if err != nil {
-			log.Errorf("Error sending wordle update: %s", err.Error())
-			continue
+		if len(wordle.Players) == 0 {
+			var userIDs []string
+			db.Model(&WordleStat{}).Distinct("user_id").Find(&userIDs)
+			for _, userID := range userIDs {
+				var user User
+				db.Take(&user, &User{ID: userID})
+				wordle.Players = append(wordle.Players, &user)
+			}
 		}
-		wordle.StatusMessageID = update.ID
-		kyDB.DB.Where(&Wordle{ChannelID: wordle.ChannelID}).Updates(&Wordle{StatusMessageID: wordle.StatusMessageID})
+
+		wordle.UpdateStatus()
+		db.Save(&wordle)
 	}
 }
 
-func (wordle *Wordle) AddUser(discord_user *discordgo.User) (changed bool) {
-	for _, existingUser := range wordle.Users {
-		if existingUser.ID == discord_user.ID {
-			return false
-		}
-	}
-
-	user := GetUser(discord_user)
-	wordle.Users = append(wordle.Users, user)
-	kyDB.DB.Model(&wordle).Association("Users").Append(&user)
-	return true
+func (wordle *Wordle) UpdateStatus() {
+	msg := wordle.BuildEmbedMsg()
+	wordle.EditStatusMessage(msg)
 }
 
-func (wordle *Wordle) RemoveUser(discord_user *discordgo.User) (changed bool) {
-	kyDB.DB.Find(&wordle, Wordle{ChannelID: wordle.ChannelID})
-	changed = false
-	i := 0
-	for _, user := range wordle.Users {
-		if user.ID != discord_user.ID {
-			wordle.Users[i] = user
-			i++
-		} else {
-			changed = true
-		}
-	}
-	wordle.Users = wordle.Users[:i]
-	kyDB.DB.Model(&wordle).Association("Users").Delete(&User{ID: discord_user.ID})
-	return changed
-}
-
-func (wordle *Wordle) UpdateStatus(s *discordgo.Session) {
-	msg := wordle.buildEmbedMsg(s)
-	wordle.editStatusMessage(s, msg)
-}
-
-func (wordle *Wordle) buildEmbedMsg(s *discordgo.Session) (msg *discordgo.MessageSend) {
+func (wordle *Wordle) BuildEmbedMsg() (msg *discordgo.MessageSend) {
 	optInButton := &discordgo.Button{
-		Label: "Join Game",
+		Label: "Enable Reminders",
 		Style: 1,
 		Emoji: discordgo.ComponentEmoji{
 			Name:     WORDLE_JOIN_EMOTE_NAME,
 			ID:       WORDLE_JOIN_EMOTE_ID,
 			Animated: true,
 		},
-		CustomID: "join_wordle",
+		CustomID: "enable_wordle_reminder",
 	}
 	optOutButton := &discordgo.Button{
-		Label: "Leave Game",
+		Label: "Disable Reminders",
 		Style: 4,
 		Emoji: discordgo.ComponentEmoji{
 			Name:     WORDLE_LEAVE_EMOTE_NAME,
 			ID:       WORDLE_LEAVE_EMOTE_ID,
 			Animated: true,
 		},
-		CustomID: "leave_wordle",
+		CustomID: "disable_wordle_reminder",
 	}
 
-	leaderBoard, worstFirstGuessUser := wordle.GenerateStatistics(s)
+	leaderboard, worstFirstGuessUser := wordle.GenerateStatistics()
 	var worstGuessUsername string
 	var worstGuessValue float32
 	if worstFirstGuessUser != nil {
@@ -179,6 +179,14 @@ func (wordle *Wordle) buildEmbedMsg(s *discordgo.Session) (msg *discordgo.Messag
 		worstGuessValue = 0
 	}
 
+	remindersString := "```\n"
+	for _, user := range wordle.Remindees {
+		remindersString += user.Username + "\n"
+	}
+	remindersString += "\n```"
+
+	reminders := remindersString
+
 	wordleEmbed := &discordgo.MessageEmbed{
 		URL:         WORDLE_URL,
 		Title:       "CLICK HERE TO PLAY WORDLE",
@@ -188,15 +196,19 @@ func (wordle *Wordle) buildEmbedMsg(s *discordgo.Session) (msg *discordgo.Messag
 		Fields: []*discordgo.MessageEmbedField{
 			{
 				Name:  "Join In!",
-				Value: "Click the button to join the game for tracking",
+				Value: "Click the button to be reminded if you haven't played by 7pm (Not working atm)",
+			},
+			{
+				Name:  "Leaderboard",
+				Value: leaderboard,
 			},
 			{
 				Name:  "Worst First Guess",
 				Value: fmt.Sprintf("<@%s> with average score of %.02f [Green=2,Yellow=1]", worstGuessUsername, worstGuessValue),
 			},
 			{
-				Name:  "Leaderboard",
-				Value: leaderBoard,
+				Name:  "People to Remind",
+				Value: reminders,
 			},
 		},
 	}
@@ -214,8 +226,7 @@ func (wordle *Wordle) buildEmbedMsg(s *discordgo.Session) (msg *discordgo.Messag
 	return msg
 }
 
-func (wordle *Wordle) editStatusMessage(s *discordgo.Session, updateContent *discordgo.MessageSend) {
-
+func (wordle *Wordle) EditStatusMessage(updateContent *discordgo.MessageSend) {
 	var statusMsg *discordgo.Message
 	var err error
 
@@ -243,32 +254,32 @@ func (wordle *Wordle) editStatusMessage(s *discordgo.Session, updateContent *dis
 	}
 
 	wordle.StatusMessageID = statusMsg.ID
-	kyDB.DB.Where(&Wordle{ChannelID: wordle.ChannelID}).Updates(&Wordle{StatusMessageID: wordle.StatusMessageID})
+	db.Where(&Wordle{ChannelID: wordle.ChannelID}).Updates(&Wordle{StatusMessageID: wordle.StatusMessageID})
 }
 
-func (wordle *Wordle) GenerateStatistics(s *discordgo.Session) (leaderBoard string, worstFirstRowUser *WordlePlayerStats) {
+func (wordle *Wordle) GenerateStatistics() (leaderBoard string, worstFirstRowUser *WordlePlayerStats) {
 	leaderBoard = "None :("
 	worstFirstRowUser = &WordlePlayerStats{
-		User:            User{Username: "No one :(", ID: "211307697331634186"},
+		User:            &User{Username: "No one :(", ID: "211307697331634186"},
 		AverageScore:    0,
 		AverageFirstRow: 0,
 		GamesPlayed:     0,
 	}
 
-	if len(wordle.Users) != 0 {
+	if len(wordle.Players) != 0 {
 		leaderBoard = "```\n Avg |Total| Name\n"
 		var users []*WordlePlayerStats
 
-		for _, player := range wordle.Users {
+		for _, player := range wordle.Players {
 			if player.Username == "" {
-				player.QueryInfo(s)
+				player.QueryInfo()
 			}
 
 			totalScore := int16(0)
 			firstRowTotalScore := int16(0)
 			gamesPlayed := int16(0)
 			var stats []WordleStat
-			kyDB.DB.Find(&stats, WordleStat{ChannelID: wordle.ChannelID})
+			db.Find(&stats, WordleStat{ChannelID: wordle.ChannelID})
 			for _, stat := range stats {
 				if stat.UserID == player.ID {
 					totalScore += int16(stat.Score)

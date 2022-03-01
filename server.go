@@ -1,10 +1,7 @@
-package component
+package main
 
 import (
 	"fmt"
-	"kyBot/commands"
-	"kyBot/config"
-	"kyBot/kyDB"
 	"net"
 	"strconv"
 	"strings"
@@ -80,10 +77,10 @@ func init() {
 			},
 		},
 	}
-	commands.AddCommand(addServerCommand)
+	AddCommand(addServerCommand)
 }
 
-func AddServer(s *discordgo.Session, i *discordgo.InteractionCreate, serverType string, host string, portString string) {
+func AddServer(i *discordgo.InteractionCreate, serverType string, host string, portString string) {
 	var port uint16
 	if portString == "" {
 		switch serverType {
@@ -109,11 +106,11 @@ func AddServer(s *discordgo.Session, i *discordgo.InteractionCreate, serverType 
 	}
 
 	// If server not found in database, add it
-	if err := kyDB.DB.Take(&server).Error; err != nil {
-		kyDB.DB.Create(&server)
-		server.ping(s)
-		kyDB.DB.Model(&server).Where(&Server{Host: server.Host}).Updates(&server)
-		msg := server.buildEmbedMsg(s)
+	if err := db.Take(&server).Error; err != nil {
+		db.Create(&server)
+		server.ping()
+		db.Model(&server).Where(&Server{Host: server.Host}).Updates(&server)
+		msg := server.buildEmbedMsg()
 
 		resp := &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -129,31 +126,31 @@ func AddServer(s *discordgo.Session, i *discordgo.InteractionCreate, serverType 
 		if err != nil {
 			log.Errorf("Error responding to the interaction: %s", err.Error())
 		}
-		interaction, err := s.InteractionResponse(config.APPID, i.Interaction)
+		interaction, err := s.InteractionResponse(APPID, i.Interaction)
 		if err != nil {
 			log.Errorf("Error getting interaction response message info: %s", err.Error())
 		}
 		server.StatusMessageID = interaction.ID
-		kyDB.DB.Model(&server).Where(&Server{Host: server.Host}).Updates(&Server{StatusMessageID: server.StatusMessageID})
+		db.Model(&server).Where(&Server{Host: server.Host}).Updates(&Server{StatusMessageID: server.StatusMessageID})
 	}
 }
 
-func (server *Server) Update(s *discordgo.Session) {
-	server.ping(s)
-	kyDB.DB.Model(&server).Where(&Server{Host: server.Host}).Updates(&server)
-	msg := server.buildEmbedMsg(s)
-	server.updateStatusMessage(s, msg)
+func (server *Server) Update() {
+	server.ping()
+	db.Model(&server).Where(&Server{Host: server.Host}).Updates(&server)
+	msg := server.buildEmbedMsg()
+	server.updateStatusMessage(msg)
 }
 
-func (server *Server) Remove(s *discordgo.Session) {
+func (server *Server) Remove() {
 	err := s.ChannelMessageDelete(server.StatusChannelID, server.StatusMessageID)
 	if err != nil {
 		log.Errorf("Error removing server status window: %s", err.Error())
 	}
-	kyDB.DB.Delete(server)
+	db.Delete(server)
 }
 
-func (server *Server) updateStatusMessage(s *discordgo.Session, updateContent *discordgo.MessageSend) {
+func (server *Server) updateStatusMessage(updateContent *discordgo.MessageSend) {
 
 	var statusMsg *discordgo.Message
 	var err error
@@ -182,10 +179,10 @@ func (server *Server) updateStatusMessage(s *discordgo.Session, updateContent *d
 	}
 
 	server.StatusMessageID = statusMsg.ID
-	kyDB.DB.Model(&server).Where(&Server{Host: server.Host}).Updates(&Server{StatusMessageID: server.StatusMessageID})
+	db.Model(&server).Where(&Server{Host: server.Host}).Updates(&Server{StatusMessageID: server.StatusMessageID})
 }
 
-func (server *Server) ping(s *discordgo.Session) {
+func (server *Server) ping() {
 	switch server.Type {
 	case "minecraft":
 		ping := mcping.NewPinger()
@@ -231,7 +228,7 @@ func (server *Server) ping(s *discordgo.Session) {
 	}
 }
 
-func (server *Server) buildEmbedMsg(s *discordgo.Session) (msg *discordgo.MessageSend) {
+func (server *Server) buildEmbedMsg() (msg *discordgo.MessageSend) {
 	var url string
 	switch server.Type {
 	case "minecraft":

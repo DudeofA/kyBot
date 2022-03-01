@@ -1,11 +1,7 @@
-package handlers
+package main
 
 import (
 	"fmt"
-	"kyBot/commands"
-	"kyBot/component"
-	"kyBot/config"
-	"kyBot/kyDB"
 
 	"github.com/bwmarrin/discordgo"
 	log "github.com/sirupsen/logrus"
@@ -19,24 +15,24 @@ func Ready(s *discordgo.Session, event *discordgo.Ready) {
 	log.Infof("%s Bot has started...running in %d Discord servers", self, len(guilds))
 
 	// Register commands
-	commands.RegisterCommands(config.APPID, s)
+	RegisterCommands(APPID)
 
 	// Loop through all servers and update their component
-	var server_objects []component.Server
-	_ = kyDB.DB.Find(&server_objects)
+	var server_objects []Server
+	_ = db.Find(&server_objects)
 	for _, server := range server_objects {
-		server.Update(s)
+		server.Update()
 	}
 
 	// Find any Wordle stats that have been posted since the bot was down
-	var wordle_channels []component.Wordle
-	_ = kyDB.DB.Preload(clause.Associations).Find(&wordle_channels)
+	var wordle_channels []Wordle
+	_ = db.Preload(clause.Associations).Find(&wordle_channels)
 	for _, wordle := range wordle_channels {
 		log.Debugf("Catching up on Wordle %s", wordle.ChannelID)
-		wordle.CatchUp(s)
+		wordle.CatchUp()
 	}
 
-	err := s.UpdateGameStatus(0, fmt.Sprintf("Wordle [v%s]", config.VERSION))
+	err := s.UpdateGameStatus(0, fmt.Sprintf("Wordle [v%s]", VERSION))
 	if err != nil {
 		log.Errorf("Error updating status: %s", err.Error())
 	}

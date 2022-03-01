@@ -1,4 +1,4 @@
-module kyBot
+module main
 
 go 1.17
 
@@ -18,12 +18,12 @@ require (
 )
 
 require (
-	github.com/gorilla/websocket v1.4.2 // indirect
+	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/robfig/cron v1.2.0
 	github.com/sirupsen/logrus v1.8.1
-	golang.org/x/crypto v0.0.0-20220131195533-30dcbda58838 // indirect
-	golang.org/x/sys v0.0.0-20220128215802-99c3d69c2c27 // indirect
-	gorm.io/driver/sqlite v1.2.6
-	gorm.io/gorm v1.22.5
+	golang.org/x/crypto v0.0.0-20220214200702-86341886e292 // indirect
+	golang.org/x/sys v0.0.0-20220224120231-95c6836cb0e7 // indirect
+	gorm.io/driver/sqlite v1.3.1
+	gorm.io/gorm v1.23.1
 	layeh.com/gumble v0.0.0-20200818122324-146f9205029b
 )
