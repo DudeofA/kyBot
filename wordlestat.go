@@ -83,8 +83,8 @@ func AddWordleStats(m *discordgo.Message, bypassChanID string) (err error) {
 	rows := strings.Split(m.Content, "\n")
 	rows_of_squares := rows[2:]
 	for i, row := range rows_of_squares {
-		yellows := int8(strings.Count(row, WORDLE_YELLOW_SQUARE))
-		greens := int8(strings.Count(row, WORDLE_GREEN_SQUARE))
+		yellows := int8(strings.Count(row, YELLOW_SQUARE_EMOJI))
+		greens := int8(strings.Count(row, GREEN_SQUARE_EMOJI))
 		wordleStat.YellowCount += yellows
 		wordleStat.GreenCount += greens
 		wordleStat.BlankCount += WORDLE_ROW_LENGTH - greens - yellows
@@ -105,7 +105,7 @@ func AddWordleStats(m *discordgo.Message, bypassChanID string) (err error) {
 		return err
 	}
 
-	err = s.MessageReactionAdd(m.ChannelID, m.ID, WORDLE_ACK_EMOJI)
+	err = s.MessageReactionAdd(m.ChannelID, m.ID, CALC_EMOJI)
 	if err != nil {
 		err := fmt.Errorf("unable to add reaction to wordle game results on messageid: %s\n%s", m.ID, err.Error())
 		log.Error(err)

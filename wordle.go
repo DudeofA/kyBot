@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"sort"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 	log "github.com/sirupsen/logrus"
@@ -12,20 +13,25 @@ import (
 const (
 	WORDLE_URL              = "https://www.nytimes.com/games/wordle/index.html"
 	WORDLE_ROW_LENGTH       = 5
-	WORDLE_GREEN_SQUARE     = "🟩"
 	WORDLE_GREEN_SCORE      = 2
-	WORDLE_YELLOW_SQUARE    = "🟨"
 	WORDLE_YELLOW_SCORE     = 1
 	WORDLE_COLOR            = 0x538d4e
-	WORDLE_ACK_EMOJI        = "🧮"
 	WORDLE_JOIN_EMOTE_NAME  = "aenezukojump"
 	WORDLE_JOIN_EMOTE_ID    = "849514753042546719"
 	WORDLE_LEAVE_EMOTE_NAME = "PES2_SadGeRain"
 	WORDLE_LEAVE_EMOTE_ID   = "849698641869406261"
 	WORDLE_FAIL_SCORE       = 7
 
-	STOP_EMOJI = "🛑"
+	YELLOW_SQUARE_EMOJI = "🟨"
+	GREEN_SQUARE_EMOJI  = "🟩"
+	CALC_EMOJI          = "🧮"
+	CHECK_EMOJI         = "✅"
+	X_EMOJI             = "❌"
+	STOP_EMOJI          = "🛑"
+	TIME_EMOJI          = "⌛"
 )
+
+var WORDLE_DAY_1 = time.Date(2021, time.June, 20, 0, 0, 0, 0, time.UTC)
 
 type Wordle struct {
 	ChannelID       string `gorm:"primaryKey"`
@@ -39,6 +45,7 @@ type WordlePlayerStats struct {
 	AverageScore    float32
 	AverageFirstRow float32
 	GamesPlayed     int16
+	PlayedToday     bool
 }
 
 func init() {
@@ -148,21 +155,19 @@ func (wordle *Wordle) UpdateStatus() {
 
 func (wordle *Wordle) BuildEmbedMsg() (msg *discordgo.MessageSend) {
 	optInButton := &discordgo.Button{
-		Label: "Enable Reminders",
+		Label: "Get Reminders",
 		Style: 1,
 		Emoji: discordgo.ComponentEmoji{
-			Name:     WORDLE_JOIN_EMOTE_NAME,
-			ID:       WORDLE_JOIN_EMOTE_ID,
+			Name:     TIME_EMOJI,
 			Animated: true,
 		},
 		CustomID: "enable_wordle_reminder",
 	}
 	optOutButton := &discordgo.Button{
-		Label: "Disable Reminders",
+		Label: "Stop Reminders",
 		Style: 4,
 		Emoji: discordgo.ComponentEmoji{
-			Name:     WORDLE_LEAVE_EMOTE_NAME,
-			ID:       WORDLE_LEAVE_EMOTE_ID,
+			Name:     STOP_EMOJI,
 			Animated: true,
 		},
 		CustomID: "disable_wordle_reminder",
@@ -267,7 +272,7 @@ func (wordle *Wordle) GenerateStatistics() (leaderBoard string, worstFirstRowUse
 	}
 
 	if len(wordle.Players) != 0 {
-		leaderBoard = "```\n Avg |Total| Name\n"
+		leaderBoard = "` Mean | Total | Today `\n"
 		var users []*WordlePlayerStats
 
 		for _, player := range wordle.Players {
@@ -278,13 +283,16 @@ func (wordle *Wordle) GenerateStatistics() (leaderBoard string, worstFirstRowUse
 			totalScore := int16(0)
 			firstRowTotalScore := int16(0)
 			gamesPlayed := int16(0)
+			playedToday := false
 			var stats []WordleStat
-			db.Find(&stats, WordleStat{ChannelID: wordle.ChannelID})
+			db.Find(&stats, WordleStat{ChannelID: wordle.ChannelID, UserID: player.ID})
 			for _, stat := range stats {
-				if stat.UserID == player.ID {
-					totalScore += int16(stat.Score)
-					firstRowTotalScore += int16(stat.FirstWordScore)
-					gamesPlayed++
+				totalScore += int16(stat.Score)
+				firstRowTotalScore += int16(stat.FirstWordScore)
+				gamesPlayed++
+				todayWordleDay := int16(time.Since(WORDLE_DAY_1).Hours() / 24)
+				if stat.Day == todayWordleDay {
+					playedToday = true
 				}
 			}
 
@@ -303,6 +311,7 @@ func (wordle *Wordle) GenerateStatistics() (leaderBoard string, worstFirstRowUse
 				AverageScore:    averageScore,
 				AverageFirstRow: averageFirstRowScore,
 				GamesPlayed:     gamesPlayed,
+				PlayedToday:     playedToday,
 			}
 			users = append(users, user)
 
@@ -314,9 +323,12 @@ func (wordle *Wordle) GenerateStatistics() (leaderBoard string, worstFirstRowUse
 			return users[i].AverageScore < users[j].AverageScore
 		})
 		for _, user := range users {
-			leaderBoard += fmt.Sprintf("%.2f | %03d | %s\n", user.AverageScore, user.GamesPlayed, user.User.Username)
+			playedStatus := X_EMOJI
+			if user.PlayedToday {
+				playedStatus = CHECK_EMOJI
+			}
+			leaderBoard += fmt.Sprintf("` %.2f | %4d  |  %s  `  <@%s>\n", user.AverageScore, user.GamesPlayed, playedStatus, user.User.ID)
 		}
-		leaderBoard += "\n```"
 	}
 	return leaderBoard, worstFirstRowUser
 }
