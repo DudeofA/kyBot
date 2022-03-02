@@ -31,7 +31,7 @@ const (
 	TIME_EMOJI          = "⌛"
 )
 
-var WORDLE_DAY_1 = time.Date(2021, time.June, 20, 0, 0, 0, 0, time.UTC)
+var WORDLE_DAY_0 = time.Date(2021, time.June, 19, 0, 0, 0, 0, time.Now().Location())
 
 type Wordle struct {
 	ChannelID       string `gorm:"primaryKey"`
@@ -273,7 +273,7 @@ func (wordle *Wordle) GenerateStatistics() (leaderBoard string, worstFirstRowUse
 				totalScore += int16(stat.Score)
 				firstRowTotalScore += int16(stat.FirstWordScore)
 				gamesPlayed++
-				todayWordleDay := int16(time.Since(WORDLE_DAY_1).Hours() / 24)
+				todayWordleDay := int16(time.Since(WORDLE_DAY_0).Hours() / 24)
 				if stat.Day == todayWordleDay {
 					playedToday = true
 				}

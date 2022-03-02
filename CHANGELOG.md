@@ -2,6 +2,12 @@
 
 All notable changes will be documented in this file.
 
+## [5.0.2] - 3/1/22
+
+## Fix
+
+-   Fix Leaderboard not using correct date to calculate if today's Wordle is complete
+
 ## [5.0.1] - 3/1/22
 
 ## Add
