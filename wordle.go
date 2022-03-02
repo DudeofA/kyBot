@@ -98,37 +98,7 @@ func DisableWordleReminder(i *discordgo.InteractionCreate) (err error) {
 	return nil
 }
 
-// func AddWordleChannel(i *discordgo.InteractionCreate) {
-// 	resp := &discordgo.InteractionResponse{
-// 		Type: discordgo.InteractionResponseChannelMessageWithSource,
-// 		Data: &discordgo.InteractionResponseData{
-// 			Content: "This channel will now track Wordle messages and stats",
-// 		},
-// 	}
-
-// 	wordle, err := GetWordle(i.Message.ChannelID)
-// 	if err != nil {
-// 		wordle = Wordle{
-// 			ChannelID: i.Message.ChannelID,
-// 		}
-
-// 		result := db.Create(&wordle)
-// 		if result.Error != nil {
-// 			err = fmt.Errorf("unable to create wordle in db: %s", result.Error)
-// 			log.Error(err)
-// 			resp.Data.Content = err.Error()
-// 		}
-// 	} else {
-// 		resp.Data.Content = fmt.Sprintf("Wordle channel already exists for this server: #%s", wordle.ChannelID)
-// 	}
-
-// 	err = s.InteractionRespond(i.Interaction, resp)
-// 	if err != nil {
-// 		log.Errorf("unable to respond to the interaction: %s", err.Error())
-// 	}
-// }
-
-func SendWordleReminders() {
+func WordleNewDay() {
 	var wordles []Wordle
 	db.Preload(clause.Associations).Find(&wordles)
 
@@ -145,6 +115,19 @@ func SendWordleReminders() {
 
 		wordle.UpdateStatus()
 		db.Save(&wordle)
+	}
+}
+
+func WordleSendReminder() {
+	var wordles []Wordle
+	db.Preload(clause.Associations).Find(&wordles)
+
+	for _, wordle := range wordles {
+		notification := "It's 7pm and you didn't do your Wordle yet :o\n"
+		for _, user := range wordle.Remindees {
+			notification += fmt.Sprintf("<@%s>", user.ID)
+		}
+		s.ChannelMessageSend(wordle.ChannelID, notification)
 	}
 }
 

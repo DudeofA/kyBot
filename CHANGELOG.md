@@ -2,6 +2,13 @@
 
 All notable changes will be documented in this file.
 
+## [5.0.1] - 3/1/22
+
+## Add
+
+-   Better leaderboard with today's completion status
+-   Update leaderboard on each wordle submission
+
 ## [5.0.0] - 2/23/22
 
 #### Structure Change

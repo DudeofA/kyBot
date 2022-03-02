@@ -67,6 +67,6 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		ScrapeChannel(m.ChannelID)
 		log.Debug("Done scraping")
 	case "wordle":
-		SendWordleReminders()
+		WordleNewDay()
 	}
 }
