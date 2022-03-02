@@ -184,7 +184,7 @@ func (wordle *Wordle) BuildEmbedMsg() (msg *discordgo.MessageSend) {
 		Fields: []*discordgo.MessageEmbedField{
 			{
 				Name:  "Join In!",
-				Value: "Click the button to be reminded if you haven't played by 7pm (Not working atm)",
+				Value: "Click the button to be reminded if you haven't played by 7pm",
 			},
 			{
 				Name:  "Leaderboard",
