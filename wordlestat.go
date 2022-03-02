@@ -120,6 +120,7 @@ func AddWordleStats(m *discordgo.Message, bypassChanID string) (err error) {
 	}
 
 	db.Create(&wordleStat)
+	wordle.UpdateStatus()
 	return nil
 }
 
