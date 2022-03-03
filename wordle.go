@@ -125,7 +125,12 @@ func WordleSendReminder() {
 	for _, wordle := range wordles {
 		notification := "It's 7pm and you didn't do your Wordle yet :o\n"
 		for _, user := range wordle.Remindees {
-			notification += fmt.Sprintf("<@%s>", user.ID)
+			var lastWordleStat WordleStat
+			todayWordleDay := int16(time.Since(WORDLE_DAY_0).Hours() / 24)
+			db.Last(&lastWordleStat, &WordleStat{UserID: user.ID})
+			if lastWordleStat.Day != todayWordleDay {
+				notification += fmt.Sprintf("<@%s>", user.ID)
+			}
 		}
 		s.ChannelMessageSend(wordle.ChannelID, notification)
 	}

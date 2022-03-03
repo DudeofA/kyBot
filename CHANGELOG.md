@@ -2,6 +2,12 @@
 
 All notable changes will be documented in this file.
 
+## [5.0.3] - 3/2/22
+
+## Fix
+
+-   Reminders going out when someone already did their Wordle :)
+
 ## [5.0.2] - 3/1/22
 
 ## Fix
