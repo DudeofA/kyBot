@@ -48,15 +48,6 @@ type WordlePlayerStats struct {
 	PlayedToday     bool
 }
 
-func init() {
-	// addServerCommand := &discordgo.ApplicationCommand{
-	// 	Name:        "add-wordle-channel",
-	// 	Type:        discordgo.ChatApplicationCommand,
-	// 	Description: "Add a repeating wordle reminder message",
-	// }
-	// AddCommand(addServerCommand)
-}
-
 func GetWordle(channelID string) (wordle Wordle, err error) {
 	result := db.Preload(clause.Associations).Limit(1).Find(&wordle, Wordle{ChannelID: channelID})
 	if result.RowsAffected != 1 {
@@ -103,19 +94,8 @@ func WordleNewDay() {
 	db.Preload(clause.Associations).Find(&wordles)
 
 	for _, wordle := range wordles {
-		if len(wordle.Players) == 0 {
-			var userIDs []string
-			db.Model(&WordleStat{}).Distinct("user_id").Find(&userIDs)
-			for _, userID := range userIDs {
-				var user User
-				db.Take(&user, &User{ID: userID})
-				wordle.Players = append(wordle.Players, &user)
-			}
-		}
-
 		wordle.StatusMessageID = ""
 		wordle.UpdateStatus()
-		db.Save(&wordle)
 	}
 }
 
@@ -130,7 +110,7 @@ func WordleSendReminder() {
 			todayWordleDay := int16(time.Since(WORDLE_DAY_0).Hours() / 24)
 			db.Last(&lastWordleStat, &WordleStat{UserID: user.ID})
 			if lastWordleStat.Day != todayWordleDay {
-				notification += fmt.Sprintf("<@%s>", user.ID)
+				notification += fmt.Sprintf("<@%s>\n", user.ID)
 			}
 		}
 		s.ChannelMessageSend(wordle.ChannelID, notification)
@@ -263,6 +243,19 @@ func (wordle *Wordle) GenerateStatistics() (leaderBoard string, worstFirstRowUse
 	if len(wordle.Players) != 0 {
 		leaderBoard = "` Mean | Total | Today `\n"
 		var users []*WordlePlayerStats
+
+		// if # players != # unique user ids of wordle stats, rebuild user list
+		var userIDs []string
+		db.Model(&WordleStat{}).Distinct("user_id").Find(&userIDs)
+		if len(wordle.Players) != len(userIDs) {
+			wordle.Players = nil
+			for _, userID := range userIDs {
+				var user User
+				db.Take(&user, &User{ID: userID})
+				wordle.Players = append(wordle.Players, &user)
+			}
+			db.Save(&wordle)
+		}
 
 		for _, player := range wordle.Players {
 			if player.Username == "" {

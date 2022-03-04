@@ -117,6 +117,7 @@ func AddWordleStats(m *discordgo.Message, bypassChanID string) (err error) {
 		// User has never played
 		user := GetUser(m.Author)
 		wordle.Players = append(wordle.Players, &user)
+		db.Save(&wordle)
 	}
 
 	db.Create(&wordleStat)

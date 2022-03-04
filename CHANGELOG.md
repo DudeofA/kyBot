@@ -2,6 +2,12 @@
 
 All notable changes will be documented in this file.
 
+## [5.0.4] - 3/3/22
+
+## Fix
+
+-   New users were not appearing on the scoreboard on their 2nd and on submissions
+
 ## [5.0.3] - 3/2/22
 
 ## Fix
