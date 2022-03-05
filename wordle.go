@@ -11,16 +11,16 @@ import (
 )
 
 const (
-	WORDLE_URL              = "https://www.nytimes.com/games/wordle/index.html"
-	WORDLE_ROW_LENGTH       = 5
-	WORDLE_GREEN_SCORE      = 2
-	WORDLE_YELLOW_SCORE     = 1
-	WORDLE_COLOR            = 0x538d4e
-	WORDLE_JOIN_EMOTE_NAME  = "aenezukojump"
-	WORDLE_JOIN_EMOTE_ID    = "849514753042546719"
-	WORDLE_LEAVE_EMOTE_NAME = "PES2_SadGeRain"
-	WORDLE_LEAVE_EMOTE_ID   = "849698641869406261"
-	WORDLE_FAIL_SCORE       = 7
+	WORDLE_URL               = "https://www.nytimes.com/games/wordle/index.html"
+	WORDLE_ROW_LENGTH        = 5
+	WORDLE_GREEN_SCORE       = 2
+	WORDLE_YELLOW_SCORE      = 1
+	WORDLE_COLOR             = 0x538d4e
+	WORDLE_GET_REMINDERS     = "ping"
+	WORDLE_GET_REMINDERS_ID  = "464520626594381854"
+	WORDLE_STOP_REMINDERS    = "angryping"
+	WORDLE_STOP_REMINDERS_ID = "425035740146171904"
+	WORDLE_FAIL_SCORE        = 7
 
 	YELLOW_SQUARE_EMOJI = "🟨"
 	GREEN_SQUARE_EMOJI  = "🟩"
@@ -46,6 +46,7 @@ type WordlePlayerStats struct {
 	AverageFirstRow float32
 	GamesPlayed     int16
 	PlayedToday     bool
+	GetReminders    bool
 }
 
 func GetWordle(channelID string) (wordle Wordle, err error) {
@@ -142,7 +143,7 @@ func (wordle *Wordle) BuildEmbedMsg() (msg *discordgo.MessageSend) {
 		CustomID: "disable_wordle_reminder",
 	}
 
-	leaderboard, worstFirstGuessUser := wordle.GenerateStatistics()
+	statusBoard, worstFirstGuessUser := wordle.GenerateStatistics()
 	var worstGuessUsername string
 	var worstGuessValue float32
 	if worstFirstGuessUser != nil {
@@ -174,7 +175,7 @@ func (wordle *Wordle) BuildEmbedMsg() (msg *discordgo.MessageSend) {
 			},
 			{
 				Name:  "Leaderboard",
-				Value: leaderboard,
+				Value: statusBoard,
 			},
 			{
 				Name:  "Worst First Guess",
@@ -231,8 +232,8 @@ func (wordle *Wordle) EditStatusMessage(updateContent *discordgo.MessageSend) {
 	db.Where(&Wordle{ChannelID: wordle.ChannelID}).Updates(&Wordle{StatusMessageID: wordle.StatusMessageID})
 }
 
-func (wordle *Wordle) GenerateStatistics() (leaderBoard string, worstFirstRowUser *WordlePlayerStats) {
-	leaderBoard = "None :("
+func (wordle *Wordle) GenerateStatistics() (statusBoard string, worstFirstRowUser *WordlePlayerStats) {
+	statusBoard = "None :("
 	worstFirstRowUser = &WordlePlayerStats{
 		User:            &User{Username: "No one :(", ID: "211307697331634186"},
 		AverageScore:    0,
@@ -241,7 +242,7 @@ func (wordle *Wordle) GenerateStatistics() (leaderBoard string, worstFirstRowUse
 	}
 
 	if len(wordle.Players) != 0 {
-		leaderBoard = "` Mean | Total | Today `\n"
+		statusBoard = "` Mean | Total | Today `\n"
 		var users []*WordlePlayerStats
 
 		// if # players != # unique user ids of wordle stats, rebuild user list
@@ -288,12 +289,20 @@ func (wordle *Wordle) GenerateStatistics() (leaderBoard string, worstFirstRowUse
 				averageFirstRowScore = float32(firstRowTotalScore) / float32(gamesPlayed)
 			}
 
+			getReminders := false
+			for _, remindee := range wordle.Remindees {
+				if remindee.ID == player.ID {
+					getReminders = true
+				}
+			}
+
 			user := &WordlePlayerStats{
 				User:            player,
 				AverageScore:    averageScore,
 				AverageFirstRow: averageFirstRowScore,
 				GamesPlayed:     gamesPlayed,
 				PlayedToday:     playedToday,
+				GetReminders:    getReminders,
 			}
 			users = append(users, user)
 
@@ -301,16 +310,36 @@ func (wordle *Wordle) GenerateStatistics() (leaderBoard string, worstFirstRowUse
 				worstFirstRowUser = user
 			}
 		}
+
 		sort.Slice(users, func(i, j int) bool {
 			return users[i].AverageScore < users[j].AverageScore
 		})
+
 		for _, user := range users {
 			playedStatus := X_EMOJI
+			// emoji := discordgo.Emoji{
+			// 	ID:   WORDLE_STOP_REMINDERS_ID,
+			// 	Name: WORDLE_STOP_REMINDERS,
+			// }
 			if user.PlayedToday {
 				playedStatus = CHECK_EMOJI
 			}
-			leaderBoard += fmt.Sprintf("` %.2f | %4d  |  %s  `  <@%s>\n", user.AverageScore, user.GamesPlayed, playedStatus, user.User.ID)
+			// reminderStatus := emoji.MessageFormat()
+			// if user.GetReminders {
+			// 	emoji := discordgo.Emoji{
+			// 		ID:   WORDLE_GET_REMINDERS_ID,
+			// 		Name: WORDLE_GET_REMINDERS,
+			// 	}
+			// 	reminderStatus = emoji.MessageFormat()
+			// }
+			statusBoard += fmt.Sprintf(
+				"` %.2f | %4d  |  %s  `  <@%s>\n",
+				user.AverageScore,
+				user.GamesPlayed,
+				playedStatus,
+				user.User.ID,
+			)
 		}
 	}
-	return leaderBoard, worstFirstRowUser
+	return statusBoard, worstFirstRowUser
 }

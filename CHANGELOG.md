@@ -2,7 +2,7 @@
 
 All notable changes will be documented in this file.
 
-## [5.0.4] - 3/3/22
+## [5.0.4] - 3/5/22
 
 ## Fix
 
