@@ -212,11 +212,14 @@ func ImportWordleStat(wordleChannelID string, channelID string, messageID string
 		log.Error(err.Error())
 		return err
 	}
-	msg, err := s.ChannelMessage(channelID, messageID)
+	msg, err := s.State.Message(channelID, messageID)
 	if err != nil {
-		err := fmt.Errorf("error finding message %s in discord: %s", messageID, err.Error())
-		log.Error(err)
-		return err
+		msg, err = s.ChannelMessage(channelID, messageID)
+		if err != nil {
+			err := fmt.Errorf("error finding message %s in discord: %s", messageID, err.Error())
+			log.Error(err)
+			return err
+		}
 	}
 	err = AddWordleStats(msg, wordleChannelID)
 	if err != nil {

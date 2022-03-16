@@ -36,6 +36,9 @@ func main() {
 	}
 	defer s.Close()
 
+	s.StateEnabled = true
+	s.State.MaxMessageCount = 100
+
 	s.AddHandlerOnce(Ready)
 	s.AddHandler(MessageCreate)
 	s.AddHandler(ReactAdd)

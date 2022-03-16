@@ -2,6 +2,12 @@
 
 All notable changes will be documented in this file.
 
+## [5.0.5] - 3/15/22
+
+## Add
+
+-   Add State management/caching
+
 ## [5.0.4] - 3/5/22
 
 ## Fix

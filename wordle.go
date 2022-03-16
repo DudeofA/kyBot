@@ -11,16 +11,12 @@ import (
 )
 
 const (
-	WORDLE_URL               = "https://www.nytimes.com/games/wordle/index.html"
-	WORDLE_ROW_LENGTH        = 5
-	WORDLE_GREEN_SCORE       = 2
-	WORDLE_YELLOW_SCORE      = 1
-	WORDLE_COLOR             = 0x538d4e
-	WORDLE_GET_REMINDERS     = "ping"
-	WORDLE_GET_REMINDERS_ID  = "464520626594381854"
-	WORDLE_STOP_REMINDERS    = "angryping"
-	WORDLE_STOP_REMINDERS_ID = "425035740146171904"
-	WORDLE_FAIL_SCORE        = 7
+	WORDLE_URL          = "https://www.nytimes.com/games/wordle/index.html"
+	WORDLE_ROW_LENGTH   = 5
+	WORDLE_GREEN_SCORE  = 2
+	WORDLE_YELLOW_SCORE = 1
+	WORDLE_COLOR        = 0x538d4e
+	WORDLE_FAIL_SCORE   = 7
 
 	YELLOW_SQUARE_EMOJI = "🟨"
 	GREEN_SQUARE_EMOJI  = "🟩"
