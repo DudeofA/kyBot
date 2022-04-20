@@ -6,6 +6,7 @@ import (
 )
 
 func InteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	var err error
 	switch i.Type {
 
 	case discordgo.InteractionApplicationCommand:
@@ -37,7 +38,7 @@ func InteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		resp := &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseDeferredMessageUpdate,
 		}
-		err := s.InteractionRespond(i.Interaction, resp)
+		err = s.InteractionRespond(i.Interaction, resp)
 		if err != nil {
 			log.Errorf("Error responding to the interaction: %s", err.Error())
 		}
@@ -51,19 +52,19 @@ func InteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
 				server.Update()
 			}
 
-		case "enable_wordle_reminder":
-			err = EnableWordleReminder(i)
+		case "toggle_wordle_reminder":
+			var user User
+			db.Where(&User{ID: i.Member.User.ID}).Limit(1).Find(&user)
+			err = user.ToggleWordleReminder()
 			if err != nil {
 				log.Errorf("error enabling wordle reminders for user [%s]: %s", i.User.ID, err)
 				return
 			}
-
-		case "disable_wordle_reminder":
-			err = DisableWordleReminder(i)
+			wordle, err := GetWordle(i.Message.ChannelID)
 			if err != nil {
-				log.Errorf("error disabling wordle reminders for user [%s]: %s", i.User.ID, err)
-				return
+				log.Error(err)
 			}
+			wordle.UpdateStatus()
 
 		default:
 			log.Warnf("Unknown Message Component: %s", i.MessageComponentData().CustomID)

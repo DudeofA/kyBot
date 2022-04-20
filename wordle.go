@@ -24,7 +24,7 @@ const (
 	CHECK_EMOJI         = "✅"
 	X_EMOJI             = "❌"
 	STOP_EMOJI          = "🛑"
-	TIME_EMOJI          = "⌛"
+	BELL_EMOJI          = "🔔"
 )
 
 var WORDLE_DAY_0 = time.Date(2021, time.June, 19, 0, 0, 0, 0, time.Now().Location())
@@ -37,60 +37,32 @@ type Wordle struct {
 }
 
 type WordlePlayerStats struct {
-	User            *User
+	ID              uint `gorm:"primaryKey"`
+	UserID          string
 	AverageScore    float32
 	AverageFirstRow float32
-	GamesPlayed     int16
+	GamesPlayed     uint16
 	PlayedToday     bool
 	GetReminders    bool
 }
 
 func GetWordle(channelID string) (wordle Wordle, err error) {
-	result := db.Preload(clause.Associations).Limit(1).Find(&wordle, Wordle{ChannelID: channelID})
+	result := db.Preload("Players.WordleStats").Preload(clause.Associations).Limit(1).Find(&wordle, Wordle{ChannelID: channelID})
 	if result.RowsAffected != 1 {
 		return wordle, fmt.Errorf("no wordle found with channel id %s", channelID)
 	}
 	return wordle, nil
 }
 
-func EnableWordleReminder(i *discordgo.InteractionCreate) (err error) {
-	wordle, err := GetWordle(i.Message.ChannelID)
-	if err != nil {
-		return err
-	}
-
-	for _, existingUser := range wordle.Remindees {
-		if existingUser.ID == i.Member.User.ID {
-			return nil // No action needed if users is already a part of the notifications group
-		}
-	}
-
-	user := GetUser(i.Member.User)
-	wordle.Remindees = append(wordle.Remindees, &user)
-
-	wordle.UpdateStatus()
-	db.Save(&wordle)
-	return nil
-}
-
-func DisableWordleReminder(i *discordgo.InteractionCreate) (err error) {
-	wordle, err := GetWordle(i.Message.ChannelID)
-	if err != nil {
-		return err
-	}
-
-	db.Model(&wordle).Association("Remindees").Delete(&User{ID: i.Member.User.ID})
-
-	wordle.UpdateStatus()
-	db.Save(&wordle)
-	return nil
-}
-
 func WordleNewDay() {
 	var wordles []Wordle
-	db.Preload(clause.Associations).Find(&wordles)
+	db.Find(&wordles)
 
-	for _, wordle := range wordles {
+	for _, raw_wordle := range wordles {
+		wordle, err := GetWordle(raw_wordle.ChannelID)
+		if err != nil {
+			log.Error(err)
+		}
 		wordle.StatusMessageID = ""
 		wordle.UpdateStatus()
 	}
@@ -101,16 +73,20 @@ func WordleSendReminder() {
 	db.Preload(clause.Associations).Find(&wordles)
 
 	for _, wordle := range wordles {
+		user_count := 0
 		notification := "It's 7pm and you didn't do your Wordle yet :o\n"
 		for _, user := range wordle.Remindees {
 			var lastWordleStat WordleStat
-			todayWordleDay := int16(time.Since(WORDLE_DAY_0).Hours() / 24)
+			todayWordleDay := uint16(time.Since(WORDLE_DAY_0).Hours() / 24)
 			db.Last(&lastWordleStat, &WordleStat{UserID: user.ID})
 			if lastWordleStat.Day != todayWordleDay {
 				notification += fmt.Sprintf("<@%s>\n", user.ID)
+				user_count++
 			}
 		}
-		s.ChannelMessageSend(wordle.ChannelID, notification)
+		if user_count > 0 {
+			s.ChannelMessageSend(wordle.ChannelID, notification)
+		}
 	}
 }
 
@@ -120,43 +96,17 @@ func (wordle *Wordle) UpdateStatus() {
 }
 
 func (wordle *Wordle) BuildEmbedMsg() (msg *discordgo.MessageSend) {
-	optInButton := &discordgo.Button{
-		Label: "Get Reminders",
+	toggleReminderButton := &discordgo.Button{
+		Label: "Toggle Reminders",
 		Style: 1,
 		Emoji: discordgo.ComponentEmoji{
-			Name:     TIME_EMOJI,
+			Name:     BELL_EMOJI,
 			Animated: true,
 		},
-		CustomID: "enable_wordle_reminder",
-	}
-	optOutButton := &discordgo.Button{
-		Label: "Stop Reminders",
-		Style: 4,
-		Emoji: discordgo.ComponentEmoji{
-			Name:     STOP_EMOJI,
-			Animated: true,
-		},
-		CustomID: "disable_wordle_reminder",
+		CustomID: "toggle_wordle_reminder",
 	}
 
-	statusBoard, worstFirstGuessUser := wordle.GenerateStatistics()
-	var worstGuessUsername string
-	var worstGuessValue float32
-	if worstFirstGuessUser != nil {
-		worstGuessUsername = worstFirstGuessUser.User.ID
-		worstGuessValue = worstFirstGuessUser.AverageFirstRow
-	} else {
-		worstGuessUsername = "N/A"
-		worstGuessValue = 0
-	}
-
-	remindersString := "```\n"
-	for _, user := range wordle.Remindees {
-		remindersString += user.Username + "\n"
-	}
-	remindersString += "\n```"
-
-	reminders := remindersString
+	statusBoard := wordle.GenerateStatistics()
 
 	wordleEmbed := &discordgo.MessageEmbed{
 		URL:         WORDLE_URL,
@@ -170,16 +120,8 @@ func (wordle *Wordle) BuildEmbedMsg() (msg *discordgo.MessageSend) {
 				Value: "Click the button to be reminded if you haven't played by 7pm",
 			},
 			{
-				Name:  "Leaderboard",
+				Name:  "Statusboard",
 				Value: statusBoard,
-			},
-			{
-				Name:  "Worst First Guess",
-				Value: fmt.Sprintf("<@%s> with average score of %.02f [Green=2,Yellow=1]", worstGuessUsername, worstGuessValue),
-			},
-			{
-				Name:  "People to Remind",
-				Value: reminders,
 			},
 		},
 	}
@@ -188,8 +130,7 @@ func (wordle *Wordle) BuildEmbedMsg() (msg *discordgo.MessageSend) {
 		Components: []discordgo.MessageComponent{
 			&discordgo.ActionsRow{
 				Components: []discordgo.MessageComponent{
-					optInButton,
-					optOutButton,
+					toggleReminderButton,
 				},
 			},
 		},
@@ -203,7 +144,7 @@ func (wordle *Wordle) EditStatusMessage(updateContent *discordgo.MessageSend) {
 
 	_, err = s.ChannelMessage(wordle.ChannelID, wordle.StatusMessageID)
 	if err != nil {
-		// Send status if previous status message does not exist anymore (user deleted)
+		// Send status if previous status message does not exist anymore (user deleted it)
 		statusMsg, err = s.ChannelMessageSendComplex(wordle.ChannelID, updateContent)
 		if err != nil {
 			log.Errorln("Could not send server status message", err.Error())
@@ -228,114 +169,36 @@ func (wordle *Wordle) EditStatusMessage(updateContent *discordgo.MessageSend) {
 	db.Where(&Wordle{ChannelID: wordle.ChannelID}).Updates(&Wordle{StatusMessageID: wordle.StatusMessageID})
 }
 
-func (wordle *Wordle) GenerateStatistics() (statusBoard string, worstFirstRowUser *WordlePlayerStats) {
-	statusBoard = "None :("
-	worstFirstRowUser = &WordlePlayerStats{
-		User:            &User{Username: "No one :(", ID: "211307697331634186"},
-		AverageScore:    0,
-		AverageFirstRow: 0,
-		GamesPlayed:     0,
+func (wordle *Wordle) GenerateStatistics() (statusBoard string) {
+
+	if len(wordle.Players) == 0 {
+		return "No gamers :("
 	}
 
-	if len(wordle.Players) != 0 {
-		statusBoard = "` Mean | Total | Today `\n"
-		var users []*WordlePlayerStats
+	sort.Slice(wordle.Players, func(i, j int) bool {
+		return wordle.Players[i].WordleStats.AverageScore < wordle.Players[j].WordleStats.AverageScore
+	})
 
-		// if # players != # unique user ids of wordle stats, rebuild user list
-		var userIDs []string
-		db.Model(&WordleStat{}).Distinct("user_id").Find(&userIDs)
-		if len(wordle.Players) != len(userIDs) {
-			wordle.Players = nil
-			for _, userID := range userIDs {
-				var user User
-				db.Take(&user, &User{ID: userID})
-				wordle.Players = append(wordle.Players, &user)
-			}
-			db.Save(&wordle)
+	statusBoard = "` Mean | Total | Today `\n"
+	for _, user := range wordle.Players {
+		playedStatus := X_EMOJI
+		reminderStatus := ""
+
+		if user.WordleStats.PlayedToday {
+			playedStatus = CHECK_EMOJI
+		}
+		if user.WordleStats.GetReminders {
+			reminderStatus = BELL_EMOJI
 		}
 
-		for _, player := range wordle.Players {
-			if player.Username == "" {
-				player.QueryInfo()
-			}
-
-			totalScore := int16(0)
-			firstRowTotalScore := int16(0)
-			gamesPlayed := int16(0)
-			playedToday := false
-			var stats []WordleStat
-			db.Find(&stats, WordleStat{ChannelID: wordle.ChannelID, UserID: player.ID})
-			for _, stat := range stats {
-				totalScore += int16(stat.Score)
-				firstRowTotalScore += int16(stat.FirstWordScore)
-				gamesPlayed++
-				todayWordleDay := int16(time.Since(WORDLE_DAY_0).Hours() / 24)
-				if stat.Day == todayWordleDay {
-					playedToday = true
-				}
-			}
-
-			var averageScore float32
-			var averageFirstRowScore float32
-			if gamesPlayed == 0 {
-				averageScore = 7
-				averageFirstRowScore = 7
-			} else {
-				averageScore = float32(totalScore) / float32(gamesPlayed)
-				averageFirstRowScore = float32(firstRowTotalScore) / float32(gamesPlayed)
-			}
-
-			getReminders := false
-			for _, remindee := range wordle.Remindees {
-				if remindee.ID == player.ID {
-					getReminders = true
-				}
-			}
-
-			user := &WordlePlayerStats{
-				User:            player,
-				AverageScore:    averageScore,
-				AverageFirstRow: averageFirstRowScore,
-				GamesPlayed:     gamesPlayed,
-				PlayedToday:     playedToday,
-				GetReminders:    getReminders,
-			}
-			users = append(users, user)
-
-			if worstFirstRowUser.AverageFirstRow == 0 || user.AverageFirstRow < worstFirstRowUser.AverageFirstRow {
-				worstFirstRowUser = user
-			}
-		}
-
-		sort.Slice(users, func(i, j int) bool {
-			return users[i].AverageScore < users[j].AverageScore
-		})
-
-		for _, user := range users {
-			playedStatus := X_EMOJI
-			// emoji := discordgo.Emoji{
-			// 	ID:   WORDLE_STOP_REMINDERS_ID,
-			// 	Name: WORDLE_STOP_REMINDERS,
-			// }
-			if user.PlayedToday {
-				playedStatus = CHECK_EMOJI
-			}
-			// reminderStatus := emoji.MessageFormat()
-			// if user.GetReminders {
-			// 	emoji := discordgo.Emoji{
-			// 		ID:   WORDLE_GET_REMINDERS_ID,
-			// 		Name: WORDLE_GET_REMINDERS,
-			// 	}
-			// 	reminderStatus = emoji.MessageFormat()
-			// }
-			statusBoard += fmt.Sprintf(
-				"` %.2f | %4d  |  %s  `  <@%s>\n",
-				user.AverageScore,
-				user.GamesPlayed,
-				playedStatus,
-				user.User.ID,
-			)
-		}
+		statusBoard += fmt.Sprintf(
+			"` %.2f | %4d  |  %s  `%s<@%s>\n",
+			user.WordleStats.AverageScore,
+			user.WordleStats.GamesPlayed,
+			playedStatus,
+			reminderStatus,
+			user.ID,
+		)
 	}
-	return statusBoard, worstFirstRowUser
+	return statusBoard
 }

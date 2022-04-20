@@ -1,8 +1,6 @@
 .vscode/
 .env
 
-morestrings/
-
 *.exe
 *.sqlite
 

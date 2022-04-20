@@ -22,14 +22,13 @@ func main() {
 	log.Info("STARTING UP")
 
 	ConnectDB()
-	MigrateDB()
-	err := db.Migrator().AutoMigrate(&Server{}, &Wordle{}, &WordleStat{}, &User{})
+	CustomMigrateDB()
+	err := db.Migrator().AutoMigrate(&Server{}, &User{}, &Wordle{}, &WordleStat{}, &WordlePlayerStats{})
 	if err != nil {
 		log.Fatalf("Database migration failed: %s", err.Error())
 	}
 	log.Infof("Connected to kyDB")
 
-	// Session
 	s, err = discordgo.New("Bot " + TOKEN)
 	if err != nil {
 		log.Fatalln("Error creating Discord session :(", err)
@@ -51,7 +50,7 @@ func main() {
 	}
 
 	c := cron.New()
-	log.Debug("Wordle reminders will go out each day at 12am")
+	log.Debug("Wordle reminders will go out each day at 7pm")
 	c.AddFunc("0 0 0 * * *", func() { WordleNewDay() })
 	c.AddFunc("0 0 19 * * *", func() { WordleSendReminder() })
 	c.Start()

@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
@@ -15,7 +13,7 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	if strings.HasPrefix(m.Content, "Wordle") {
-		AddWordleStats(m.Message, "")
+		AddWordleStats(m.Message)
 	}
 
 	if !strings.HasPrefix(m.Content, "k!") {
@@ -37,36 +35,30 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 	command := strings.ToLower(split_content[0])
-	var data string
-	if len(split_content) < 2 {
-		data = ""
-	} else {
-		data = split_content[1]
-	}
+	// var data string
+	// if len(split_content) < 2 {
+	// 	data = ""
+	// } else {
+	// 	data = split_content[1]
+	// }
+
+	// log.Debug(data)
 
 	switch command {
-	case "import":
-		regex := regexp.MustCompile(`^https://discord\\.com/channels/(.*)/(.*)/(.*)`)
-
-		messageLink := regex.FindStringSubmatch(data)
-		if len(messageLink) != 4 {
-			s.ChannelMessageSend(m.ChannelID, "Not a valid discord message link")
-			return
-		}
-		// messageLink[0] is the whole link
-		// messageLink[1] is the guild ID
-		chanID := messageLink[2]
-		msgID := messageLink[3]
-
-		if err := ImportWordleStat(m.ChannelID, chanID, msgID); err != nil {
-			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Failed to add Wordle stat: %s", err))
-		} else {
-			s.ChannelMessageSend(m.ChannelID, "Added Wordle stats successfully")
-		}
-	case "scrape":
-		ScrapeChannel(m.ChannelID)
-		log.Debug("Done scraping")
 	case "wordle":
-		WordleNewDay()
+		var wordles []Wordle
+		db.Find(&wordles)
+
+		for _, raw_wordle := range wordles {
+			wordle, err := GetWordle(raw_wordle.ChannelID)
+			if err != nil {
+				log.Error(err)
+			}
+			for _, user := range wordle.Players {
+				user.UpdateStats()
+			}
+			wordle.StatusMessageID = ""
+			wordle.UpdateStatus()
+		}
 	}
 }

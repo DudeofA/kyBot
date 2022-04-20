@@ -126,7 +126,7 @@ func AddServer(i *discordgo.InteractionCreate, serverType string, host string, p
 		if err != nil {
 			log.Errorf("Error responding to the interaction: %s", err.Error())
 		}
-		interaction, err := s.InteractionResponse(APPID, i.Interaction)
+		interaction, err := s.InteractionResponse(i.Interaction)
 		if err != nil {
 			log.Errorf("Error getting interaction response message info: %s", err.Error())
 		}

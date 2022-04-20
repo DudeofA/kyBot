@@ -2,6 +2,15 @@
 
 All notable changes will be documented in this file.
 
+## [5.1.0] - 3/23/22
+
+## Add
+
+-   Persistant Wordle Statistics per user
+-   Convert Leaderboard to Statusboard
+-   Add Reminders into Statusboard
+-   Convert all wordlestats to uints
+
 ## [5.0.5] - 3/15/22
 
 ## Add

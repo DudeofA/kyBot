@@ -1,15 +1,18 @@
 package main
 
 import (
+	"time"
+
 	"github.com/bwmarrin/discordgo"
 	log "github.com/sirupsen/logrus"
 )
 
 type User struct {
-	ID            string `gorm:"primaryKey"` // User ID
+	ID            string `gorm:"primaryKey"` // Discord User ID
 	Username      string
 	Discriminator string // Unique identifier (#4712)
-	Stats         []*WordleStat
+	WordleGames   []*WordleStat
+	WordleStats   *WordlePlayerStats
 }
 
 func GetUser(discord_user *discordgo.User) (user User) {
@@ -43,15 +46,66 @@ func (user *User) QueryInfo() {
 	db.Save(&user)
 }
 
+func (user *User) UpdateStats() {
+	if user.WordleStats == nil {
+		user.WordleStats = &WordlePlayerStats{
+			GetReminders: false,
+		}
+	}
+
+	stats := user.WordleStats
+
+	stats.AverageScore = user.GetAverageScore()
+	stats.AverageFirstRow = user.GetAverageFirstRow()
+	stats.GamesPlayed = user.GetGamesPlayed()
+	stats.PlayedToday = user.CheckPlayedToday()
+
+	db.Save(&stats)
+}
+
 func (user *User) GetAverageScore() (average float32) {
 	row := db.Model(&WordleStat{}).Where(&WordleStat{UserID: user.ID}).Select("avg(score)").Row()
 	row.Scan(&average)
 	return average
 }
 
-func (user *User) GetGamesPlayed() (count int16) {
+func (user *User) GetAverageFirstRow() (average float32) {
+	row := db.Model(&WordleStat{}).Where(&WordleStat{UserID: user.ID}).Select("avg(first_word_score)").Row()
+	row.Scan(&average)
+	return average
+}
+
+func (user *User) GetGamesPlayed() (count uint16) {
 	var temp_count int64
 	db.Model(&WordleStat{}).Where(&WordleStat{UserID: user.ID}).Count(&temp_count)
-	count = int16(temp_count)
+	count = uint16(temp_count)
 	return count
+}
+
+func (user *User) CheckPlayedToday() bool {
+	todayWordleDay := uint16(time.Since(WORDLE_DAY_0).Hours() / 24)
+	var stats []WordleStat
+	db.Find(&stats, WordleStat{UserID: user.ID})
+	for _, stat := range stats {
+		if stat.Day == todayWordleDay {
+			return true
+		}
+	}
+	return false
+}
+
+func (user *User) ToggleWordleReminder() error {
+	var stat WordlePlayerStats
+	result := db.FirstOrCreate(&stat, &WordlePlayerStats{UserID: user.ID})
+	if result.Error != nil {
+		return result.Error
+	}
+	if stat.GetReminders {
+		stat.GetReminders = false
+	} else {
+		stat.GetReminders = true
+	}
+	db.Save(&stat)
+
+	return nil
 }
