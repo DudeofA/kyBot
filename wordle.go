@@ -46,7 +46,7 @@ type WordlePlayerStats struct {
 	GetReminders    bool
 }
 
-func GetWordle(channelID string) (wordle Wordle, err error) {
+func GetWordle(channelID string) (wordle *Wordle, err error) {
 	result := db.Preload("Players.WordleStats").Preload(clause.Associations).Limit(1).Find(&wordle, Wordle{ChannelID: channelID})
 	if result.RowsAffected != 1 {
 		return wordle, fmt.Errorf("no wordle found with channel id %s", channelID)
@@ -64,7 +64,7 @@ func WordleNewDay() {
 			log.Error(err)
 		}
 		wordle.StatusMessageID = ""
-		wordle.UpdateStatus()
+		wordle.RefreshStatus()
 	}
 }
 
@@ -90,7 +90,9 @@ func WordleSendReminder() {
 	}
 }
 
-func (wordle *Wordle) UpdateStatus() {
+func (wordle *Wordle) RefreshStatus() {
+	// TODO: Reload users more cleanly
+	wordle, _ = GetWordle(wordle.ChannelID)
 	msg := wordle.BuildEmbedMsg()
 	wordle.EditStatusMessage(msg)
 }

@@ -55,10 +55,10 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 				log.Error(err)
 			}
 			for _, user := range wordle.Players {
-				user.UpdateStats()
+				user.CalculateStats()
 			}
 			wordle.StatusMessageID = ""
-			wordle.UpdateStatus()
+			wordle.RefreshStatus()
 		}
 	}
 }

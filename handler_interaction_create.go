@@ -64,7 +64,7 @@ func InteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			if err != nil {
 				log.Error(err)
 			}
-			wordle.UpdateStatus()
+			wordle.RefreshStatus()
 
 		default:
 			log.Warnf("Unknown Message Component: %s", i.MessageComponentData().CustomID)

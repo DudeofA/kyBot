@@ -113,8 +113,8 @@ func AddWordleStats(m *discordgo.Message) (err error) {
 	}
 
 	db.Create(&wordleStat)
-	user.UpdateStats()
-	wordle.UpdateStatus()
+	user.CalculateStats()
+	wordle.RefreshStatus()
 	return nil
 }
 
