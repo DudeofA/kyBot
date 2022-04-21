@@ -2,6 +2,12 @@
 
 All notable changes will be documented in this file.
 
+## [5.1.1] - 4/20/22
+
+## Add
+
+-   Fixed User stats not refreshing after each submission
+
 ## [5.1.0] - 3/23/22
 
 ## Add

@@ -16,7 +16,7 @@ type User struct {
 }
 
 func GetUser(discord_user *discordgo.User) (user User) {
-	result := db.Limit(1).Find(&user, User{ID: discord_user.ID})
+	result := db.Preload("WordleStats").Limit(1).Find(&user, User{ID: discord_user.ID})
 	if result.RowsAffected == 1 {
 		return user
 	}
@@ -46,21 +46,19 @@ func (user *User) QueryInfo() {
 	db.Save(&user)
 }
 
-func (user *User) UpdateStats() {
+func (user *User) CalculateStats() {
 	if user.WordleStats == nil {
 		user.WordleStats = &WordlePlayerStats{
 			GetReminders: false,
 		}
 	}
 
-	stats := user.WordleStats
+	user.WordleStats.AverageScore = user.GetAverageScore()
+	user.WordleStats.AverageFirstRow = user.GetAverageFirstRow()
+	user.WordleStats.GamesPlayed = user.GetGamesPlayed()
+	user.WordleStats.PlayedToday = user.CheckPlayedToday()
 
-	stats.AverageScore = user.GetAverageScore()
-	stats.AverageFirstRow = user.GetAverageFirstRow()
-	stats.GamesPlayed = user.GetGamesPlayed()
-	stats.PlayedToday = user.CheckPlayedToday()
-
-	db.Save(&stats)
+	db.Save(&user.WordleStats)
 }
 
 func (user *User) GetAverageScore() (average float32) {
