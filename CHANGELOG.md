@@ -2,9 +2,15 @@
 
 All notable changes will be documented in this file.
 
+## [5.1.2] - 4/22/22
+
+## Fix 
+
+-   Scoreboard not updating corrected on each submission
+
 ## [5.1.1] - 4/20/22
 
-## Add
+## Fix
 
 -   Fixed User stats not refreshing after each submission
 

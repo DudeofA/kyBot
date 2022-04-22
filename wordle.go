@@ -91,8 +91,6 @@ func WordleSendReminder() {
 }
 
 func (wordle *Wordle) RefreshStatus() {
-	// TODO: Reload users more cleanly
-	wordle, _ = GetWordle(wordle.ChannelID)
 	msg := wordle.BuildEmbedMsg()
 	wordle.EditStatusMessage(msg)
 }

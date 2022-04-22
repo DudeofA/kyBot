@@ -114,6 +114,11 @@ func AddWordleStats(m *discordgo.Message) (err error) {
 
 	db.Create(&wordleStat)
 	user.CalculateStats()
+	for _, player := range wordle.Players {
+		if player.ID == user.ID {
+			player.WordleStats = user.WordleStats
+		}
+	}
 	wordle.RefreshStatus()
 	return nil
 }
