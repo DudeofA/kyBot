@@ -2,6 +2,12 @@
 
 All notable changes will be documented in this file.
 
+## [5.1.3] - 4/22/22
+
+## Fix
+
+-   New day not reseting statusboard
+
 ## [5.1.2] - 4/22/22
 
 ## Fix 

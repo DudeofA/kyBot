@@ -51,7 +51,7 @@ func main() {
 
 	c := cron.New()
 	log.Debug("Wordle reminders will go out each day at 7pm")
-	c.AddFunc("0 0 0 * * *", func() { WordleNewDay() })
+	c.AddFunc("0 0 0 * * *", func() { WordleMidnight() })
 	c.AddFunc("0 0 19 * * *", func() { WordleSendReminder() })
 	c.Start()
 

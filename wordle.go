@@ -54,7 +54,18 @@ func GetWordle(channelID string) (wordle *Wordle, err error) {
 	return wordle, nil
 }
 
-func WordleNewDay() {
+func WordleMidnight() {
+	var users []User
+	db.Find(&users)
+
+	for _, user := range users {
+		user.WordleStats.PlayedToday = false
+		user.CalculateStats()
+	}
+	WordleNewScoreboard()
+}
+
+func WordleNewScoreboard() {
 	var wordles []Wordle
 	db.Find(&wordles)
 
