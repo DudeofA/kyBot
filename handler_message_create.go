@@ -46,19 +46,6 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	switch command {
 	case "wordle":
-		var wordles []Wordle
-		db.Find(&wordles)
-
-		for _, raw_wordle := range wordles {
-			wordle, err := GetWordle(raw_wordle.ChannelID)
-			if err != nil {
-				log.Error(err)
-			}
-			for _, user := range wordle.Players {
-				user.CalculateStats()
-			}
-			wordle.StatusMessageID = ""
-			wordle.RefreshStatus()
-		}
+		WordleMidnight()
 	}
 }
