@@ -56,7 +56,7 @@ func GetWordle(channelID string) (wordle *Wordle, err error) {
 
 func WordleMidnight() {
 	var users []User
-	db.Find(&users)
+	db.Preload("WordleStats").Find(&users)
 
 	for _, user := range users {
 		user.WordleStats.PlayedToday = false

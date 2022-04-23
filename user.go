@@ -83,6 +83,7 @@ func (user *User) GetGamesPlayed() (count uint16) {
 func (user *User) CheckPlayedToday() bool {
 	todayWordleDay := uint16(time.Since(WORDLE_DAY_0).Hours() / 24)
 	var stats []WordleStat
+	// TODO: Optimize today checking by filtering search to stat.days that equal today
 	db.Find(&stats, WordleStat{UserID: user.ID})
 	for _, stat := range stats {
 		if stat.Day == todayWordleDay {
