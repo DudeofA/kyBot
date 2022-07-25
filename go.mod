@@ -13,17 +13,17 @@ require (
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/jmoiron/jsonq v0.0.0-20150511023944-e874b168d07e // indirect
-	github.com/mattn/go-sqlite3 v1.14.12 // indirect
+	github.com/mattn/go-sqlite3 v1.14.14 // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
 )
 
 require (
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/robfig/cron v1.2.0
-	github.com/sirupsen/logrus v1.8.1
-	golang.org/x/crypto v0.0.0-20220411220226-7b82a4e95df4 // indirect
-	golang.org/x/sys v0.0.0-20220412211240-33da011f77ad // indirect
-	gorm.io/driver/sqlite v1.3.1
-	gorm.io/gorm v1.23.4
+	github.com/sirupsen/logrus v1.9.0
+	golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa // indirect
+	golang.org/x/sys v0.0.0-20220722155257-8c9f86f7a55f // indirect
+	gorm.io/driver/sqlite v1.3.6
+	gorm.io/gorm v1.23.8
 	layeh.com/gumble v0.0.0-20200818122324-146f9205029b
 )
