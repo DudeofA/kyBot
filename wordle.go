@@ -88,10 +88,9 @@ func WordleSendReminder() {
 		user_count := 0
 		notification := "It's 7pm and you didn't do your Wordle yet :o\n"
 		for _, user := range wordle.Remindees {
-			var lastWordleStat WordleStat
-			todayWordleDay := uint16(time.Since(WORDLE_DAY_0).Hours() / 24)
-			db.Last(&lastWordleStat, &WordleStat{UserID: user.ID})
-			if lastWordleStat.Day != todayWordleDay {
+			var player_stats WordlePlayerStats
+			db.Take(&player_stats, WordlePlayerStats{UserID: user.ID})
+			if !player_stats.PlayedToday {
 				notification += fmt.Sprintf("<@%s>\n", user.ID)
 				user_count++
 			}
