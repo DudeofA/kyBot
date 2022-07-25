@@ -10,6 +10,8 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/iverly/go-mcping/mcping"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	"layeh.com/gumble/gumble"
 )
 
@@ -264,7 +266,8 @@ func (server *Server) buildEmbedMsg() (msg *discordgo.MessageSend) {
 		Name:  "Players",
 		Value: playersStr,
 	}
-	title := fmt.Sprintf("%s Server Status", strings.Title(server.Type))
+	caser := cases.Title(language.AmericanEnglish)
+	title := fmt.Sprintf("%s Server Status", caser.String(server.Type))
 	embed := &discordgo.MessageEmbed{
 		Title:       title,
 		Description: server.MOTD,
