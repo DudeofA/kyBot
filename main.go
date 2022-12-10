@@ -6,7 +6,6 @@ import (
 	"syscall"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/robfig/cron"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -49,11 +48,11 @@ func main() {
 		log.Panicln("error opening discord connection :(", err)
 	}
 
-	c := cron.New()
-	log.Debug("Wordle reminders will go out each day at 7pm")
-	c.AddFunc("0 0 0 * * *", func() { WordleMidnight() })
-	c.AddFunc("0 0 19 * * *", func() { WordleSendReminder() })
-	c.Start()
+	// c := cron.New()
+	// log.Debug("Wordle reminders will go out each day at 7pm")
+	// c.AddFunc("0 0 0 * * *", func() { WordleMidnight() })
+	// c.AddFunc("0 0 19 * * *", func() { WordleSendReminder() })
+	// c.Start()
 
 	// Create channels to watch for kill signals
 	botChan := make(chan os.Signal, 1)
