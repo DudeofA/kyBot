@@ -21,8 +21,7 @@ func main() {
 	log.Info("STARTING UP")
 
 	ConnectDB()
-	CustomMigrateDB()
-	err := db.Migrator().AutoMigrate(&Server{}, &User{}, &Wordle{}, &WordleStat{}, &WordlePlayerStats{})
+	err := db.Migrator().AutoMigrate(&Server{}, &User{}, &ReadyCheck{}, &ReadyCheckStatus{})
 	if err != nil {
 		log.Fatalf("Database migration failed: %s", err.Error())
 	}
@@ -32,10 +31,17 @@ func main() {
 	if err != nil {
 		log.Fatalln("Error creating Discord session :(", err)
 	}
-	defer s.Close()
+
+	s.Identify.Intents |= discordgo.IntentGuilds
+	s.Identify.Intents |= discordgo.IntentGuildPresences
+	s.Identify.Intents |= discordgo.IntentGuildMembers
+	s.Identify.Intents |= discordgo.IntentGuildVoiceStates
 
 	s.StateEnabled = true
-	s.State.MaxMessageCount = 100
+	s.State.TrackChannels = true
+	s.State.TrackMembers = true
+	s.State.TrackVoice = true
+	s.State.TrackPresences = true
 
 	s.AddHandlerOnce(Ready)
 	s.AddHandler(MessageCreate)
@@ -47,12 +53,7 @@ func main() {
 	if err != nil {
 		log.Panicln("error opening discord connection :(", err)
 	}
-
-	// c := cron.New()
-	// log.Debug("Wordle reminders will go out each day at 7pm")
-	// c.AddFunc("0 0 0 * * *", func() { WordleMidnight() })
-	// c.AddFunc("0 0 19 * * *", func() { WordleSendReminder() })
-	// c.Start()
+	defer s.Close()
 
 	// Create channels to watch for kill signals
 	botChan := make(chan os.Signal, 1)

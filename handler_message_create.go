@@ -12,10 +12,6 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	if strings.HasPrefix(m.Content, "Wordle") {
-		AddWordleStats(m.Message)
-	}
-
 	if !strings.HasPrefix(m.Content, "k!") {
 		return
 	}
@@ -35,17 +31,11 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 	command := strings.ToLower(split_content[0])
-	// var data string
-	// if len(split_content) < 2 {
-	// 	data = ""
-	// } else {
-	// 	data = split_content[1]
-	// }
 
 	// log.Debug(data)
 
 	switch command {
-	case "wordle":
-		WordleMidnight()
+	case "none":
+		_ = command
 	}
 }

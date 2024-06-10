@@ -2,6 +2,16 @@
 
 All notable changes will be documented in this file.
 
+## [6.0] - 6/9/24
+
+## Removed
+
+- All things Wordle
+
+## Added
+
+- Ready Check command much like Dota 2
+
 ## [5.1.3] - 4/22/22
 
 ## Fix

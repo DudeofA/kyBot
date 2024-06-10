@@ -5,7 +5,6 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	log "github.com/sirupsen/logrus"
-	"gorm.io/gorm/clause"
 )
 
 func Ready(s *discordgo.Session, event *discordgo.Ready) {
@@ -24,15 +23,7 @@ func Ready(s *discordgo.Session, event *discordgo.Ready) {
 		server.Update()
 	}
 
-	// Find any Wordle stats that have been posted since the bot was down
-	var wordle_channels []Wordle
-	_ = db.Preload(clause.Associations).Find(&wordle_channels)
-	for _, wordle := range wordle_channels {
-		log.Debugf("Catching up on Wordle %s", wordle.ChannelID)
-		wordle.CatchUp()
-	}
-
-	err := s.UpdateGameStatus(0, fmt.Sprintf("Wordle [v%s]", VERSION))
+	err := s.UpdateGameStatus(0, fmt.Sprintf("v%s", VERSION))
 	if err != nil {
 		log.Errorf("Error updating status: %s", err.Error())
 	}

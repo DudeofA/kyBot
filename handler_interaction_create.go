@@ -25,8 +25,8 @@ func InteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 			AddServer(i, serverType, host, port)
 
-		case "add-wordle-channel":
-			// AddWordleChannel(i)
+		case "readycheck":
+			AddReadyCheck(i)
 
 		default:
 			log.Warnln("aw fuck idk what this is: ", data.Name)
@@ -43,28 +43,47 @@ func InteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			log.Errorf("Error responding to the interaction: %s", err.Error())
 		}
 
-		var server Server
 		switch i.MessageComponentData().CustomID {
 
 		case "refresh_server":
+			var server Server
 			result := db.Where(&Server{StatusMessageID: i.Message.ID}).Limit(1).Find(&server)
 			if result.RowsAffected == 1 {
 				server.Update()
 			}
 
-		case "toggle_wordle_reminder":
-			var user User
-			db.Where(&User{ID: i.Member.User.ID}).Limit(1).Find(&user)
-			err = user.ToggleWordleReminder()
-			if err != nil {
-				log.Errorf("error enabling wordle reminders for user [%s]: %s", i.User.ID, err)
-				return
+		case "ready":
+			var readyCheck ReadyCheck
+			result := db.Preload("ReadyStatuses").Where(&ReadyCheck{StatusMessageID: i.Message.ID}).Limit(1).Find(&readyCheck)
+			if result.RowsAffected == 1 {
+				for idx, user := range readyCheck.ReadyStatuses {
+					if i.Member.User.ID == user.UserID {
+						readyCheck.ReadyStatuses[idx].Status = "Ready"
+						db.Save(&readyCheck.ReadyStatuses[idx])
+						readyCheck.Update()
+					}
+				}
 			}
-			wordle, err := GetWordle(i.Message.ChannelID)
-			if err != nil {
-				log.Error(err)
+
+		case "not_ready":
+			var readyCheck ReadyCheck
+			result := db.Preload("ReadyStatuses").Where(&ReadyCheck{StatusMessageID: i.Message.ID}).Limit(1).Find(&readyCheck)
+			if result.RowsAffected == 1 {
+				for idx, user := range readyCheck.ReadyStatuses {
+					if i.Member.User.ID == user.UserID {
+						readyCheck.ReadyStatuses[idx].Status = "Not Ready"
+						db.Save(&readyCheck.ReadyStatuses[idx])
+						readyCheck.Update()
+					}
+				}
 			}
-			wordle.RefreshStatus()
+
+		case "delete_readycheck":
+			var readyCheck ReadyCheck
+			result := db.Preload("ReadyStatuses").Where(&ReadyCheck{StatusMessageID: i.Message.ID}).Limit(1).Find(&readyCheck)
+			if result.RowsAffected == 1 {
+				readyCheck.Remove()
+			}
 
 		default:
 			log.Warnf("Unknown Message Component: %s", i.MessageComponentData().CustomID)

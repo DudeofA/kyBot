@@ -168,7 +168,7 @@ func (server *Server) updateStatusMessage(updateContent *discordgo.MessageSend) 
 	} else {
 		// Edit existing message
 		edit := &discordgo.MessageEdit{
-			Components: updateContent.Components,
+			Components: &updateContent.Components,
 			ID:         server.StatusMessageID,
 			Channel:    server.StatusChannelID,
 			Embed:      updateContent.Embed,
@@ -289,7 +289,7 @@ func (server *Server) buildEmbedMsg() (msg *discordgo.MessageSend) {
 	refresh_button := &discordgo.Button{
 		Label: "Refresh",
 		Style: 1,
-		Emoji: discordgo.ComponentEmoji{
+		Emoji: &discordgo.ComponentEmoji{
 			Name:     REFRESH_EMOJI,
 			ID:       "",
 			Animated: false,
@@ -301,7 +301,7 @@ func (server *Server) buildEmbedMsg() (msg *discordgo.MessageSend) {
 		Label:    "Delete Server",
 		Style:    4,
 		Disabled: false,
-		Emoji: discordgo.ComponentEmoji{
+		Emoji: &discordgo.ComponentEmoji{
 			Name:     DELETE_EMOJI,
 			ID:       "",
 			Animated: false,
