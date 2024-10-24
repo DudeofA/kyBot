@@ -1,6 +1,8 @@
 package main
 
 import (
+	"math/rand"
+
 	"github.com/bwmarrin/discordgo"
 	log "github.com/sirupsen/logrus"
 )
@@ -27,6 +29,22 @@ func InteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 		case "readycheck":
 			AddReadyCheck(i)
+
+		case "coinflip":
+			results := "tails"
+			if rand.Intn(2) == 0 {
+				results = "heads"
+			}
+			resp := &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: results,
+				},
+			}
+			err := s.InteractionRespond(i.Interaction, resp)
+			if err != nil {
+				log.Errorf("Error responding to the interaction: %s", err.Error())
+			}
 
 		default:
 			log.Warnln("aw fuck idk what this is: ", data.Name)

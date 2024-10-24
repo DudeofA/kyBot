@@ -49,6 +49,13 @@ func main() {
 	s.AddHandler(InteractionCreate)
 	s.AddHandler(RateLimit)
 
+	coinflipCommand := &discordgo.ApplicationCommand{
+		Name:        "coinflip",
+		Type:        discordgo.ChatApplicationCommand,
+		Description: "Flip a coin",
+	}
+	AddCommand(coinflipCommand)
+
 	err = s.Open()
 	if err != nil {
 		log.Panicln("error opening discord connection :(", err)
